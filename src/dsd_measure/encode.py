@@ -8,7 +8,7 @@ picks the best design from a ladder (order 8 down to order 5) that does not over
 core (``csrc/dsm.c``, built on first use with the system C compiler into a private per-user cache), with a slow pure-Python
 fallback. Bits are returned as int8 values +1 / -1.
 
-This is a *reference*, not a product: it is meant to be stable, transparent and reproducible.
+This is a *reference*, not a product: it is meant to be stable and reproducible.
 """
 
 import ctypes

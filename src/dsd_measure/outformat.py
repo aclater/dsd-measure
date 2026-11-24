@@ -1,8 +1,10 @@
 """Output word length: what a converter wrote, and what that format alone can hide.
 
-A converter that writes 16-bit PCM adds rounding noise of about -98 dBFS (in the whole band; 92.5 dB SINAD at 44.1 kHz output, 101.5 dB at 352.8 kHz), whatever its decoder
-does. Read as a verdict on the decoder, that noise would be wrong, so every measured file's format
-is recorded and a result that the format limits is reported as such.
+A converter that writes integer PCM adds rounding noise whatever its decoder does: plain rounding to 16 bits
+reads about 92.5 dB SINAD at 44.1 kHz output and 101.5 dB at 352.8 kHz, and a 24-bit file about 140.7 and 149.7 dB; with TPDF
+dither, the usual way to write a file, the noise is 4.77 dB higher. Read as a verdict on the decoder, that noise would be wrong, so
+every measured file's format is recorded and a result that the format may limit is reported as such, for any integer word length.
+Floating-point output is not limited. Whether a file was dithered is not detected: both bounds are given.
 """
 
 import math
@@ -63,17 +65,22 @@ def name_of(fmt):
     return f"{fmt['bits']}-bit {'integer' if fmt['kind'] == 'int' else fmt['kind']}"
 
 
-def quantisation_sinad_db(bits, rate, band_hz=BAND_HZ, tone_shift_db=0.0):
+#: TPDF dither of two LSB peak to peak adds LSB squared / 6 to the rounding noise of LSB squared / 12: 4.77 dB in all.
+TPDF_COST_DB = 10 * math.log10(3.0)
+
+
+def quantisation_sinad_db(bits, rate, band_hz=BAND_HZ, tone_shift_db=0.0, dithered=False):
     """SINAD (dB) that rounding to ``bits`` integer bits alone allows for the 0 dB SACD tone.
 
     Rounding noise is white with power (LSB squared) / 12; the analysis keeps the share inside
-    ``band_hz``. Dither would cost about 4.8 dB more, so this is the best case for the format.
+    ``band_hz``. Plain rounding is the best case for the format; ``dithered=True`` gives the figure with
+    TPDF dither, which costs 4.77 dB more.
     ``tone_shift_db`` is how far the tone as written in the file sits above (+) or below (-) the nominal level
     (a tool that writes 6 dB low has 6 dB less to work with).
     """
     lsb = 2.0 ** (1 - bits)
     noise = lsb / math.sqrt(12) * math.sqrt(min(band_hz / (rate / 2), 1.0))
-    return 20 * math.log10(TONE_RMS / noise) + tone_shift_db
+    return 20 * math.log10(TONE_RMS / noise) + tone_shift_db - (TPDF_COST_DB if dithered else 0.0)
 
 
 def narrowest(formats):
@@ -83,7 +90,7 @@ def narrowest(formats):
 
 
 def summary(fmt, tone_shift_db=0.0):
-    """What goes into the metrics: the format and the SINAD an integer format of that width allows.
+    """What goes into the metrics: the format and the SINAD an integer format of that width allows, plain and with TPDF dither.
 
     ``tone_shift_db`` is the level of the tone as the tool wrote it, relative to nominal.
     """
@@ -92,22 +99,34 @@ def summary(fmt, tone_shift_db=0.0):
     out = {"container": fmt["container"], "kind": fmt["kind"], "bits": fmt["bits"], "rate": fmt["rate"], "text": name_of(fmt)}
     if fmt["kind"] == "int":
         out["quantisation_sinad_db"] = round(quantisation_sinad_db(fmt["bits"], fmt["rate"], tone_shift_db=tone_shift_db), 1)
+        out["quantisation_sinad_dithered_db"] = round(
+            quantisation_sinad_db(fmt["bits"], fmt["rate"], tone_shift_db=tone_shift_db, dithered=True), 1)
         out["tone_shift_db"] = round(float(tone_shift_db), 1)
     return out
 
 
 def limits_result(fmt):
-    """True when the integer word length alone caps the result below the reference chain's floor (16-bit and shorter)."""
-    return bool(fmt) and fmt.get("kind") == "int" and fmt.get("bits", 32) < 24
+    """True for integer output of any width below 32 bits: its rounding noise may cap a result (see ``bound_text``).
+
+    Whether it does depends on the measured figure, which ``conclusions.format_limit`` checks against both bounds. Floating-point
+    output is never limited.
+    """
+    return bool(fmt) and fmt.get("kind") == "int" and fmt.get("bits", 32) < 32
+
+
+def bound_text(fmt):
+    """``"140.7 dB with plain rounding or 135.9 dB with TPDF dither"`` for an integer format."""
+    hi = quantisation_sinad_db(fmt["bits"], fmt["rate"])
+    lo = quantisation_sinad_db(fmt["bits"], fmt["rate"], dithered=True)
+    return f"{hi:.1f} dB with plain rounding or {lo:.1f} dB with TPDF dither"
 
 
 def warning(fmt, command=""):
-    """The sentence that tells a user their output format limits the result, or None."""
+    """The sentence that tells a user their output format may limit the result, or None."""
     if not limits_result(fmt):
         return None
-    limit = quantisation_sinad_db(fmt["bits"], fmt["rate"])
-    msg = (f"the tool wrote {name_of(fmt)} PCM, which alone limits SINAD to about {limit:.1f} dB whatever the decoder "
-           "does, so the report cannot judge the decoder. Ask the tool for floating-point output (or 32-bit integer)")
+    msg = (f"the tool wrote {name_of(fmt)} PCM at {fmt['rate'] / 1000:g} kHz, which alone limits SINAD to about {bound_text(fmt)} "
+           "whatever the decoder does, so a figure near that cannot be told from the file format. Ask the tool for floating-point output")
     words = str(command).split()
     if words and Path(words[0]).name == "ffmpeg":
         msg += " (for ffmpeg, add -c:a pcm_f32le before the output file)"

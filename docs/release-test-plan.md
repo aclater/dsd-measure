@@ -82,7 +82,7 @@ dsd-measure signals null-source --only multitone
 dsd-measure null --source null-source/multitone.dsf --device reference@352800 --device reference@176400 -o null-report
 ```
 
-The first device is the baseline. The two devices are the same decoder at two output rates, so the difference is only the extra filtering at 176.4 kHz: `null-report/index.html` shows a null depth of more than 140 dB below 18 kHz, about 104 dB in the 18 to 20 kHz band (the common-rate resampler's edge) and the verdict tier "far-below" (the difference is far below audibility).
+The first device is the baseline. The two devices are the same decoder at two output rates, so the difference is only the extra filtering at 176.4 kHz: `null-report/index.html` shows a null depth of more than 140 dB below 18 kHz, about 104 dB in the 18 to 20 kHz band (the common-rate resampler's edge) and the depth band "d100" (100 dB or more).
 
 ## Links that block automated clients
 

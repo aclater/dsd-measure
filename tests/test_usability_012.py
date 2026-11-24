@@ -85,9 +85,9 @@ def test_a_16_bit_tool_is_not_judged_a_32_bit_float_tool_is(tmp_path):
     assert "reference floor" in summary_line("t32", res["float32"])
     c16, c32 = cn.device_conclusions(m16, adapters.Cli("x", "x").describe()), cn.device_conclusions(m32, adapters.Cli("x", "x").describe())
     assert c16[0]["id"] == "overall" and c16[0]["verdict"] == "format-limited"
-    assert c32[0]["verdict"] == "transparent" or c32[0]["verdict"] == "inaudible"
+    assert c32[0]["verdict"] == "margin-120" or c32[0]["verdict"] == "margin-87"
     h16 = cn.device_headline(m16, {"adapter": "cli", "class": "A"}, "tool")
-    assert h16.startswith("Result: not judged. tool wrote 16-bit integer PCM") and "floating-point" in h16
+    assert h16.startswith("Result: not judged. tool wrote 16-bit integer PCM") and "floating-point" in h16 and "TPDF dither" in h16
 
 
 def test_format_limit_rules():
@@ -95,7 +95,8 @@ def test_format_limit_rules():
     assert cn.format_limit(metrics(sinad=101.4, output_format=FMT16))
     assert not cn.format_limit(metrics(sinad=130.0, output_format=FMT16))  # noise shaping beats plain rounding
     assert not cn.format_limit(metrics(sinad=60.0, output_format=FMT16))  # the device's own noise is lower still
-    assert not cn.format_limit(metrics(sinad=101.4, output_format={**FMT16, "bits": 24, "quantisation_sinad_db": 149.7}))
+    assert not cn.format_limit(metrics(sinad=101.4, output_format={**FMT16, "bits": 24, "quantisation_sinad_db": 149.7,
+                                                                    "quantisation_sinad_dithered_db": 144.9}))
     assert not cn.format_limit(metrics(sinad=101.4, output_format={**FMT16, "kind": "float", "bits": 32}))
     assert not cn.format_limit(metrics(sinad=101.4))
     assert not cn.format_limit(metrics(klass="B", sinad=101.4, output_format=FMT16))
@@ -103,12 +104,20 @@ def test_format_limit_rules():
 
 def test_comparison_does_not_rank_a_file_format():
     from test_conclusions import CLI, FMT16, metrics
-    a, b = metrics(sinad=146.0, dr=150.0), metrics(sinad=101.4, dr=103.7, output_format=FMT16)
+    FLT = {"container": "wav", "kind": "float", "bits": 32, "rate": 352800, "text": "32-bit float"}
+    a, b = metrics(sinad=146.0, dr=150.0, output_format=FLT), metrics(sinad=101.4, dr=103.7, output_format=FMT16)
     cs = cn.comparison_conclusions([("good", a, CLI), ("narrow", b, CLI)])
     ids = [c["id"] for c in cs]
     assert "cmp-format" in ids and "cmp-distortion" not in ids and "cmp-overall" not in ids
+    assert "cmp-conditions" in ids  # a different word length is not like-for-like
     h = cn.comparison_headline([("good", a, CLI), ("narrow", b, CLI)], cs)
-    assert h.startswith("Result: not compared in distortion and noise") and "narrow wrote 16-bit" in h
+    assert h.startswith("Result: not like-for-like.") and "16-bit integer out at 352.8 kHz" in h
+    # the same format at the same rate: the format rule alone speaks
+    c = metrics(sinad=101.0, dr=103.0, output_format=FMT16)
+    cs2 = cn.comparison_conclusions([("one", c, CLI), ("narrow", b, CLI)])
+    ids2 = [x["id"] for x in cs2]
+    assert "cmp-format" in ids2 and "cmp-conditions" not in ids2 and "cmp-distortion" not in ids2
+    assert cn.comparison_headline([("one", c, CLI), ("narrow", b, CLI)], cs2).startswith("Result: not compared in distortion and noise")
 
 
 def test_report_says_the_word_length_and_the_result_first(tmp_path):
@@ -126,7 +135,7 @@ def test_report_says_the_word_length_and_the_result_first(tmp_path):
     assert html.index("class=result") < html.index("Conclusions")
     assert f"**{head}**" in md.splitlines()[4]
     assert json.loads((tmp_path / "r" / "results.json").read_text())["headline"] == head
-    assert "Output word length" in html and "16-bit integer as written by the device (WAV)" in html
+    assert "Output format" in html and "16-bit integer as written by the device (WAV)" in html
 
 
 # ----------------------------------------------------------------------------- presets and unknown names
@@ -268,15 +277,16 @@ def test_run_ends_with_the_result_line(tmp_path):
 def test_headlines_for_each_verdict():
     from test_conclusions import CLI, metrics
     t = cn.device_headline(metrics(sinad=146, dr=150, smpte=-146, ccif=-146, analysis_version=2, noise=QUIET_NOISE), CLI, "tool")
-    assert t.startswith("Result: tool is transparent; the weakest figure in the audio band is ")
+    assert t.startswith("Result: tool measures 140 dB below a reference-level tone in its weakest figure in the audio band, ")
+    assert "every concluded figure is at least 120 dB down" in t
     assert "Not judged in this version: filter and ringing." in t
     i = cn.device_headline(metrics(sinad=100, dr=112, analysis_version=2, noise=QUIET_NOISE), CLI, "tool")
-    assert "inaudible in normal listening" in i and "distortion plus noise on a 1 kHz tone (SINAD), 100 dB below" in i
+    assert "at least 87 dB down" in i and "distortion plus noise on a 1 kHz tone (SINAD)" in i and "100 dB below" in i
     r = cn.device_headline(metrics(sinad=60, dr=112, analysis_version=2, noise=QUIET_NOISE), CLI, "tool")
-    assert "shows audible risk" in r
+    assert "less than 87 dB down" in r
     a, b = metrics(analysis_version=2), metrics(sinad=110.5, analysis_version=2)
     h = cn.comparison_headline([("A", a, CLI), ("B", b, CLI)], cn.comparison_conclusions([("A", a, CLI), ("B", b, CLI)]))
-    assert h.startswith("Result: in the audio band, A and B are indistinguishable by measurement.")
+    assert h.startswith("Result: in the audio band, A and B measure the same within the tolerance used here.")
     assert "Not compared in this version" in h
 
 
@@ -293,6 +303,7 @@ def test_every_number_in_a_headline_is_in_the_evidence():
     h = cn.device_headline(M, CLI, "tool")
     ov = next(c for c in cn.device_conclusions(M, CLI) if c["id"] == "overall")
     backed = {n.lstrip("-") for e in ov["evidence"] for n in cn.numbers(e["value"]) + cn.numbers(e["label"])}
+    backed |= {f"{cn.THRESHOLDS[t]['value']:.0f}" for t in ov["thresholds"]}
     assert all(n.lstrip("-") in backed for n in cn.numbers(h)), (h, backed)
 
 

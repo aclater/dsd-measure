@@ -50,7 +50,7 @@ def _main(argv=None):
     if Path(argv[0]).suffix.lower() in (".dsf", ".dff") and not argv[0].startswith("-"):
         raise UserError(f"{argv[0]!r} is a DSD file, not a command. To compare decoders on this file: "
                         f"dsd-measure null {argv[0]} ffmpeg")
-    ap = argparse.ArgumentParser(prog="dsd-measure", description="Reproducible measurements for DSD and PCM converters.")
+    ap = argparse.ArgumentParser(prog="dsd-measure", description="Deterministic measurements for DSD and PCM converters.")
     ap.add_argument("--version", action="version", version=__version__)
     sub = ap.add_subparsers(dest="cmd", required=True)
 

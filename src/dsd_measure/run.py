@@ -105,8 +105,13 @@ def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, ver
     try:
         # pre-flight: every device converts one short signal before anything is measured or written
         pre = [preflight.run(a, in_rate, log) for a in adapters]
+        identities = [a.tool_versions() for a in adapters]  # version and executable hash of each device, recorded in its provenance
+        for a, ident in zip(adapters, identities, strict=True):
+            if a.kind not in ("reference", "import", "recorder") and not (ident.get("version") or ident.get("declared_version")):
+                log(f"  note: the version of {a.name} could not be read; the provenance records its executable hash"
+                    f"{'' if ident.get('sha256') else ' where it can be found'}. Add version = \"...\" to the device to declare it.")
         outdir.mkdir(parents=True, exist_ok=True)
-        for n, (adapter, pf) in enumerate(zip(adapters, pre, strict=True), 1):
+        for n, (adapter, pf, ident) in enumerate(zip(adapters, pre, identities, strict=True), 1):
             fa = pl.device_facts(adapter)
             log("")
             log(f"Device {n} of {len(specs)}: {adapter.name} (class {adapter.klass}, {fa['kind']}, adapter {adapter.kind})")
@@ -124,10 +129,11 @@ def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, ver
                     "reference_chain": REFERENCE_CHAIN_VERSION, "versions": versions(),
                     "suite_sha256": hashlib.sha256(raw).hexdigest(), "adapter_calls": adapter.log[:50],
                     "command": " ".join(["dsd-measure"] + sys.argv[1:]), "timing_s": res["timing_s"],
-                    "preflight": pf,
+                    "preflight": pf, "device_versions": ident,
                     "profile_settings": PROFILES[profile], "reference_modulator_designs": res.get("reference_chain_ntf", {})}
             meta["measured"] = pl.measured(adapter, profile, in_rate, res["metrics"].get("reference_floor"), suite.get("name"))
             meta["measured"]["versions"] = meta["versions"]
+            meta["measured"]["device_versions"] = ident
             safe = pl.safe_name(adapter.name)
             heads.append(write_device_report(outdir / safe, adapter.name, res, meta))
             results.append((adapter.name, safe, res))
@@ -136,6 +142,12 @@ def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, ver
         for a in adapters:
             a.close()  # temporary files go on success, failure and Ctrl-C
     if len(results) > 1:
+        from .conclusions import like_for_like
+        same, why = like_for_like([(n, r["metrics"]) for n, _, r in results])
+        if not same:
+            log("")
+            log(f"WARNING: not like-for-like. {why}. The comparison lists the figures but does not compare distortion and noise: "
+                "measure every device at the same output rate and format.")
         heads = [write_comparison(outdir / "comparison", [(s_, r) for _, s_, r in results], {"profile": profile, "measured": metas})]
     if "null" in cfg and (only is None or "null" in only):
         from .nulltest.run import options_from, run_null

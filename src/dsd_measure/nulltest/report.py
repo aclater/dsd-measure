@@ -3,6 +3,7 @@
 import csv
 import html
 import json
+import re
 from pathlib import Path
 
 import matplotlib
@@ -11,7 +12,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from ..report import PALETTE, _card, _logx, _page, _svg  # noqa: E402
-from .verdict import BASIS, SOURCES, TIERS, audible_band_depth, verdict  # noqa: E402
+from .verdict import BASIS, SOURCES, TIERS, inband_depth, verdict  # noqa: E402
+
+_TIER_NOTE = re.compile(r"^depth band [^;:,]*[;:,]?\s*")
 
 
 def _worst(res):
@@ -51,7 +54,7 @@ def plot_depth(ch):
     f = [b["centre_hz"] for b in ch["bands"]]
     d = [min(b["depth_db"], 300) for b in ch["bands"]]
     ax.plot(f, d, "-o", ms=3, color=PALETTE[2])
-    for y, lab in ((100, "far below"), (60, "below"), (40, "near the edge")):
+    for y, lab in ((100, "100 dB"), (60, "60 dB"), (40, "40 dB")):
         ax.axhline(y, color="#999", lw=0.8, ls="--")
         ax.text(21, y + 1.5, lab, fontsize=7, color="#666")
     ax.axvline(20000, color="#999", lw=0.8, ls=":")
@@ -130,10 +133,10 @@ def write_report(outdir, run):
         cards = "".join([
             _card(plot_spectrum(ch, fc), "Where the difference sits against the music. The dotted line marks 20 kHz; bands above it are ultrasonic and are not part of the verdict."),
             _card(plot_time(ch), "Whether the difference follows the music or is steady. A difference that rises in loud passages scales with the music; a flat one is a noise floor."),
-            _card(plot_depth(ch), "The same two lines as a ratio. Dashed lines mark the tiers used for the verdict."),
+            _card(plot_depth(ch), "The same two lines as a ratio. Dashed lines mark the depth band edges."),
         ])
         per_ch = "<table><tr><th>Channel</th><th class=v>Null depth, 20 Hz to 20 kHz</th><th class=v>Null depth, full analysed band</th><th class=v>Diff RMS (dBFS)</th><th class=v>Diff peak (dBFS)</th><th class=v>Delay (samples)</th><th class=v>Level B vs A (dB)</th></tr>" + "".join(
-            f"<tr><td>{c['channel']}</td><td class=v>{_depth_txt(audible_band_depth(c))}</td><td class=v>{_depth_txt(c['null_depth_db'])}</td><td class=v>{c['diff_rms_dbfs']:.1f}</td><td class=v>{c['diff_peak_dbfs']:.1f}</td>"
+            f"<tr><td>{c['channel']}</td><td class=v>{_depth_txt(inband_depth(c))}</td><td class=v>{_depth_txt(c['null_depth_db'])}</td><td class=v>{c['diff_rms_dbfs']:.1f}</td><td class=v>{c['diff_peak_dbfs']:.1f}</td>"
             f"<td class=v>{c['delay_samples']:.4f}</td><td class=v>{-c['gain_db']:+.4f}</td></tr>" for c in res["channels"]) + "</table>"
         det = "".join(f"<li>{html.escape(x)}</li>" for x in v["details"])
         wav = f"<p>Difference signal: <a href='{html.escape(p['diff_wav'])}'>{html.escape(p['diff_wav'])}</a> (32-bit float WAV at {fc} Hz; the level is {run['options']['diff_gain_db']:+g} dB from true, so turn the volume down before playing it).</p>" if p.get("diff_wav") else ""
@@ -146,18 +149,18 @@ def write_report(outdir, run):
     hero = "".join(f"<div><span>{html.escape(b)} vs {html.escape(a_name)}</span><b>{_depth_txt(v['depth_db'])}</b><span>null depth</span></div>" for b, v, _ in srows)
     results = [(f"{p['b']} against {a_name}: " if len(srows) > 1 else "") + p["verdict"]["headline"] for p in run["pairs"]]
     head = "".join(f"<p class=result>Result: {html.escape(r)}</p>" for r in results)
-    tiers = "".join(f"<tr><td>{'identical' if lo >= 300 else (f'{lo:g} dB or more' if lo > -1e8 else 'under 20 dB')}</td><td>{html.escape(t)}</td></tr>" for lo, _, t in TIERS)
+    tiers = "".join(f"<tr><td>{'identical' if lo >= 300 else (f'{lo:g} dB or more' if lo > -1e8 else 'under 20 dB')}</td><td>{html.escape(_TIER_NOTE.sub('', t))}</td></tr>" for lo, _, t in TIERS)
     src = "".join(f"<li><a href='{u}'>{html.escape(n)}</a></li>" for n, u in SOURCES)
     body = (f"<div class=hero>{hero}</div>{head}{''.join(sections)}"
             f"<h2>What was compared</h2><div class=card>{_compared(run)}</div>"
-            f"<details><summary>How to read the verdict</summary><p>Null depth is how far below the music the difference is: the music's RMS level minus the RMS level of "
+            f"<details><summary>How to read the depth band</summary><p>Null depth is how far below the music the difference is: the music's RMS level minus the RMS level of "
             f"A minus B after alignment and level matching.</p><table>{tiers}</table><p>{html.escape(BASIS)}</p><ul>{src}</ul></details>"
-            f"<p class=legend>This is a test on your own music, separate from the synthetic measurements of the footprint: it says how much two decoders differ on this recording, not which is better. "
+            f"<p class=legend>This is a test on your own music, separate from the synthetic measurements of the footprint: it says how much two decoders differ on this recording; it does not say which is right or whether the difference is heard. "
             f"A difference may be a filter, a level or a delay choice rather than an error.</p>"
             f"<p>Raw numbers: <a href=results.json>results.json</a>, <a href=bands.csv>bands.csv</a>, <a href=seconds.csv>seconds.csv</a>, <a href=provenance.json>provenance.json</a>.</p>")
     sub = f"Null test of {len(run['devices'])} decoders on {html.escape(run['source']['name'])}; common rate {fc} Hz."
     (out / "index.html").write_text(_page("Null test report", body, sub))
-    md += ["## What was compared", ""] + [f"- {k}: {v}" for k, v in _rows_plain(run)] + ["", "Thresholds and sources: see `index.html`.", ""]
+    md += ["## What was compared", ""] + [f"- {k}: {v}" for k, v in _rows_plain(run)] + ["", "Depth bands and sources: see `index.html`.", ""]
     (out / "index.md").write_text("\n".join(md) + "\n")
     (out / "results.json").write_text(json.dumps(run, indent=1, default=float))
     (out / "provenance.json").write_text(json.dumps({k: run[k] for k in ("source", "devices", "options", "command", "versions")}, indent=1, default=float))

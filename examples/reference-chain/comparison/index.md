@@ -4,7 +4,7 @@
 
 ## Conclusions
 
-- Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool: it is at least that good.
+- Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool.
 - The parts of the chain agree: SINAD is 146.7 dB for reference decoder and 146.7 dB for reference modulator, a spread of 0.01 dB.
 - Not compared in this version: filter and ringing, polarity, multitone, J-Test, peak-level SINAD and modulator stability. These figures are not validated yet or not used by any rule, and converters often differ most in their filters and ultrasonic noise, so this comparison is not the whole picture.
 
@@ -17,7 +17,7 @@ Conclusions cover the synthetic test signals and the software path measured here
 - **Reference chain:** reference modulator and decoder at DSD64: THD+N -147.0 dB, dynamic range (A) 151.8 dB. A device figure within 6 dB of it is marked as limited by the measurement.
 - **Profile and date:** full, 2026-11-24, dsd-measure 0.1.2, reference chain 2.
 
-> Levels: dBFS is relative to PCM full scale. 0 dB SACD is the reference tone level, 50 % modulation, -6.02 dBFS; noise in dBFS is referred to the rms of a full-scale sine (AES17, ASR). Distortion and noise figures are in dB below the 1 kHz tone unless they say dBFS. Bandwidth 20 Hz to 20 kHz, unweighted unless marked A-weighted. SINAD is THD+N turned positive. Because the tone is 6 dB below full scale, a noise-limited device would read about 6 dB better at full scale; compare reports made at the same level.
+> Levels: dBFS is relative to PCM full scale. 0 dB SACD is the reference tone level, 50 % modulation, -6.02 dBFS; noise in dBFS is referred to the rms of a full-scale sine, as in AES17. Distortion and noise figures are in dB below the 1 kHz tone unless they say dBFS. Bandwidth 20 Hz to 20 kHz, unweighted unless marked A-weighted. SINAD is THD+N turned positive. Because the tone is 6 dB below full scale, a noise-limited device would read about 6 dB higher at full scale; compare reports made at the same level. These are not AES17 measurements: only the 20 kHz band edge and the dBFS convention follow it; the tone (1 kHz, not 997 Hz), the weighting (A, not CCIR-RMS), the notch, the level and the dither differ (docs/methodology-limits.md).
 
 | Metric | reference-decoder | reference-modulator |
 |---|---|---|
@@ -44,7 +44,7 @@ Conclusions cover the synthetic test signals and the software path measured here
 | Gain error at 0 dB SACD | +0.000 dB | +0.000 dB |
 | Polarity | normal | normal |
 | DC offset | -211 dBFS | -168 dBFS |
-| Output word length | 64-bit float | not run |
+| Output format | 64-bit float, 44.1 kHz | not run |
 | Reference floor (reference modulator + decoder, DSD64) | THD+N -147.0 dB, DR(A) 151.8 dB | not run |
 | Ultrasonic density at 50 / 100 / 200 kHz | not run | -88 / -81 / -72 dBFS/Hz |
 | Ultrasonic noise, highest 1/3 octave | not run | -70 dBFS/Hz at 226 kHz (band edge) |

@@ -12,7 +12,7 @@ How dsd-measure is built and why. The measurements themselves are defined in the
 | `encode` | The reference PCM to DSD modulator |
 | `decode` | The reference DSD to PCM decoder |
 | `adapters` | A device or tool as "DSD to PCM" or "PCM to DSD" |
-| `analyse` | One function per metric, each tested against a signal with a known answer and against an independent second analyser (`tests/refanalyser.py`); see [accuracy](accuracy.md) |
+| `analyse` | One function per metric, each tested against a signal with a known answer and against a separately written second analyser (`tests/refanalyser.py`); see [accuracy](accuracy.md) |
 | `measure` | The tests of the footprint, run against one adapter |
 | `report` | HTML, Markdown, SVG, CSV and JSON |
 | `plan` | The test catalogue: what each test uses and why, `--plan`, `signals --list` and the report's "What was measured" data |

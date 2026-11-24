@@ -45,7 +45,8 @@ def metrics(klass="A", sinad=110.0, dr=112.0, smpte=-108.0, ccif=-105.0, **over)
     return M
 
 
-FMT16 = {"container": "wav", "kind": "int", "bits": 16, "rate": 352800, "text": "16-bit integer", "quantisation_sinad_db": 101.5}
+FMT16 = {"container": "wav", "kind": "int", "bits": 16, "rate": 352800, "text": "16-bit integer", "quantisation_sinad_db": 101.5,
+         "quantisation_sinad_dithered_db": 96.8}
 
 
 def by_id(cs):
@@ -59,31 +60,31 @@ def dev(M, device=CLI):
 # ----------------------------------------------------------------------------- overall verdict
 
 @pytest.mark.parametrize("worst, verdict", [
-    (140.0, "transparent"), (120.0, "transparent"), (119.99, "inaudible"),
-    (87.0, "inaudible"), (86.99, "audible-risk"), (40.0, "audible-risk")])
+    (140.0, "margin-120"), (120.0, "margin-120"), (119.99, "margin-87"),
+    (87.0, "margin-87"), (86.99, "margin-low"), (40.0, "margin-low")])
 def test_overall_tiers_and_boundaries(worst, verdict):
     c = dev(metrics(sinad=worst, dr=150, smpte=-150, ccif=-150))["overall"]
     assert c["verdict"] == verdict
-    assert c["text"].startswith(cn.VERDICTS[verdict][0])
-    assert "tone_0dbsacd.sinad_db" in c["metrics"]
+    assert c["verdict"] == verdict and "tone_0dbsacd.sinad_db" in c["metrics"]
+    assert "not a listening test" in c["text"]
 
 
 def test_overall_names_the_weakest_figure_and_rounds_down():
     c = dev(metrics(sinad=130, dr=131, smpte=-125, ccif=-119.6))["overall"]
-    assert c["verdict"] == "inaudible"
+    assert c["verdict"] == "margin-87"
     assert "at least 119 dB" in c["text"] and "19 kHz with 20 kHz" in c["text"]  # 119.6 is never shown as 120
 
 
 def test_overall_says_at_least_when_the_weakest_figure_is_at_the_floor():
     c = dev(metrics(sinad=143.0, dr=150, smpte=-150, ccif=-150))["overall"]
-    assert c["verdict"] == "transparent" and "at least this good" in c["text"]
-    assert "at least this good" not in dev(metrics(sinad=130, dr=150, smpte=-150, ccif=-150))["overall"]["text"]
+    assert c["verdict"] == "margin-120" and "the tool cannot show more" in c["text"]
+    assert "the tool cannot show more" not in dev(metrics(sinad=130, dr=150, smpte=-150, ccif=-150))["overall"]["text"]
 
 
 def test_unvalidated_figures_never_reach_a_verdict():
     """Peak-level SINAD, noise, multitone, the J-Test and the stopband are poor here, and must be ignored."""
     cs = dev(metrics(sinad=130, dr=130, smpte=-130, ccif=-130))
-    assert cs["overall"]["verdict"] == "transparent"
+    assert cs["overall"]["verdict"] == "margin-120"
     used = {m for c in cs.values() if c["id"] != "pending" for m in c["metrics"]}
     for bad in ("tone_peak", "noise", "multitone", "jtest", "filter_summary", "impulse", "overload_recovery", "polarity"):
         assert not any(m.split(".")[0] == bad for m in used), bad
@@ -95,10 +96,10 @@ def test_unvalidated_figures_never_reach_a_verdict():
 def test_noise_counts_from_analysis_version_2():
     M = metrics(sinad=130, dr=130, smpte=-130, ccif=-130, analysis_version=2)
     c = dev(M)["overall"]
-    assert c["verdict"] == "audible-risk" and "background noise" in c["text"]  # -60 dBFS is 53 dB below the reference
-    assert "only 53 dB" in c["text"]
+    assert c["verdict"] == "margin-low" and "background noise" in c["text"].lower()  # -60 dBFS is 53 dB below the reference
+    assert "is 53 dB below" in c["text"]
     M["noise"]["a_weighted_dbfs"] = -140.0
-    assert dev(M)["overall"]["verdict"] == "transparent"
+    assert dev(M)["overall"]["verdict"] == "margin-120"
 
 
 def test_no_overall_without_a_validated_figure():
@@ -134,7 +135,7 @@ def test_limits_counts_figures():
 
 @pytest.mark.parametrize("ripple, start, verdict", [
     (0.1, "Flat response", "fact"), (0.11, "Nearly flat response", "fact"),
-    (0.5, "Nearly flat response", "fact"), (0.51, "Uneven response", "may-matter")])
+    (0.5, "Nearly flat response", "fact"), (0.51, "Uneven response", "notable")])
 def test_response_boundaries(ripple, start, verdict):
     M = metrics()
     M["frequency_response"]["ripple_pp_db"] = ripple
@@ -146,9 +147,9 @@ def test_response_boundaries(ripple, start, verdict):
 def test_level_gain_boundary(gain, unity):
     c = dev(metrics(gain_error_db=gain))["level"]
     assert ("unity gain within" in c["text"]) == unity
-    assert c["verdict"] == ("fact" if unity else "may-matter")
+    assert c["verdict"] == ("fact" if unity else "notable")
     if not unity:
-        assert "match levels" in c["text"] and ("louder" if gain > 0 else "quieter") in c["text"]
+        assert "match levels" in c["text"] and ("higher" if gain > 0 else "lower") in c["text"]
 
 
 def test_level_never_understates_a_difference():
@@ -162,7 +163,7 @@ def test_level_channel_mismatch():
     M = metrics()
     M["crosstalk"]["1000"]["gain_diff_db"] = 0.8
     c = dev(M)["level"]
-    assert "channels differ by 0.80 dB" in c["text"] and c["verdict"] == "may-matter"
+    assert "channels differ by 0.80 dB" in c["text"] and c["verdict"] == "notable"
 
 
 # ----------------------------------------------------------------------------- gated rules
@@ -170,14 +171,14 @@ def test_level_channel_mismatch():
 def test_filter_rule_when_enabled(monkeypatch):
     monkeypatch.setattr(cn, "UNREVIEWED_VALIDATED", True)
     c = dev(metrics())["filter"]
-    assert c["verdict"] == "unsettled" and c["text"].startswith("Linear phase filter, flat within 0.1 dB up to 20.9 kHz")
-    assert "0.67 ms before" in c["text"] and "no consensus" in c["text"] and "listen for yourself" in c["text"]
+    assert c["verdict"] == "no-threshold" and c["text"].startswith("Linear phase filter, flat within 0.1 dB up to 20.9 kHz")
+    assert "0.67 ms before" in c["text"] and "does not agree on a limit" in c["text"] and "no verdict" in c["text"]
     assert "rejects images" not in c["text"]  # the stopband needs analysis version 2
     M = metrics(analysis_version=2)
     M["impulse"] = {"filter_type": "minimum phase", "pre_ringing_ms": 0.0, "post_ringing_ms": 1.2}
     M["group_delay_us"] = {"at_1k": 0.0, "at_20k": 300.0}
     c = dev(M)["filter"]
-    assert c["text"].startswith("Minimum phase filter") and "0.30 ms" in c["text"] and "below the roughly 1 ms" in c["text"]
+    assert c["text"].startswith("Minimum phase filter") and "0.30 ms" in c["text"] and "below the 1 ms reference line" in c["text"]
     assert "rejects images by at least 140 dB (tones from 24.1 to 34.1 kHz)" in c["text"] and "polarity is correct" in dev(M)["level"]["text"]
     assert "filter" not in dev(metrics(klass="B"))  # for a modulator the filter rows describe the reference decoder
 
@@ -186,7 +187,7 @@ def test_ultrasonic_rule_from_analysis_version_2():
     M = metrics(klass="B", analysis_version=2, ultrasonic={"integrated_dbfs": {"20000-40000": -82.0, "40000-96000": -38.0,
                                                                               "96000-192000": -29.0}})
     c = dev(M)["ultrasonic"]
-    assert c["verdict"] == "unsettled" and "-38 dBFS between 20 and 96 kHz" in c["text"] and "no agreed limit" in c["text"]
+    assert c["verdict"] == "no-threshold" and "-38 dBFS between 20 and 96 kHz" in c["text"] and "no agreed limit" in c["text"]
     assert cn.ultrasonic_level(M)[0] == pytest.approx(-38.0, abs=0.01)
     del M["ultrasonic"]  # a class A device: whatever its output rate carries
     assert "-40 dBFS between 20 and 96 kHz" in dev(M)["ultrasonic"]["text"]
@@ -202,7 +203,7 @@ def test_stability_rule_when_enabled(monkeypatch):
     assert c["text"].startswith("Stable") and "0.18 dB" in c["text"] and "overload" not in c["text"]
     lv["+3.1 dB SACD (peak)"]["saturated"] = True
     c = dev(M)["stability"]
-    assert c["text"].startswith("Unstable") and c["verdict"] == "may-matter"
+    assert c["text"].startswith("Unstable") and c["verdict"] == "notable"
 
 
 def test_rates_rule():
@@ -218,37 +219,37 @@ def cmp(a, b, da=CLI, db=CLI):
 
 def test_comparison_indistinguishable():
     cs = cmp(metrics(), metrics(sinad=110.9))  # under 1 dB apart
-    assert cs["cmp-overall"]["verdict"] == "indistinguishable"
-    assert "A and B are indistinguishable by measurement" in cs["cmp-overall"]["text"]
-    assert cs["cmp-distortion"]["verdict"] == "indistinguishable"
+    assert cs["cmp-overall"]["verdict"] == "same"
+    assert "A and B measure the same in the audio band" in cs["cmp-overall"]["text"]
+    assert cs["cmp-distortion"]["verdict"] == "same"
 
 
 def test_comparison_same_when_both_are_at_the_floor():
     cs = cmp(metrics(sinad=146.9, dr=151), metrics(sinad=142.0, dr=147), )
-    assert cs["cmp-distortion"]["verdict"] == "indistinguishable" and cs["cmp-overall"]["verdict"] == "indistinguishable"
+    assert cs["cmp-distortion"]["verdict"] == "same" and cs["cmp-overall"]["verdict"] == "same"
 
 
 @pytest.mark.parametrize("worse, verdict, phrase", [
-    (125.0, "technical", "beyond the 120 dB range of hearing"),
-    (100.0, "technical", "quieter than the noise of a CD"),
-    (87.0, "technical", "not audible in normal listening"),
-    (86.9, "may-matter", "may be audible")])
+    (125.0, "difference-low", "both are at least 120 dB below it"),
+    (100.0, "difference-low", "both are below the 87 dB noise level of dithered 16-bit"),
+    (87.0, "difference-low", "both are below the 87 dB noise level of dithered 16-bit"),
+    (86.9, "notable", "less than the 87 dB noise level of dithered 16-bit")])
 def test_comparison_distortion_tiers(worse, verdict, phrase):
     cs = cmp(metrics(sinad=worse, dr=140, smpte=-140, ccif=-140), metrics(sinad=140, dr=140, smpte=-140, ccif=-140))
     c = cs["cmp-distortion"]
     assert c["verdict"] == verdict and phrase in c["text"]
     assert cs["cmp-overall"]["verdict"] == verdict
-    if verdict == "technical":
-        assert "B is" in c["text"] and "better than A" in c["text"] and "technical, not audible" in c["text"]
-        assert "difference in sound is not expected" in cs["cmp-overall"]["text"]
+    if verdict == "difference-low":
+        assert "B reads" in c["text"] and "a difference of" in c["text"] and "No repeatability interval" in c["text"]
+        assert "ranks nothing" in cs["cmp-overall"]["text"]
 
 
 def test_comparison_one_db_boundary():
-    assert cmp(metrics(sinad=110), metrics(sinad=110.99))["cmp-distortion"]["verdict"] == "indistinguishable"
-    assert cmp(metrics(sinad=110), metrics(sinad=111.0))["cmp-distortion"]["verdict"] == "technical"
+    assert cmp(metrics(sinad=110), metrics(sinad=110.99))["cmp-distortion"]["verdict"] == "same"
+    assert cmp(metrics(sinad=110), metrics(sinad=111.0))["cmp-distortion"]["verdict"] == "difference-low"
 
 
-@pytest.mark.parametrize("d, verdict", [(0.1, "indistinguishable"), (0.11, "technical"), (0.5, "technical"), (0.51, "may-matter")])
+@pytest.mark.parametrize("d, verdict", [(0.1, "same"), (0.11, "difference-low"), (0.5, "difference-low"), (0.51, "notable")])
 def test_comparison_response_boundaries(d, verdict):
     b = metrics()
     b["frequency_response"]["at_hz"]["20000"] = -0.02 - d
@@ -257,10 +258,10 @@ def test_comparison_response_boundaries(d, verdict):
 
 def test_comparison_level_difference_asks_for_level_matching():
     cs = cmp(metrics(), metrics(gain_error_db=-6.02))
-    assert cs["cmp-level"]["verdict"] == "may-matter" and "A plays 6.02 dB louder" in cs["cmp-level"]["text"]
-    assert "Match the levels" in cs["cmp-level"]["text"]
-    assert cs["cmp-overall"]["verdict"] == "may-matter" and "in level" in cs["cmp-overall"]["text"]
-    assert cmp(metrics(), metrics(gain_error_db=0.1))["cmp-level"]["verdict"] == "indistinguishable"
+    assert cs["cmp-level"]["verdict"] == "notable" and "A reads 6.02 dB higher in output level" in cs["cmp-level"]["text"]
+    assert "Match the levels before any listening comparison" in cs["cmp-level"]["text"]
+    assert cs["cmp-overall"]["verdict"] == "notable" and "in level" in cs["cmp-overall"]["text"]
+    assert cmp(metrics(), metrics(gain_error_db=0.1))["cmp-level"]["verdict"] == "same"
 
 
 def test_comparison_never_names_a_winner_and_lists_what_is_not_compared():
@@ -278,7 +279,7 @@ def test_comparison_of_different_classes_and_of_the_reference_chain():
     assert cs["floor"]["text"].startswith("Every device here is the built-in reference chain. This is the measurement floor")
     assert "agree" in cs["floor-agreement"]["text"] and cs["floor-agreement"]["verdict"] == "fact"
     cs = cmp(metrics(sinad=146.7), metrics(klass="B", sinad=140.0), REF, {"adapter": "reference", "class": "B"})
-    assert cs["floor-agreement"]["verdict"] == "may-matter"
+    assert cs["floor-agreement"]["verdict"] == "notable"
 
 
 def test_three_devices_are_compared_in_pairs():
@@ -382,7 +383,7 @@ def test_reports_lead_with_conclusions(tmp_path):
     out = json.loads((tmp_path / "d" / "results.json").read_text())
     ids = [c["id"] for c in out["conclusions"]]
     assert ids[0] == "overall" and "limits" in ids and 3 <= len(ids) <= 7
-    assert out["conclusions"][0]["text"] in md and out["conclusions"][0]["verdict"] == "transparent"
+    assert out["conclusions"][0]["text"] in md and out["conclusions"][0]["verdict"] == "margin-120"
     measured = [{"device": {"name": n.replace("-", " "), "class": k, "adapter": "reference"}} for n, k in
                 (("reference-decoder", "A"), ("reference-modulator", "B"))]
     write_comparison(tmp_path / "c", list(res.items()), {"profile": "full"})
@@ -405,10 +406,10 @@ def test_rules_do_not_change_their_input():
 def test_images_count_towards_the_overall_verdict():  # N12: "Transparent" ignored image rejection
     M = metrics(sinad=130, dr=130, smpte=-130, ccif=-130, analysis_version=2)
     M["noise"]["a_weighted_dbfs"] = -140.0
-    assert dev(M)["overall"]["verdict"] == "transparent" and "distortion, noise and images" in dev(M)["overall"]["text"]
+    assert dev(M)["overall"]["verdict"] == "margin-120" and "distortion, noise and images" in dev(M)["overall"]["text"]
     M["filter_summary"]["stopband_worst_db"] = -20.0
     c = dev(M)["overall"]
-    assert c["verdict"] == "audible-risk" and "image rejection" in c["text"] and "only 20 dB" in c["text"]
+    assert c["verdict"] == "margin-low" and "image rejection" in c["text"].lower() and "is 20 dB below" in c["text"]
 
 
 def test_stopband_sentence_names_the_tones_and_says_upper_bound():  # N2

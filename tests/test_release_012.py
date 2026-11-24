@@ -38,9 +38,10 @@ def test_extensible_valid_bits(tmp_path):
     assert of.wav_format(_wav(tmp_path / "a.wav", ext))["bits"] == 16
 
 
-def test_float_and_24_bit_are_never_limited(tmp_path):
+def test_float_and_32_bit_are_never_limited_and_24_bit_may_be(tmp_path):
     assert not of.limits_result(of.wav_format(_wav(tmp_path / "a.wav", _fmt(tag=3, bits=32))))
-    assert not of.limits_result(of.wav_format(_wav(tmp_path / "b.wav", _fmt(bits=24))))
+    assert not of.limits_result(of.wav_format(_wav(tmp_path / "c.wav", _fmt(bits=32))))
+    assert of.limits_result(of.wav_format(_wav(tmp_path / "b.wav", _fmt(bits=24))))
 
 
 def test_tone_shift_moves_the_limit():

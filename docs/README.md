@@ -4,7 +4,7 @@
 
 # Documentation
 
-The documentation index for dsd-measure, the reproducible measurement kit for DSD and PCM converters.
+The documentation index for dsd-measure, the deterministic measurement kit for DSD and PCM converters.
 
 ## Install
 
@@ -18,6 +18,7 @@ The documentation index for dsd-measure, the reproducible measurement kit for DS
 ## Reference
 
 - [Conclusions](conclusions.md): the rules, thresholds and sources behind each report's conclusions.
+- [Methodology limits](methodology-limits.md): what the tool can and cannot claim today, and what follows AES17.
 - [Measurement footprint](footprint.md): what is measured, why and how.
 - [Accuracy](accuracy.md): how the numbers are validated, with tolerances, cross-tool agreement and known limits.
 - [Reference tools](reference-tools.md): pinned black-box tools to compare against.

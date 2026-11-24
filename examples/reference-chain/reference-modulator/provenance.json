@@ -243,24 +243,30 @@
  "command": "dsd-measure run examples/suites/ref.toml --profile full -o examples/reference-chain",
  "timing_s": {
   "reference_floor": 0.0,
-  "levels": 43.9,
-  "thdn_freq": 7.3,
-  "frequency_response": 26.2,
-  "impulse": 3.5,
-  "noise": 20.3,
-  "imd": 3.5,
-  "multitone": 13.3,
+  "levels": 47.7,
+  "thdn_freq": 7.7,
+  "frequency_response": 27.6,
+  "impulse": 3.7,
+  "noise": 20.5,
+  "imd": 3.7,
+  "multitone": 13.6,
   "tone_15k": 1.8,
-  "jtest": 11.8,
+  "jtest": 12.3,
   "polarity": 0.2,
-  "stability": 85.6,
-  "crosstalk": 17.0,
-  "imd_sweep": 22.9,
+  "stability": 90.8,
+  "crosstalk": 17.5,
+  "imd_sweep": 23.4,
   "overload": 1.1,
-  "rate_table": 96.3
+  "rate_table": 97.5
  },
  "preflight": {
   "checked": "built-in"
+ },
+ "device_versions": {
+  "adapter": "reference",
+  "program": "dsd-measure built-in reference chain",
+  "version": "0.1.2",
+  "reference_chain": "2"
  },
  "profile_settings": {
   "seg_s": 2.5,
@@ -358,6 +364,12 @@
    "numpy": "2.5.5",
    "scipy": "1.18.1",
    "matplotlib": "3.11.2"
+  },
+  "device_versions": {
+   "adapter": "reference",
+   "program": "dsd-measure built-in reference chain",
+   "version": "0.1.2",
+   "reference_chain": "2"
   }
  }
 }

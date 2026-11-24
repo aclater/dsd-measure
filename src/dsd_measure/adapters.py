@@ -36,6 +36,41 @@ def sha256_file(path):
     return h.hexdigest()
 
 
+def program_identity(command, version_command=None, timeout=20):
+    """Who a program is, for the provenance: ``{"program", "path", "sha256", "version"}``.
+
+    ``command`` is the program (or a command line whose first word is the program). The path is resolved the way a run
+    resolves it and the file at that path is hashed; the version is the first line the program prints for
+    ``--version`` (then ``-version``), or for ``version_command`` when one is given. A field that cannot be found is None:
+    a missing version is recorded, never guessed.
+    """
+    try:
+        words = shlex.split(str(command))
+    except ValueError:
+        words = str(command).split()
+    exe = words[0] if words else ""
+    rec = {"program": exe, "path": None, "sha256": None, "version": None}
+    found = shutil.which(exe) if exe and "/" not in exe else (exe if exe and os.path.isfile(exe) else None)
+    if found:
+        real = os.path.realpath(found)
+        rec["path"] = real
+        try:
+            rec["sha256"] = sha256_file(real)
+        except OSError:
+            pass
+    tries = [shlex.split(version_command)] if version_command else ([[found or exe, "--version"], [found or exe, "-version"]] if exe else [])
+    for cmd in tries:
+        try:
+            r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout, text=True, errors="replace")
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        line = next((ln.strip() for ln in (r.stdout + "\n" + r.stderr).splitlines() if ln.strip()), "")
+        if r.returncode == 0 and line:
+            rec["version"] = line[:200]
+            break
+    return rec
+
+
 def sha256_array(a):
     return hashlib.sha256(np.ascontiguousarray(a).tobytes()).hexdigest()
 
@@ -140,7 +175,14 @@ class Adapter:
         raise NotImplementedError
 
     def tool_versions(self):
-        return {}
+        """Who the device is: its version and, for a program, the SHA-256 of its executable (recorded in the provenance).
+
+        A version the user declares with ``version = "..."`` in the suite file is kept beside what was found.
+        """
+        d = {"adapter": self.kind}
+        if self.opts.get("version"):
+            d["declared_version"] = str(self.opts["version"])
+        return d
 
     def output_format(self):
         """The narrowest PCM output format recorded in the provenance log (None if no file was read)."""
@@ -176,6 +218,11 @@ class Reference(Adapter):
 
     def output_format(self):
         return {"container": "internal", "kind": "float", "bits": 64, "rate": self.out_rate, "channels": 1}
+
+    def tool_versions(self):
+        from . import REFERENCE_CHAIN_VERSION, __version__
+        return {**super().tool_versions(), "program": "dsd-measure built-in reference chain", "version": __version__,
+                "reference_chain": REFERENCE_CHAIN_VERSION}
 
     def dsd_to_pcm(self, bits, rate):
         g = 10 ** (self.gain_db / 20)
@@ -263,8 +310,10 @@ class Cli(Adapter):
     kind = "cli"
 
     def __init__(self, name, command, klass="A", output_ext=None, input_ext="dsf", workdir=None,
-                 timeout=3600, shell=False, input_ext_fallback=None, **opts):
+                 timeout=3600, shell=False, input_ext_fallback=None, version_command=None, **opts):
         super().__init__(name, **opts)
+        #: a command that prints the tool's version, for a command that starts a wrapper script (``--version`` would not reach the tool)
+        self.version_command = version_command
         #: another file type to try in the pre-flight when the tool cannot read ``input_ext`` (see ``preflight``)
         self.input_ext_fallback = input_ext_fallback
         self.shell = bool(shell)
@@ -283,6 +332,9 @@ class Cli(Adapter):
         if self.klass == "A":
             d["input_ext"] = self.input_ext
         return d
+
+    def tool_versions(self):
+        return {**super().tool_versions(), **program_identity(self.command, self.version_command)}
 
     def close(self):
         self._work.close()
@@ -335,7 +387,9 @@ class ReftoolSox(Adapter):
     """SoX-DSD run as a black box through the pinned container wrapper (``tools/reftool.sh``).
 
     Class A: DSD to 32-bit float PCM at ``out_rate``. Class B: PCM to DSD with the ``sdm`` or
-    ``clans`` modulator.
+    ``clans`` modulator. The default modulator is ``sdm-8``, the highest order of the ``sdm`` family, which read lower noise than
+    ``clans-8`` in our checks (docs/accuracy.md: 140.8 dB against 119.5 dB on the same input) and in Archimago's 2022 notes it
+    is described as the lower-noise filter; ``clans-8`` and the per-rate ``auto`` choice are still available by name.
 
     Level convention. SoX-DSD maps PCM full scale (0 dBFS) to 50 % modulation, which is 0 dB SACD
     in this toolkit, so a -6.02 dBFS test tone reaches the modulator at 25 % and SoX writes its
@@ -357,7 +411,7 @@ class ReftoolSox(Adapter):
     kind = "sox-dsd"
     TRELLIS = {"32x32": ["-t", "32", "-n", "32"], "default": []}
 
-    def __init__(self, name, reftool, klass="A", out_rate=352800, modulator="clans-8", workdir=None,
+    def __init__(self, name, reftool, klass="A", out_rate=352800, modulator="sdm-8", workdir=None,
                  gain_db=None, input_gain_db=0.0, trellis="32x32", timeout=3600, **opts):
         input_gain_db = float(input_gain_db) if klass == "B" else 0.0  # input gain is a class B option
         if gain_db is None:
@@ -374,7 +428,29 @@ class ReftoolSox(Adapter):
     def describe(self):
         d = super().describe()
         d["detail"] = {"reftool": "container wrapper", "modulator": self.modulator, "out_rate": self.out_rate,
-                       "input_gain_db": self.input_gain_db, "trellis": self.trellis}
+                       "input_gain_db": self.input_gain_db, "trellis": self.trellis,
+                       "level_mapping": self.level_mapping()}
+        return d
+
+    def level_mapping(self):
+        """What the modulator's input level is, in words (class B only): the test tone enters at 25 % or 50 % modulation."""
+        if self.klass != "B":
+            return "not applicable (class A)"
+        pct = 25.0 * 10 ** (self.input_gain_db / 20)
+        return (f"the 0 dB SACD test tone (-6.02 dBFS) enters the modulator at {pct:.0f} % modulation "
+                f"(SoX-DSD maps PCM full scale to 50 %; input gain {self.input_gain_db:g} dB); the output is raised by {self.gain_db:g} dB")
+
+    def tool_versions(self):
+        import json
+        d = {**super().tool_versions(), "program": "SoX-DSD in the pinned container", "wrapper": program_identity(self.reftool, version_command="true")}
+        try:
+            r = subprocess.run([self.reftool, "versions"], stdin=subprocess.DEVNULL, capture_output=True, timeout=300, text=True)
+            info = json.loads(r.stdout)["sox-dsd"] if r.returncode == 0 else None
+        except (OSError, subprocess.TimeoutExpired, ValueError, KeyError):
+            info = None
+        d.update(info or {"version": None})
+        if self.klass == "B":
+            d.update(modulator=self.modulator, level_mapping=self.level_mapping())
         return d
 
     def close(self):
@@ -429,6 +505,10 @@ class Import(Adapter):
         self.dir = Path(directory)
         self.klass = klass
         self.current = None  # set by the runner before each call
+
+    def tool_versions(self):
+        return {**super().tool_versions(), "program": "produced elsewhere", "directory": str(self.dir),
+                "version": None, "note": "dsd-measure cannot know the tool or version behind these files; each file's SHA-256 is in the provenance"}
 
     def dsd_to_pcm(self, bits, rate):
         p = self.dir / f"{self.current}.wav"

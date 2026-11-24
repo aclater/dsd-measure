@@ -1,11 +1,11 @@
 {
- "headline": "Result: this is the measurement floor of the built-in reference chain (SINAD 147.0 dB, the best figure the tool can show), not a result for a product.",
+ "headline": "Result: this is the measurement floor of the built-in reference chain (SINAD 147.0 dB, the highest figure the tool can show), not a result for a product.",
  "conclusions": [
   {
    "id": "floor",
    "verdict": "floor",
    "label": "Measurement floor",
-   "text": "This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool: it is at least that good.",
+   "text": "This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool.",
    "metrics": [
     "reference_floor.chain.dr_a_db",
     "reference_floor.chain.sinad_db",
@@ -47,7 +47,7 @@
    "id": "response",
    "verdict": "fact",
    "label": "Finding",
-   "text": "Flat response: the level varies by less than 0.01 dB from 20 Hz to 20 kHz and is down by less than 0.01 dB at 20 kHz, too little to change the tone.",
+   "text": "Flat response: the level varies by less than 0.01 dB from 20 Hz to 20 kHz (read at the tones measured) and is down by less than 0.01 dB at 20 kHz.",
    "metrics": [
     "frequency_response.at_hz.20000",
     "frequency_response.ripple_pp_db"
@@ -72,7 +72,7 @@
    "id": "stopband",
    "verdict": "fact",
    "label": "Finding",
-   "text": "Image rejection: tones from 24.1 to 34.1 kHz come back as images at least 156 dB below the tone. The figure includes the device's own noise, so it is an upper bound on the images and the filter is at least this good.",
+   "text": "Image rejection: tones from 24.1 to 34.1 kHz come back as images at least 156 dB below the tone. The figure includes the device's own noise, so it is an upper bound on the images.",
    "metrics": [
     "filter_summary.stopband_tested_hz",
     "filter_summary.stopband_worst_db"
@@ -193,6 +193,12 @@
    "thresholds": []
   }
  ],
+ "device_versions": {
+  "adapter": "reference",
+  "program": "dsd-measure built-in reference chain",
+  "version": "0.1.2",
+  "reference_chain": "2"
+ },
  "metrics": {
   "analysis_version": 2,
   "device_class": "A",

@@ -1,3 +1,6 @@
+# The two devices below write different output rates (176.4 and 352.8 kHz), so a report of this suite marks the
+# comparison "not like-for-like" and does not compare distortion and noise. Give both the same rate (and, for an
+# integer output, the same word length) for a comparison.
 [suite]
 name = "decoders"
 profile = "full"

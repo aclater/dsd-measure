@@ -41,7 +41,7 @@ Device 1 of 2: ffmpeg (class A, DSD to PCM converter, adapter ffmpeg)
 [12/17] -> ffmpeg: stability (long loud tones, 0 dB SACD, +3.1 dB SACD) ... skipped: class B only
 
 Finished in 3.6 min. Report: report/comparison/index.html
-Result: in the audio band, ffmpeg and reference decoder are indistinguishable by measurement. Not compared in this version: filter and ringing.
+Result: in the audio band, ffmpeg and reference decoder measure the same within the tolerance used here. Not compared in this version: filter and ringing.
 ```
 
 After the report path, one line per device gives its SINAD, its dynamic range and whether it is at the reference floor. The last line, `Result:`, is the same sentence that opens the report; it is the answer in one line. The time left is an estimate from the planned times of the tests still to run, scaled by how long the first tests took.
@@ -74,7 +74,7 @@ Before anything is measured, each device converts one 0.5 s test signal. If the 
 
 ### Output word length
 
-A tool that writes 16-bit PCM adds rounding noise of about -98 dBFS, which limits SINAD to about 101.5 dB at 352.8 kHz whatever its decoder does. The same decoder reads 146.8 dB when it writes 32-bit float. So the report records the word length of every file the tool wrote ("Output word length" in the table and the "What was measured" block). When the output is integer of fewer than 24 bits and the measured SINAD is within 6 dB of what that word length allows, the verdict is "Not judged: output format" and the headline says so, instead of calling the format a property of the decoder. A comparison does not rank the distortion and noise of such a device. The fix is to ask the tool for floating-point or 32-bit output (for ffmpeg, `-c:a pcm_f32le` before the output file). 24-bit output is recorded but not called a limit: its rounding noise sits at the reference chain's own floor.
+A tool that writes integer PCM adds rounding noise whatever its decoder does. At 352.8 kHz, 16-bit output limits SINAD to about 101.5 dB with plain rounding or 96.8 dB with TPDF dither, and 24-bit output to about 149.7 dB or 144.9 dB; the same decoder reads 146.8 dB when it writes 32-bit float. So the report records the word length, kind and rate of every file the tool wrote ("Output format" in the table and the "What was measured" block) and the two bounds for an integer file. Whether a file was dithered is not detected. When the output is integer of fewer than 32 bits and the measured SINAD lies between 6 dB under the dithered bound and 6 dB over the plain bound, the verdict is "Not judged: output format" and the headline says so, instead of treating the format as a property of the decoder. A comparison does not compare the distortion and noise of such a device. The fix is to ask the tool for floating-point or 32-bit output (for ffmpeg, `-c:a pcm_f32le` before the output file).
 
 ## Measure a converter
 
@@ -157,7 +157,7 @@ dsd-measure null --source track.dsf --device reference@352800 --device reference
 dsd-measure null --source track.dsf --device reference@352800 --device 'dsd2pcm=dsd2pcm {input} {output} --rate 176400' --device 'ffmpeg=dff: ffmpeg -v error -y -i {input} -c:a pcm_f32le {output}' --diff-wav --out null-report
 ```
 
-The report starts with one line of verdict, `Result:`, such as "Difference -161 dB relative to the music (null depth 161 dB): far below audibility", then the numbers, three plots and a "What was compared" block with the source file hash, each device's command, rates and the alignment used.
+The report starts with one line, `Result:`, such as "Difference -161 dB relative to the music (null depth 161 dB): depth band 100 dB or more", then the numbers, three plots and a "What was compared" block with the source file hash, each device's command, rates and the alignment used.
 
 What happens to the outputs before they are subtracted:
 
@@ -170,19 +170,19 @@ What happens to the outputs before they are subtracted:
 
 Memory use does not depend on the length of the track: a full album track is read, decoded and compared in blocks of about two million samples.
 
-Reading the verdict:
+Reading the depth band:
 
-| Null depth | Verdict |
+| Null depth | Depth band |
 |---|---|
 | identical | The two outputs match to floating-point rounding |
-| 100 dB or more | Far below audibility |
-| 80 to 100 dB | Well below audibility |
-| 60 to 80 dB | Below audibility in normal listening |
-| 40 to 60 dB | A shallow null: a difference this size can be heard on revealing music, but a null test cannot say whether it can; listen blind |
-| 20 to 40 dB | A deep difference, usually different filters or phase (see the bands); a null test cannot say whether it is audible; listen blind (ABX) |
-| under 20 dB | A large difference: check the alignment and the level match first |
+| 100 dB or more | Depth band 100 dB or more |
+| 80 to 100 dB | Depth band 80 to 100 dB |
+| 60 to 80 dB | Depth band 60 to 80 dB |
+| 40 to 60 dB | Depth band 40 to 60 dB |
+| 20 to 40 dB | Usually different filters or phase (see the bands) |
+| under 20 dB | Check the alignment and the level match first |
 
-These tiers are rules of thumb, not a psychoacoustic model; the report explains them and links its sources: [ISO 226:2023](https://www.iso.org/standard/83117.html) for the threshold of hearing in quiet, [Zwicker and Fastl](https://link.springer.com/book/10.1007/978-3-662-09562-1) for masking, [Clark 1982](https://aes2.org/publications/elibrary-page/?id=3839) for matching levels before a blind test, [Meyer and Moran 2007](https://www.aes.org/e-lib/browse.cfm?elib=14195) for a blind test of a 16-bit loop and [ITU-R BS.1116](https://www.itu.int/rec/R-REC-BS.1116) for the method. A small difference is not an error: two correct decoders with different filters differ, mostly above 20 kHz.
+These bands are plain ranges of depth. They say how far below the music the difference is and make no statement about hearing, which was not tested, for any band: a null test cannot say whether a difference is heard, and the only test of that is a blind listening test (ABX). The report explains this and lists sources for a reader who wants them: [ISO 226:2023](https://www.iso.org/standard/83117.html) for the threshold of hearing in quiet, [Zwicker and Fastl](https://link.springer.com/book/10.1007/978-3-662-09562-1) for masking (not checked by the authors), [Clark 1982](https://aes2.org/publications/elibrary-page/?id=3839) for matching levels before a blind test, [Meyer and Moran 2007](https://www.aes.org/e-lib/browse.cfm?elib=14195) for a blind test of a 16-bit loop and [ITU-R BS.1116](https://www.itu.int/rec/R-REC-BS.1116) for the method (not checked by the authors). A difference is not an error: two correct decoders with different filters differ, mostly above 20 kHz.
 
 To listen to the difference, add `--diff-wav`. The WAV is 32-bit float at the common rate and at its true level, which is usually very quiet but includes any ultrasonic content, so start with the volume at zero. `--diff-gain-db 40` raises it by 40 dB for the WAV only; the numbers never change.
 
@@ -190,15 +190,15 @@ A suite file can hold the same settings in a `[null]` table next to the `[[devic
 
 ## Read the report
 
-Open `index.html`. It starts with one sentence, `Result:`, which says whether the device was judged and what its weakest figure is (the same sentence ends the terminal output and is in `index.md` and `results.json`), then the conclusions (see [below](#reading-the-conclusions)) and what was measured. The row of big numbers (SINAD, dynamic range, noise, filter, ultrasonic noise) and the table under it are the whole result in one screen. Below it are seven key plots, each with one sentence saying what the numbers mean. "Notes" (when present) lists caveats that apply to the numbers, such as which filter a class B row really describes. "More plots" holds the detail, "Not run" lists what was skipped and why, and "Provenance" lists tool versions and file hashes. The same numbers are in `results.csv` and `results.json`, and each plot is a separate SVG in `plots/`.
+Open `index.html`. It starts with one sentence, `Result:`, which says whether the device was judged and what its weakest figure measures (the same sentence ends the terminal output and is in `index.md` and `results.json`), then the conclusions (see [below](#reading-the-conclusions)) and what was measured. The row of big numbers (SINAD, dynamic range, noise, filter, ultrasonic noise) and the table under it are the whole result in one screen. Below it are seven key plots, each with one sentence saying what the numbers mean. "Notes" (when present) lists caveats that apply to the numbers, such as which filter a class B row really describes. "More plots" holds the detail, "Not run" lists what was skipped and why, and "Provenance" lists tool versions and file hashes. The same numbers are in `results.csv` and `results.json`, and each plot is a separate SVG in `plots/`.
 
 Some terms:
 
 - **Reference floor**: what the measurement itself cannot see below. A figure marked "at the reference floor" is within 6 dB of it and may be limited by the tool, not the device. At DSD64 the floor is about -147 dB THD+N; use `dsd_rate = 5644800` for class A devices that accept DSD128 and the floor drops to about -176 dB.
-- **SINAD** and **THD+N**: how far the unwanted sound is below a 1 kHz tone. 100 dB or more is excellent.
-- **Dynamic range**: the noise floor measured with a quiet -60 dB tone, the usual "DR" figure.
-- **Multitone distortion-free range**: how clean the output stays with 32 tones at once.
-- **Ultrasonic noise** (modulators): the shaped noise above 20 kHz, which is normal for DSD but should be low and steady.
+- **SINAD** and **THD+N**: how far everything that is not the 1 kHz tone is below it, in dB.
+- **Dynamic range**: the noise floor measured with a quiet -60 dB tone, a -60 dB-method figure referred to 0 dB SACD, not the AES17 dynamic range.
+- **Multitone distortion-free range**: the range between the tones and the highest residual with 32 tones at once.
+- **Ultrasonic noise** (modulators): the shaped noise above 20 kHz; the level is reported, with no verdict.
 
 ## Reading the conclusions
 
@@ -206,18 +206,18 @@ Every report starts with a "Conclusions" block of a few sentences. Each sentence
 
 A device report says, in this order:
 
-- **The overall verdict.** It takes the weakest of SINAD, dynamic range and the two intermodulation tests, in dB below a reference-level tone, and names it. "Transparent" means at least 120 dB down, beyond the range of hearing. "Inaudible in normal listening" means at least 87 dB down, quieter than the noise of a CD. "Audible risk" means less than that: it may or may not be heard, so listen for yourself.
-- **Response and level.** Whether the response is flat (within 0.1 dB), whether gain is unity and the channels match. A level difference matters when you compare two devices by ear: match levels first.
-- **At the reference floor.** Which figures are within 6 dB of the tool's own limit. Those show the tool's limit; the device is at least that good.
+- **The overall figure.** It takes the weakest of SINAD, dynamic range and the two intermodulation tests, in dB below a reference-level tone, and names it. "At least 120 dB down" and "At least 87 dB down" are reference lines from the literature (87 dB is the noise level of dithered 16-bit on this scale, 120 dB a dynamic range that Fielder cites for the most demanding cases, a source not checked against the paper); "Under 87 dB down" is below the lower one. None of the three is a statement about hearing: see [methodology limits](methodology-limits.md).
+- **Response and level.** Whether the response is flat (within 0.1 dB), whether gain is unity and the channels match. Match levels before any listening comparison of two devices.
+- **At the reference floor.** Which figures are within 6 dB of the tool's own limit. Those show the tool's limit; the tool cannot show more.
 - **Image rejection, ultrasonic noise and overload recovery.** The worst image of the alias tones (converters), the noise between 20 and 96 kHz (no verdict: there is no agreed limit) and how long the output takes to settle after a loud burst.
-- **Not judged: output format.** Shown instead of a verdict when the file the tool wrote (16-bit or shorter integer) limits the figures; see [output word length](#output-word-length).
+- **Not judged: output format.** Shown instead of a verdict when the file the tool wrote (integer, any word length below 32 bits) may limit the figures; see [output word length](#output-word-length).
 - **Not concluded.** Figures that are measured but not validated, or not used by any rule, in this version, such as the filter and ringing, polarity, modulator stability, multitone, the J-Test and the peak-level SINAD (which is shown with the floor of the reference modulator at that level). They are in the table for reference and never reach a verdict.
 
 The report for the built-in reference chain has no verdict. It says that its figures are the measurement floor: a converter within 6 dB of them cannot be ranked by this tool.
 
-A comparison report says whether the devices are "indistinguishable by measurement" in the audio band (every difference is below the floor or the thresholds), whether they "measure differently, but no difference reaches the audibility thresholds" (a technical difference), or where they differ in a way that may matter. It never names a winner. A converter and a modulator in one suite are not compared, because they do different jobs.
+A comparison report says whether the devices "measure the same" in the audio band within the tolerance used (every difference is below the floor or 1 dB, a convention: no repeatability interval has been measured yet), whether they "measure differently, but no difference reaches the thresholds", or where they differ by more than the tolerance. It marks no cell as better, ranks nothing and names no winner. Devices measured at different output rates or formats are marked "not like-for-like" and their distortion and noise are not compared. A converter and a modulator in one suite are not compared, because they do different jobs.
 
-Where research does not agree, for example on whether the ringing of a linear-phase filter is audible, the sentence says so and gives no verdict. The conclusions cover the synthetic signals and the software path measured; they are not a listening test.
+Where the literature does not agree on a threshold, for example for the ringing of a linear-phase filter, the sentence says so and gives no verdict. The conclusions cover the synthetic signals and the software path measured; they are not a listening test, and [methodology limits](methodology-limits.md) lists what they cannot claim.
 
 ## Stereo, rates and the other tests
 

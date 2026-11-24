@@ -4,12 +4,17 @@
   "reference-modulator"
  ],
  "headline": "Result: every device here is the built-in reference chain, so this is the measurement floor of the tool, not a result for a product.",
+ "like_for_like": true,
+ "conditions": {
+  "reference-decoder": "DSD64 in, floating-point out at 44.1 kHz",
+  "reference-modulator": "DSD64 out"
+ },
  "conclusions": [
   {
    "id": "floor",
    "verdict": "floor",
    "label": "Measurement floor",
-   "text": "Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool: it is at least that good.",
+   "text": "Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool.",
    "metrics": [
     "reference_floor.chain.dr_a_db",
     "reference_floor.chain.sinad_db",

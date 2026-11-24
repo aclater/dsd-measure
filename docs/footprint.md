@@ -2,7 +2,7 @@
 
 # Measurement footprint
 
-This page is the shared standard for what dsd-measure measures, how each result is computed and how it is shown. It covers DSD to PCM converters and PCM to DSD modulators, and it is written so that anyone can repeat a measurement and get the same numbers.
+This page is the shared standard for what dsd-measure measures, how each result is computed and how it is shown. It covers DSD to PCM converters and PCM to DSD modulators, and it is written so that a measurement can be repeated: a run is deterministic on the same package versions, and equality across platforms is not verified.
 
 ## Contents
 
@@ -22,37 +22,37 @@ This page is the shared standard for what dsd-measure measures, how each result 
 
 ## What is measured and why
 
-Class A is a DSD to PCM converter, class B a PCM to DSD modulator. "Run" says what version 0.1.1 does; the method for each is in [The measurements](#the-measurements).
+Class A is a DSD to PCM converter, class B a PCM to DSD modulator. "Run" says what version 0.1.2 does; the method for each is in [The measurements](#the-measurements).
 
-| # | Measurement | What it tells you | Plain-language reason | Run in 0.1.1 |
+| # | Measurement | What it tells you | What it shows | Run in 0.1.2 |
 |---|---|---|---|---|
-| 1 | Summary dashboard | SINAD, THD, noise, DR, IMD, ripple, gain, polarity | One screen to compare devices | yes |
-| 2 | Frequency response, ripple | Gain across 20 Hz to 20 kHz | Dull or bright treble | yes (stepped tones, reduced) |
-| 3 | Filter magnitude, stopband, aliasing | Roll-off above the audio band | Ultrasonic leakage and fold-back | magnitude yes (class A only); alias tones yes (class A) |
-| 4 | Impulse and step response | Ringing before and after, overshoot | Pre-echo, the filter fingerprint | yes (class A only: for a modulator they describe the reference decoder and are not shown) |
-| 5 | Group delay and phase | Arrival time against frequency | Timing of treble against bass | yes (delay, class A only) |
-| 6 | Noise floor, in-band and ultrasonic | Hiss and shaped noise | Low-level detail, amplifier safety | yes |
-| 7 | Dynamic range, -60 dB method | How quiet it is | The headline "DR" figure | yes |
-| 8 | THD and THD+N at several levels | Distortion at 1 kHz | The classic review numbers | yes |
-| 9 | THD+N against level and frequency | Quiet and loud, bass and treble | Where it behaves best | yes |
-| 10 | IMD SMPTE and CCIF | Distortion between tones | Harsh, non-harmonic distortion | yes: single points and the sweep |
-| 11 | 32-tone multitone | Distortion-free range with music-like load | Real-world stress | yes |
-| 12 | J-Test | Jitter-like sidebands (arithmetic only here) | Truncation and dither problems | yes |
-| 13 | Linearity to -120 dB | Level accuracy for quiet signals | Low-level detail | yes |
-| 14 | Crosstalk and channel match | Stereo separation and balance | Imaging | yes (stereo path) |
-| 15 | Polarity and DC | Inversion, offset | Speaker safety, absolute polarity | yes |
-| 16 | Gain accuracy | Level error | Fair A/B comparisons | yes |
-| 17 | 15 kHz tone at -12 dBFS | Spurs and images at high frequency | Filter and noise-shaper behaviour | yes |
-| 18 | Stability and overload (class B) | 60 s tones to the peak level | Never saturates at loud peaks | yes, with overload recovery |
+| 1 | Summary dashboard | SINAD, THD, noise, DR, IMD, ripple, gain, polarity | All headline figures on one screen | yes |
+| 2 | Frequency response, ripple | Gain across 20 Hz to 20 kHz | Response tilt at the band edges | yes (stepped tones, reduced) |
+| 3 | Filter magnitude, stopband, aliasing | Roll-off above the audio band | Leakage above 20 kHz and fold-back | magnitude yes (class A only); alias tones yes (class A) |
+| 4 | Impulse and step response | Ringing before and after, overshoot | Ringing before the main pulse | yes (class A only: for a modulator they describe the reference decoder and are not shown) |
+| 5 | Group delay and phase | Arrival time against frequency | Delay of high against low frequencies | yes (delay, class A only) |
+| 6 | Noise floor, in-band and ultrasonic | Hiss and shaped noise | Noise level in band and above 20 kHz | yes |
+| 7 | Dynamic range, -60 dB method | How quiet it is | Noise against a -60 dB tone | yes |
+| 8 | THD and THD+N at several levels | Distortion at 1 kHz | Distortion at the reference level | yes |
+| 9 | THD+N against level and frequency | Quiet and loud, bass and treble | Level and frequency dependence | yes |
+| 10 | IMD SMPTE and CCIF | Distortion between tones | Non-harmonic products | yes: single points and the sweep |
+| 11 | 32-tone multitone | Distortion-free range with 32 tones at once | Many tones at once | yes |
+| 12 | J-Test | Jitter-like sidebands (arithmetic only here) | Truncation and dither products | yes |
+| 13 | Linearity to -120 dB | Level accuracy for quiet signals | Level error for quiet signals | yes |
+| 14 | Crosstalk and channel match | Stereo separation and balance | Channel separation and match | yes (stereo path) |
+| 15 | Polarity and DC | Inversion, offset | Inversion and DC offset | yes |
+| 16 | Gain accuracy | Level error | Level error | yes |
+| 17 | 15 kHz tone at -12 dBFS | Spurs and images at high frequency | Spurs and images from filter and noise shaper | yes |
+| 18 | Stability and overload (class B) | 60 s tones to the peak level | Saturation at loud peaks | yes, with overload recovery |
 | 19 | Ultrasonic peak per rate (class B) | Where the shaped noise peaks | DSD64 against higher rates | yes: DSD64 plus the rate table (DSD128, DSD256) |
 
 ## Principles
 
-1. **Measure what readers look at.** The set follows what audiophile reviewers publish, so a result can be compared with a review.
+1. **Measure what readers look at.** The set follows what audiophile reviewers publish, so the figures resemble what reviews show. They are file-domain figures and are not comparable with a review's analogue readings.
 2. **One definition per metric.** Signal, level, FFT size, window, bandwidth and weighting are fixed here. A device may only differ where a test says so.
 3. **Raw samples, never interpolated.** Impulse and step plots show the actual output samples as stems or steps.
 4. **A plain-language line under every plot.** Non-engineers get a "what this means" sentence. Engineers get the numbers in CSV and JSON.
-5. **Same chain for every device.** The reference decoder and the analysers are shared, so differences come from the device under test and not from the analysis.
+5. **Same chain for every device.** The reference decoder and the analysers are shared, so every device sees the same analysis; the stimulus is one modulator's.
 6. **Be honest about the limits.** The measurement floor of the reference chain is reported next to every result, and a result within 6 dB of that floor is flagged as "at the floor".
 7. **Every comparison states each device's output rate and level convention.** A decoder's in-band floor depends on the rate it writes (a filter that is deep at 352.8 kHz can fold more of the ultrasonic noise into the audio band at 88.2 kHz: one widely used decoder reads about 147 dB SINAD at 352.8 kHz and about 126 dB at 88.2 kHz on the same bits), and tools map PCM full scale to different DSD modulation depths (SoX-DSD maps 0 dBFS to 50 percent, so a -6 dBFS tone reaches its modulator at 25 percent). A table that compares devices must therefore list, per device, the output rate, the input and output gains applied and the modulator settings, and must not compare rows made at different rates or levels without saying so. The report's device header and `provenance.json` carry these fields.
 
@@ -68,7 +68,7 @@ The set is a synthesis of public practice; it copies no private test and no text
 | [Audio Science Review (ASR)](https://www.audiosciencereview.com/) | The SINAD dashboard, the 32-tone multitone, the filter and impulse plots, THD+N against level, the J-Test |
 | [Stereophile (John Atkinson)](https://www.stereophile.com/content/measurements-maps-precision) | Impulse and step response, frequency response, spectra at 16 and 24 bit, the J-Test, linearity error, the 15 kHz composite |
 | [RMAA](http://audio.rightmark.org/) | Noise level dB(A), dynamic range, THD, IMD (SMPTE), crosstalk, frequency response |
-| AES17 | The 20 kHz measurement bandwidth, A-weighting, the notch method for THD+N, the -60 dB dynamic range method |
+| AES17 | The 20 kHz measurement bandwidth and the dBFS reference (a full-scale sine). Not followed: the 997 Hz tone, the CCIR-RMS weighting, the notch width and the dither; see [methodology limits](methodology-limits.md#what-follows-aes17) |
 
 The [dsd2pcm quality tools](https://github.com/aclater/dsd2pcm-rs) (tools/quality, MIT OR Apache-2.0) are a sister project that measures DSD to PCM decoders in the same spirit. From them we took the SoX-DSD filter per DSD rate (CLANS-8, 7 and 6, from Archimago's 2022 tests), the Legendre-zero modulator design that our reference modulator extends to higher order, and the observation that a wide decoder filter folds 300 to 400 kHz DSD noise into the audio band. Not yet taken: their separate low-pass step for comparing a 30 kHz decoder filter with a wide decode.
 
@@ -113,7 +113,7 @@ These apply to every FFT-based result unless a row says otherwise.
 | Window | 7-term Blackman-Harris (main lobe 7 bins each side, sidelobes below -180 dB) for spectra; rectangular only for the multitone, where every tone is on a bin |
 | FFT length | 2^18 points (262144) at 352.8 kHz for tone spectra; the same bin width (1.3458 Hz) at every other output rate. Noise: 2^20 points when the record is long enough (full profile), otherwise 2^18; J-Test 2^18; ultrasonic noise 2^18 at 705.6 kHz or 1411.2 kHz; stated per test |
 | Averages | Noise: up to 8 half-overlapped segments (power-averaged); a record too short for 8 gets fewer and the result carries the number used (`averages`). J-Test: 3. Coherent tones: 1. Multitone: one per whole period (3 in the quick profile, 8 in the full profile) |
-| Measurement bandwidth | 20 Hz to 20 kHz (AES17), with 22.05 kHz and 40 kHz variants for wide-band noise |
+| Measurement bandwidth | 20 Hz to 20 kHz (the AES17 band edge), with 22.05 kHz and 40 kHz variants for wide-band noise |
 | Weighting | Unweighted and A-weighted (IEC 61672 curve) both reported where the metric is a noise figure |
 | Spectrum plots | dBFS. No smoothing is applied to metrics. To keep SVG files small, a plot may reduce the raw bins to about 2000 points: power-averaged in 1/48-octave buckets for noise plots, peak-held for tone spectra |
 | Channels | Mono. Every test feeds and analyses one channel, except crosstalk and channel match, which use a stereo pair. A device's second channel is not measured separately; use the stereo tests to see a difference between channels |
@@ -122,7 +122,7 @@ These apply to every FFT-based result unless a row says otherwise.
 
 ## The measurements
 
-Each entry gives the signal, the analysis, the metric, the plot and why a listener cares. Class applies to A and B unless noted. "Coherent 1 kHz" means the tone frequency is moved to the nearest bin-centred frequency of the FFT, which rounds to within 1 Hz of 1 kHz.
+Each entry gives the signal, the analysis, the metric, the plot and why it is measured. Class applies to A and B unless noted. "Coherent 1 kHz" means the tone frequency is moved to the nearest bin-centred frequency of the FFT, which rounds to within 1 Hz of 1 kHz.
 
 ### 1. Summary dashboard
 
@@ -137,7 +137,7 @@ Each entry gives the signal, the analysis, the metric, the plot and why a listen
 - **Analysis:** deconvolve the sweep (inverse-filter method) to get the impulse response, then FFT with a 2^20 window. The stepped tones give an independent magnitude at each point; the two agree within 0.01 dB for a linear device.
 - **Metric:** gain relative to 1 kHz, dB, at 20 Hz, 1, 10, 15, 20, 20.5 kHz; peak-to-peak passband ripple 20 Hz to 20 kHz; -0.1 dB, -1 dB and -3 dB frequencies.
 - **Plot:** magnitude in dB, x log 5 Hz to Nyquist, y +1 to -6 dB (zoomed) and a full view y +3 to -120 dB.
-- **Why:** it shows treble roll-off or lift in the audible band, which listeners hear as dull or bright.
+- **Why:** it shows treble roll-off or lift in the 20 Hz to 20 kHz band.
 
 ### 3. Filter magnitude, transition band, stopband and aliasing
 
@@ -145,7 +145,7 @@ Each entry gives the signal, the analysis, the metric, the plot and why a listen
 - **Analysis:** magnitude from the deconvolved response; alias level from the spectrum of each tone (the image of each tone is read at its folded frequency, output rate minus tone, in dB below the tone).
 - **Metric:** transition band edges (-3 dB and -60 dB), stopband attenuation (the worst image of the alias tones, re the tone: an impulse measurement cannot see below its own noise, about -80 dB, and so is not used for the stopband), worst alias image (dB) and its frequency. The image level includes the device's noise, so it is an upper bound on the stopband.
 - **Plot:** magnitude in dB, x linear 0 to 30 kHz (class A at 44.1 kHz: 0 to 22.05 kHz) with the transition band shaded, y 0 to -140 dB; a second plot shows alias image levels against the input tone frequency.
-- **Why:** filter steepness decides how much ultrasonic noise leaks in and how much aliasing folds back into the audible band; it is the main difference between decoders.
+- **Why:** filter steepness decides how much ultrasonic noise leaks in and how much aliasing folds back into the 20 Hz to 20 kHz band; it is a main difference between decoders.
 
 ### 4. Impulse and step response
 
@@ -161,21 +161,21 @@ Each entry gives the signal, the analysis, the metric, the plot and why a listen
 - **Analysis:** unwrap the phase of the 2^20 FFT of the impulse response, differentiate against angular frequency, report in microseconds after removing the constant latency.
 - **Metric:** group delay at 20 Hz, 1, 10 and 20 kHz and its maximum deviation in the passband.
 - **Plot:** group delay in microseconds against log frequency, y +/-100 microseconds (zoomed) with a full view; the phase in degrees against log frequency, y +/-180 degrees.
-- **Why:** a flat group delay means all frequencies arrive together; steep delay near 20 kHz is the audible cost of some minimum-phase filters.
+- **Why:** a flat group delay means all frequencies arrive together; a steep delay near 20 kHz is a property of some minimum-phase filters.
 
 ### 6. Noise floor, in-band and ultrasonic
 
 - **Signal:** two kinds of silence, because an exact-zero input makes a delta-sigma modulator fall into a limit cycle that is far quieter than real music would leave it (about -218 dB). (1) The DSD idle pattern, the repeating byte 0x69, for class A. (2) TPDF-dithered silence at 32-bit level (about -194.85 dBFS over 20 kHz, dBFS re a full-scale sine, fixed seed; the reference chain's A-weighted noise with it in is about -162 dBFS) for class B and for the modulator feeding class A. The dither is 32-bit because a 24-bit dither (about -146.7 dBFS) would be the floor of the result: with it the reference chain read -151.6 dBFS(A) when its own noise is below -160. Exact-zero PCM is also run for class B and reported separately as zero input. 6 s (quick) or 15 s (full) long, the first 0.5 s dropped, analysed as Welch averages: 50 percent overlap, 8 segments of 2^20 samples at 352.8 kHz when the record is long enough (the full profile) and of 2^18 otherwise; the report states the number of averages used.
 - **Analysis:** FFT 2^20, Blackman-Harris, 8 averages, bin power divided by the effective noise bandwidth to give dBFS per Hz. Integrated noise over 20 Hz to 20 kHz (unweighted and A-weighted), 20 kHz to 40 kHz, and 40 kHz up to the larger of 96 kHz and the output Nyquist, in steps of 48 kHz, to at least 192 kHz, which needs the 705.6 kHz or 1411.2 kHz decode (a 352.8 kHz output only reaches 176.4 kHz); class A is limited by its own output rate and the report says so.
-- **Metric:** in-band noise dBFS and dB(A), referred to the rms of a full-scale sine (the AES17 and ASR convention: a noise power of 1e-10 reads -97.0 dBFS, 3.01 dB above its mean square re a peak of 1.0); noise density at 1 kHz and 20 kHz (dBFS/Hz); ultrasonic noise integrated in bands, as density at 50, 100 and 200 kHz (power per Hz over a third of an octave) and the highest third-octave band, flagged when it is the edge of the analysis band. A single bin is never reported as a peak: the largest of 10^5 noisy bins reads several dB above the noise, and its bin width changes with the FFT size.
+- **Metric:** in-band noise dBFS and dB(A), referred to the rms of a full-scale sine (the AES17 convention: a noise power of 1e-10 reads -97.0 dBFS, 3.01 dB above its mean square re a peak of 1.0); noise density at 1 kHz and 20 kHz (dBFS/Hz); ultrasonic noise integrated in bands, as density at 50, 100 and 200 kHz (power per Hz over a third of an octave) and the highest third-octave band, flagged when it is the edge of the analysis band. A single bin is never reported as a peak: the largest of 10^5 noisy bins reads several dB above the noise, and its bin width changes with the FFT size.
 - **Plot:** spectrum in dBFS per Hz, x log 20 Hz to 192 kHz (or the output Nyquist), y -180 to -60 dB; a second linear-x view to 192 kHz so noise-shaper humps are visible.
 - **Why:** audiophiles look for ultrasonic noise (the shaped quantisation noise of DSD) that can upset amplifiers and tweeters, and for the in-band floor that sets low-level detail.
 
 ### 7. Dynamic range (-60 dB method)
 
 - **Signal:** a coherent 1 kHz sine at -60 dB below 0 dB SACD (-66 dBFS).
-- **Analysis:** FFT 2^18, A-weighted and unweighted. The tone is removed with a notch (AES17 method: a notch at 1 kHz, width as narrow as the window allows), the rest of the 20 Hz to 20 kHz band is integrated.
-- **Metric:** dynamic range = 60 + (the level of the tone, in dB relative to 0 dB SACD, minus the level of the residual noise, in dB), reported unweighted and A-weighted; this is the DR value reviewers quote.
+- **Analysis:** FFT 2^18, A-weighted and unweighted. The tone is removed with a notch at 1 kHz (not the AES17 notch: its width is as narrow as the window allows, far narrower than the standard's Q of 1.2 to 3), the rest of the 20 Hz to 20 kHz band is integrated.
+- **Metric:** dynamic range = 60 + (the level of the tone, in dB relative to 0 dB SACD, minus the level of the residual noise, in dB), reported unweighted and A-weighted; this is a -60 dB-method figure referred to 0 dB SACD, not the AES17 dynamic range.
 - **Plot:** spectrum of the -66 dBFS tone, y -160 to -60 dB, x log 20 Hz to 20 kHz.
 - **Why:** it is the plain "how quiet is it?" number; it is the RMAA dynamic range figure.
 
@@ -193,7 +193,7 @@ Each entry gives the signal, the analysis, the metric, the plot and why a listen
 - **Analysis:** as test 8, with a measurement bandwidth of 20 Hz to 20 kHz; at 15 kHz and 20 kHz the harmonic products fall above 20 kHz, so the harmonics are also counted up to 80 kHz (or 0.45 x the output rate) wherever they stand 6 dB above the local noise, and the report shows that figure beside the 20 kHz one. Counted harmonics are only those above the noise: a missing figure reads "none found" with a bound.
 - **Metric:** THD+N in dB at each point; the level at which THD+N is lowest.
 - **Plot:** THD+N in dB against level (x -100 to 0 dBFS, y -140 to -60 dB), and against frequency (x log 20 Hz to 20 kHz).
-- **Why:** it shows how the device behaves for quiet and for loud passages, and whether the treble is as clean as the midrange (the ASR chart).
+- **Why:** it shows how the device behaves for quiet and for loud passages, and whether the figure at 20 kHz is within 6 dB of the figure at 1 kHz.
 
 ### 10. IMD, SMPTE and CCIF, and the IMD sweep
 
@@ -203,7 +203,7 @@ Each entry gives the signal, the analysis, the metric, the plot and why a listen
 - **IMD sweep:** the CCIF pair centred on 10, 12, 14, 16, 18 and 19.5 kHz with a fixed 1 kHz spacing, and the SMPTE pair swept in level from -60 dB to 0 dB SACD.
 - **Metric:** IMD in dB and percent per condition; the worst of the sweep.
 - **Plot:** spectrum of each pair (zoomed on the products), and IMD against centre frequency or level.
-- **Why:** intermodulation makes distortion that is not harmonically related to the music, which listeners find harsher than harmonic distortion at the same level.
+- **Why:** intermodulation makes distortion that is not harmonically related to the signal, which a single-tone test does not show.
 
 ### 11. 32-tone multitone with distortion-free range
 
@@ -212,7 +212,7 @@ Each entry gives the signal, the analysis, the metric, the plot and why a listen
 - **Averages:** the headline value is the power spectrum averaged over the whole periods (8 in the full profile, to match published REW figures; 3 in the quick profile; the number is in the report); the 1-average value is reported next to it as an extra, because a single average reads about 10 dB more pessimistic. The multitone is peak-normalised per sample rate, so its crest factor differs by 0.03 dB between 88.2 kHz and 352.8 kHz.
 - **Metric:** the distortion-free range: the level difference between the lowest-level tone and the highest of the in-between bins (the "multitone dynamic range"), the tone-to-residual ratio at each tone, and the average of the 31 residual bins in dB.
 - **Plot:** spectrum 20 Hz to 22 kHz on a log axis; tones as markers and the residual as a line; y -140 to 0 dB.
-- **Why:** it stresses a device with music-like signals; a clean residual at -100 dB or better is what a good converter shows, and the ASR multitone is a standard way to compare.
+- **Why:** it stresses a device with many tones at once, a test that ASR also publishes.
 
 ### 12. J-Test
 
@@ -244,7 +244,7 @@ Each entry gives the signal, the analysis, the metric, the plot and why a listen
 - **Analysis:** polarity from the sign of the output peak against the input peak; the DC figure is the mean of the dithered-silence record of the noise test, in dBFS. It is a noise statistic of that record (about -170 dBFS for the reference chain), not a measurement of a device's offset, and no verdict uses it.
 - **Metric:** polarity (normal or inverted); DC offset (dBFS, absolute).
 - **Plot:** none for polarity (a single field); DC is a number in the dashboard.
-- **Why:** inverted polarity is audible to some on asymmetric material, and a DC offset can damage speakers and consume headroom.
+- **Why:** polarity and DC offset are basic properties of any signal path, and a DC offset consumes headroom.
 
 ### 16. Gain accuracy
 
@@ -252,7 +252,7 @@ Each entry gives the signal, the analysis, the metric, the plot and why a listen
 - **Analysis:** the power in the tone's lobe (the Blackman-Harris main lobe, so the tone only, not the noise), relative to the expected level; one channel, and the channel difference from test 14.
 - **Metric:** gain error in dB (positive means the output is louder than expected). For class A the expected level is -6 dBFS for a 50% DSD tone. For class B the expected output is the input level.
 - **Plot:** a number in the dashboard, plus gain against level on the linearity plot.
-- **Why:** an offset of 1 dB changes any A/B comparison; mismatched gain is the most common cause of a fake "better sound".
+- **Why:** a level offset of 1 dB changes any A/B comparison made by listening.
 
 ### 17. The 15 kHz -12 dBFS tone
 
@@ -284,7 +284,7 @@ These tests apply to class B only.
 
 ## Reduced methods
 
-Some tests have a full method (the target) and a reduced method that version 0.1.1 uses because it costs less compute. This table lists every place where what the code does differs from the test text above. A report says which method was used.
+Some tests have a full method (the target) and a reduced method that version 0.1.2 uses because it costs less compute. This table lists every place where what the code does differs from the test text above. A report says which method was used.
 
 | Test | Full method (target) | Reduced method (first round) |
 |---|---|---|
@@ -311,7 +311,7 @@ A measurement cannot see below its own noise and distortion, so every report car
 
 - **Class A** (the device is fed DSD from the reference modulator): the floor is the reference modulator and decoder together, measured with the same signals as the device (1 kHz at 0 dB SACD, -60 dB SACD, 32-bit-level dithered silence).
 - **Class B** (the device's DSD is read by the reference decoder): the floor is the decoder alone, measured with an ideal 64-bit sine at the DSD rate, plus the rejection of loud tones just above multiples of the output rate (which would fold into the audio band if the stopband were weak).
-- **What the reference achieves.** A single-bit modulator cannot be driven to full scale, so the floor is stated at 0 dB SACD (-6.02 dBFS), where 8th-order loops are stable. At DSD64 the reference modulator (order 8, largest NTF gain 1.45) reads THD+N of about -147 dB and an A-weighted dynamic range of about 152 dB; at DSD128 and DSD256 (order 7, gain 1.4) about -176 dB. The decoder alone reads below -280 dB, and its rejection of tones that would alias is better than 170 dB, so the decoder is not the limit.
+- **What the reference achieves.** A single-bit modulator cannot be driven to full scale, so the floor is stated at 0 dB SACD (-6.02 dBFS), where 8th-order loops are stable. At DSD64 the reference modulator (order 8, largest NTF gain 1.45) reads THD+N of about -147 dB and an A-weighted dynamic range of about 152 dB; at DSD128 and DSD256 (order 7, gain 1.4) about -176 dB. The decoder alone reads below -280 dB, and its rejection of tones that would alias exceeds 170 dB, so the decoder is not the limit.
 - **Stability guard.** The modulator tries a ladder of designs from order 8 down to order 5 and uses the first that does not overload (the quantiser input stays within 2). The design used for each signal is written to the provenance file. At the +3.1 dB SACD peak level the guard picks order 8 at gain 1.3 (stable, about 129 dB SINAD at DSD64), or lower if that overloads. Every row made at the peak level or at -3 dBFS (the peak-level SINAD, the J-Test, the overload test) names the design that was used and carries a floor measured with that design; the peak-level SINAD is flagged "at the reference floor" within 6 dB of it.
 - **Class A at DSD128.** Set `dsd_rate = 5644800`: the floor then moves to about -176 dB.
 - A device that is limited by the floor is not shown as better than the floor; its row carries "at the reference floor".
@@ -354,14 +354,14 @@ Each plot has:
 
 1. a title in plain words ("Frequency response"),
 2. the plot, with units on both axes,
-3. a one-line "what this means" in plain English, filled from a fixed template with the real numbers ("The treble is flat to within 0.02 dB up to 20 kHz."),
+3. a one-line "what this means" in plain English, filled from a fixed template with the real numbers ("The response is flat to within 0.02 dB up to 20 kHz."),
 4. a "details" line for engineers: signal id, FFT size, window, averages and the metric values.
 
 ### Comparison report
 
 ```
 report/comparison/
-  index.html       conclusions, then a dashboard table with one column per device, the best value in each row marked
+  index.html       conclusions, then a dashboard table with one column per device, no value marked as better (no repeatability interval has been measured yet)
   index.md
   results.json     the conclusions of the comparison
   plots/*.svg      overlays: frequency response, filter, impulse, noise, THD+N against level, linearity
@@ -410,6 +410,6 @@ Rules for adapters:
 - [Archimago's Musings](https://archimago.blogspot.com/) for the DSD measurement series that shaped this set
 - [Audio Science Review](https://www.audiosciencereview.com/) for the dashboard and multitone conventions
 - [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) (John Atkinson) for the digital measurement set
-- [AES17](https://www.aes.org/publications/standards/) for the measurement method for digital audio equipment
+- [AES17](https://www.aes.org/publications/standards/) for the measurement method for digital audio equipment (only the band edge and the dBFS reference are followed)
 
 Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).
