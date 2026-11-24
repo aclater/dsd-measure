@@ -73,7 +73,7 @@ def test_noise_floor_white():
     sigma = 1e-5
     x = sigma * rng.standard_normal(FS * 12)
     out, _, _ = an.noise_floor(x, FS, nfft=2**16)
-    expect = 10 * np.log10(sigma**2 * 19980 / (FS / 2))
+    expect = 10 * np.log10(sigma**2 * 19980 / (FS / 2)) + an.SINE_REF_DB  # dBFS re a full-scale sine's rms
     assert out["unweighted_dbfs"] == pytest.approx(expect, abs=0.2)
     assert out["a_weighted_dbfs"] < out["unweighted_dbfs"]
 
@@ -85,7 +85,7 @@ def test_dynamic_range_of_known_noise():
     x = sg.sine(f0, -66.0206, FS, NFFT) + sigma * rng.standard_normal(NFFT)
     r = an.dynamic_range(x, FS, f0, NFFT)
     noise_rms = 10 * np.log10(sigma**2 * 19980 / (FS / 2))
-    assert r["noise_dbfs"] == pytest.approx(noise_rms, abs=0.3)
+    assert r["noise_dbfs"] == pytest.approx(noise_rms + an.SINE_REF_DB, abs=0.3)
     assert r["dr_db"] == pytest.approx(REF_DBFS - 3.0103 - noise_rms, abs=0.3)
 
 

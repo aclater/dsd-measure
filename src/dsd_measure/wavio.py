@@ -6,12 +6,15 @@ import numpy as np
 
 
 def write_wav(path, data, fs, subtype="float32"):
-    """Write ``data`` (channels x samples, or 1-D mono) as WAV. subtype: pcm16, pcm24, pcm32, float32."""
+    """Write ``data`` (channels x samples, or 1-D mono) as WAV. subtype: pcm16, pcm24, pcm32, float32, float64."""
     x = np.atleast_2d(np.asarray(data, dtype=np.float64))
     ch, n = x.shape
     if subtype == "float32":
         raw = x.T.astype("<f4").tobytes()
         fmt, bits = 3, 32
+    elif subtype == "float64":
+        raw = x.T.astype("<f8").tobytes()
+        fmt, bits = 3, 64
     elif subtype in ("pcm16", "pcm24", "pcm32"):
         bits = int(subtype[3:])
         scale = 2 ** (bits - 1)
@@ -21,15 +24,21 @@ def write_wav(path, data, fs, subtype="float32"):
         elif bits == 32:
             raw = q.astype("<i4").tobytes()
         else:
-            b = q.astype("<i4").view(np.uint8).reshape(-1, 4)[:, :3]
+            b = np.ascontiguousarray(q.astype("<i4")).view(np.uint8).reshape(-1, 4)[:, :3]
             raw = b.tobytes()
         fmt = 1
     else:
         raise ValueError(f"unknown subtype {subtype}")
     block = ch * bits // 8
-    hdr = b"RIFF" + struct.pack("<I", 36 + len(raw)) + b"WAVE"
-    hdr += b"fmt " + struct.pack("<IHHIIHH", 16, fmt, ch, int(fs), int(fs) * block, block, bits)
+    # Float data carries the extended fmt chunk (cbSize = 0) and a fact chunk, as the format
+    # specification asks; strict readers (SoX) warn without them.
+    ext = fmt == 3
+    fmt_body = struct.pack("<HHIIHH", fmt, ch, int(fs), int(fs) * block, block, bits) + (b"\0\0" if ext else b"")
+    hdr = b"fmt " + struct.pack("<I", len(fmt_body)) + fmt_body
+    if ext:
+        hdr += b"fact" + struct.pack("<II", 4, n)
     hdr += b"data" + struct.pack("<I", len(raw))
+    hdr = b"RIFF" + struct.pack("<I", 4 + len(hdr) + len(raw)) + b"WAVE" + hdr
     with open(path, "wb") as f:
         f.write(hdr + raw)
 

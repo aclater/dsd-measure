@@ -1,5 +1,199 @@
 {
+ "conclusions": [
+  {
+   "id": "floor",
+   "verdict": "floor",
+   "label": "Measurement floor",
+   "text": "This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool: it is at least that good.",
+   "metrics": [
+    "reference_floor.chain.dr_a_db",
+    "reference_floor.chain.sinad_db",
+    "reference_floor.margin_db",
+    "tone_0dbsacd.sinad_db"
+   ],
+   "evidence": [
+    {
+     "metric": "reference_floor.chain.sinad_db",
+     "label": "SINAD of the reference chain at DSD64",
+     "value": "147.0 dB"
+    },
+    {
+     "metric": "reference_floor.chain.dr_a_db",
+     "label": "dynamic range of the reference chain, A-weighted",
+     "value": "151.8 dB"
+    },
+    {
+     "metric": "reference_floor.margin_db",
+     "label": "margin",
+     "value": "6 dB"
+    },
+    {
+     "metric": "tone_0dbsacd.sinad_db",
+     "label": "SINAD of this device",
+     "value": "146.7 dB"
+    },
+    {
+     "metric": "reference_floor.chain.sinad_db",
+     "label": "SINAD above which a converter cannot be ranked",
+     "value": "141.0 dB"
+    }
+   ],
+   "thresholds": [
+    "floor_margin_db"
+   ]
+  },
+  {
+   "id": "response",
+   "verdict": "fact",
+   "label": "Finding",
+   "text": "Flat response: the level varies by less than 0.01 dB from 20 Hz to 20 kHz and is down by less than 0.01 dB at 20 kHz, too little to change the tone.",
+   "metrics": [
+    "frequency_response.at_hz.20000",
+    "frequency_response.ripple_pp_db"
+   ],
+   "evidence": [
+    {
+     "metric": "frequency_response.ripple_pp_db",
+     "label": "response variation, 20 Hz to 20 kHz",
+     "value": "less than 0.01 dB"
+    },
+    {
+     "metric": "frequency_response.at_hz.20000",
+     "label": "response at 20 kHz against 1 kHz",
+     "value": "less than 0.01 dB"
+    }
+   ],
+   "thresholds": [
+    "flat_db"
+   ]
+  },
+  {
+   "id": "stopband",
+   "verdict": "fact",
+   "label": "Finding",
+   "text": "Image rejection: tones from 24.1 to 34.1 kHz come back as images at least 156 dB below the tone. The figure includes the device's own noise, so it is an upper bound on the images and the filter is at least this good.",
+   "metrics": [
+    "filter_summary.stopband_tested_hz",
+    "filter_summary.stopband_worst_db"
+   ],
+   "evidence": [
+    {
+     "metric": "filter_summary.stopband_worst_db",
+     "label": "worst image of the tones tested",
+     "value": "156 dB below the tone"
+    },
+    {
+     "metric": "filter_summary.stopband_tested_hz",
+     "label": "tones tested",
+     "value": "24.1 to 34.1 kHz"
+    }
+   ],
+   "thresholds": []
+  },
+  {
+   "id": "level",
+   "verdict": "fact",
+   "label": "Finding",
+   "text": "Level: unity gain within 0.01 dB, channels matched within 0.01 dB and quiet signals keep their level down to -126 dBFS.",
+   "metrics": [
+    "crosstalk.1000.gain_diff_db",
+    "gain_error_db",
+    "linearity.lowest_level_within_0p5_db"
+   ],
+   "evidence": [
+    {
+     "metric": "gain_error_db",
+     "label": "gain error at 0 dB SACD",
+     "value": "0.01 dB"
+    },
+    {
+     "metric": "crosstalk.1000.gain_diff_db",
+     "label": "channel gain difference at 1 kHz",
+     "value": "0.01 dB"
+    },
+    {
+     "metric": "linearity.lowest_level_within_0p5_db",
+     "label": "lowest level reproduced within 0.5 dB",
+     "value": "-126 dBFS"
+    }
+   ],
+   "thresholds": [
+    "flat_db",
+    "level_jnd_db"
+   ]
+  },
+  {
+   "id": "overload",
+   "verdict": "fact",
+   "label": "Finding",
+   "text": "Overload: after a loud burst (the peak level SACD allows) of 50 ms at -2.9 dBFS the output is back to normal within 10 ms, the resolution of the test.",
+   "metrics": [
+    "overload_recovery.recovery_ms"
+   ],
+   "evidence": [
+    {
+     "metric": "overload_recovery.recovery_ms",
+     "label": "recovery after an overload burst",
+     "value": "8 ms"
+    },
+    {
+     "metric": "overload_recovery.recovery_ms",
+     "label": "resolution of the test",
+     "value": "about 10 ms"
+    }
+   ],
+   "thresholds": []
+  },
+  {
+   "id": "pending",
+   "verdict": "pending",
+   "label": "Not concluded",
+   "text": "Not concluded in this version: filter and ringing, polarity, multitone, J-Test and peak-level SINAD. These figures are either not validated yet or not used by any rule in this version, so they are in the table for reference only and are not part of any verdict here. The peak-level SINAD is shown with the floor of the reference modulator at that level.",
+   "metrics": [
+    "filter_summary",
+    "impulse",
+    "jtest",
+    "multitone",
+    "polarity",
+    "tone_peak"
+   ],
+   "evidence": [
+    {
+     "metric": "impulse",
+     "label": "filter and ringing",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "filter_summary",
+     "label": "filter and ringing",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "polarity",
+     "label": "polarity",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "multitone",
+     "label": "multitone",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "jtest",
+     "label": "J-Test",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "tone_peak",
+     "label": "peak-level SINAD",
+     "value": "measured, not concluded"
+    }
+   ],
+   "thresholds": []
+  }
+ ],
  "metrics": {
+  "analysis_version": 2,
   "device_class": "A",
   "dsd_rate": 2822400,
   "reference_floor": {
@@ -13,21 +207,38 @@
     "thd_db": -163.28,
     "thdn_a_db": -150.37,
     "sinad_db": 146.99,
-    "noise_dbfs": -149.51,
-    "noise_a_dbfs": -151.64,
+    "noise_dbfs": -159.06,
+    "noise_a_dbfs": -162.45,
     "dr_db": 148.46,
-    "dr_a_db": 151.8
+    "dr_a_db": 151.8,
+    "metric_floors": {
+     "lobe_noise_db": -183.5,
+     "imd_smpte_db": -144.78,
+     "imd_ccif_db": -134.89,
+     "multitone_dfr_db": 150.7
+    }
    },
    "decoder_alone": {
     "thdn_db": -280.92,
     "thd_db": -309.97,
     "thdn_a_db": -282.12,
     "sinad_db": 280.92,
-    "noise_dbfs": -349.96,
-    "noise_a_dbfs": -351.15,
+    "peak": {
+     "thdn_db": -280.93,
+     "thd_db": -310.0,
+     "thdn_a_db": -282.12,
+     "sinad_db": 280.93
+    },
+    "noise_dbfs": -346.95,
+    "noise_a_dbfs": -348.14,
     "dr_db": 340.93,
     "dr_a_db": 342.12,
-    "alias_rejection_db": -187.7
+    "alias_rejection_db": -187.7,
+    "metric_floors": {
+     "lobe_noise_db": -369.4,
+     "imd_smpte_db": -294.92,
+     "imd_ccif_db": -279.67
+    }
    },
    "meets_target": true
   },
@@ -44,25 +255,38 @@
    }
   },
   "tone_peak": {
-   "thd_db": -127.60539842623798,
-   "thdn_db": -122.73912815360322,
-   "sinad_db": 122.73912815360322
+   "thd_db": -139.583626531261,
+   "thdn_db": -129.24924598031797,
+   "sinad_db": 129.24924598031797,
+   "design": "order 8, max gain 1.3",
+   "design_floor": {
+    "order": 8,
+    "hinf": 1.3,
+    "ntf": "order 8, max gain 1.3",
+    "stable": true,
+    "level_dbfs": -2.922386997509154,
+    "thdn_db": -129.16,
+    "thd_db": -139.5,
+    "sinad_db": 129.16,
+    "lobe_noise_db": -148.3
+   }
   },
   "gain_error_db": 1.8864395858742e-06,
   "dynamic_range": {
    "dr_db": 147.2663316109587,
    "dr_a_db": 150.48270356308288,
-   "noise_dbfs": -156.29723152423833,
-   "noise_a_dbfs": -159.5136034763625
+   "noise_dbfs": -153.28693156759851,
+   "noise_a_dbfs": -156.5033035197227
   },
   "linearity": {
-   "lowest_level_within_0p5_db": -123.02059991327965,
+   "lowest_level_within_0p5_db": -126.02059991327965,
    "error_at": {
     "-6": 1.8864395858742e-06,
     "-66": 8.342170346509192e-06,
     "-90": -7.657069662059257e-05,
     "-102": 9.2239655387516e-05,
-    "-114": 0.0003041494082367535
+    "-114": 0.0003041494082367535,
+    "-126": -0.005927222161034251
    }
   },
   "thdn_vs_frequency": {
@@ -74,6 +298,25 @@
    "15000": -146.94212473954028,
    "20000": -146.88744490707617,
    "bandwidth": "20 Hz to 20 kHz"
+  },
+  "thd_wide_vs_frequency": {
+   "20": -155.1106630438554,
+   "100": -155.9748144984813,
+   "1000": -166.90702859728842,
+   "5000": -158.21146445210297,
+   "10000": null,
+   "15000": null,
+   "20000": null,
+   "note": "harmonics 2 to 9 below 80 kHz or 0.45 x the output rate, counted when 10 dB above the local noise (None: none found; the bound is then 'no worse than'); the 20 kHz band cannot see the harmonics of tones at 10 kHz and above"
+  },
+  "thd_wide_vs_frequency_bound": {
+   "20": -154.91708989279348,
+   "100": -155.34116387093437,
+   "1000": -163.9445624265603,
+   "5000": -158.13993185111138,
+   "10000": null,
+   "15000": null,
+   "20000": null
   },
   "frequency_response": {
    "ripple_pp_db": 3.961051051604159e-06,
@@ -90,17 +333,22 @@
    "method": "stepped coherent tones",
    "tones": 34
   },
+  "latency": {
+   "seconds": 0.0,
+   "method": "peak of a single impulse in dithered silence, searched from 0.1 s on"
+  },
   "impulse": {
    "peak_index": 4080,
    "pre_ringing_samples": 236,
    "post_ringing_samples": 236,
    "pre_ringing_ms": 0.6689342403628118,
    "post_ringing_ms": 0.6689342403628118,
-   "pre_energy_fraction": 0.43669467606247103,
-   "symmetry": 0.9999999971855748,
+   "pre_energy_fraction": 0.43669468135080414,
+   "symmetry": 0.9999999999205067,
    "floor_used_db": -60.0,
    "filter_type": "linear phase",
    "output_rate": 44100,
+   "measurable": true,
    "method": "samples of eight alignments interleaved at 352.8 kHz"
   },
   "filter_summary": {
@@ -109,12 +357,18 @@
    "minus_60_db_hz": 23500.799560546875,
    "output_nyquist_hz": 22050.0,
    "stopband_edge_hz": 24100.0,
-   "stopband_worst_db": -81.3321343325275
+   "stopband_worst_db": -156.27943625753355,
+   "stopband_tested_hz": [
+    24102.383422851562,
+    34101.86462402344
+   ],
+   "stopband_method": "worst image of tones from the output rate minus 20 kHz upward, read at the folded frequency (output rate minus tone, 20 kHz or lower), re the tone; includes the device's own noise, so it is an upper bound on the filter's stopband level: the true level is this or deeper"
   },
   "group_delay_us": {
-   "at_1k": -0.07059339244841627,
-   "at_10k": -0.015195728082157115,
-   "at_20k": -0.26400554426606204
+   "at_1k": 0.0042883181998717166,
+   "at_10k": -0.0003675692740187811,
+   "at_20k": 0.010883488547712821,
+   "measurable": true
   },
   "step": {
    "overshoot_percent": 6.811188609664112,
@@ -122,46 +376,54 @@
    "final": 1.0000002214953647,
    "note": "average of 8 rising edges"
   },
-  "noise_input": "24-bit TPDF-dithered silence through the reference modulator",
-  "noise_idle_pattern_a_weighted_dbfs": -496.8189482282741,
+  "noise_input": "32-bit-level TPDF-dithered silence (about -194.85 dBFS over 20 kHz, below every converter here) through the reference modulator",
+  "noise_reference": "dBFS re the rms of a full-scale sine (AES17, ASR); a full-scale square would read +3 dB",
+  "noise_idle_pattern_a_weighted_dbfs": -493.8086482716343,
   "noise": {
    "bands": {
-    "20-20000": -149.46826367261815,
-    "20000-22050.0": -147.0788653730759
+    "20-20000": -158.99521501097792,
+    "20000-22050.0": -144.32875549648816
    },
-   "a_weighted_dbfs": -151.57536170539564,
-   "unweighted_dbfs": -149.46826367261815,
-   "density_1k_dbfs_hz": -192.33813340735162,
-   "density_20k_dbfs_hz": -187.1900287287721
+   "a_weighted_dbfs": -162.40041704279156,
+   "unweighted_dbfs": -158.99521501097792,
+   "density_1k_dbfs_hz": -201.9995232857771,
+   "density_20k_dbfs_hz": -185.76210231046971,
+   "bin_hz": 0.336456298828125,
+   "averages": 8
   },
   "dc": {
-   "dc": 1.5828775464060777e-09,
-   "dc_dbfs": -176.01105362918562
+   "dc": 2.9396869518645274e-11,
+   "dc_dbfs": -210.6339783054745
   },
   "imd_smpte": {
    "imd_db": -144.72471198271336,
-   "imd_percent": 5.804494457829975e-06
+   "imd_percent": 5.804494457829975e-06,
+   "imd_db_amplitude_sum": -137.11136207424698
   },
   "imd_ccif": {
    "imd_db": -136.76562545547054,
-   "imd_percent": 1.4511714554537843e-05
+   "imd_percent": 1.4511714554537843e-05,
+   "imd_db_iec": -139.77592541211035
   },
   "multitone": {
    "headline": {
-    "tone_min_dbfs": -35.228946257617885,
-    "tone_mean_dbfs": -34.368970265846116,
-    "residual_max_dbfs": -171.19024986165232,
-    "residual_mean_dbfs": -188.93678790012677,
-    "distortion_free_range_db": 135.96130360403444
+    "tone_min_dbfs": -34.343879644693025,
+    "tone_mean_dbfs": -34.34387569289274,
+    "residual_max_dbfs": -188.60593208888878,
+    "residual_mean_dbfs": -203.6610924272897,
+    "distortion_free_range_db": 154.26205244419575
    },
    "avg1": {
-    "tone_min_dbfs": -35.228946507437605,
-    "tone_mean_dbfs": -34.36897026916053,
-    "residual_max_dbfs": -166.3133033192064,
-    "residual_mean_dbfs": -188.9334313774848,
-    "distortion_free_range_db": 131.0843568117688
+    "tone_min_dbfs": -34.343879682200075,
+    "tone_mean_dbfs": -34.34387568972144,
+    "residual_max_dbfs": -184.45027228524413,
+    "residual_mean_dbfs": -203.61195010180455,
+    "distortion_free_range_db": 150.10639260304404
    },
-   "averages": 8
+   "averages": 8,
+   "output_rate": 44100,
+   "analysis_rate": 44100,
+   "range_note": "tones and residual up to 20 kHz; rectangular window on whole periods; every record decimated to 44.1 kHz first"
   },
   "tone_15k": {
    "audio_band": {
@@ -175,23 +437,38 @@
    "count_above": 0
   },
   "jtest": {
-   "carrier_dbfs": -6.010361498368695,
-   "largest_sideband_db": -149.78388229633464,
-   "largest_sideband_order": 39,
+   "carrier_dbfs": -6.01029619641092,
+   "noise_floor_db": -159.7881795348889,
+   "bin_hz": 1.3458251953125,
+   "sidebands_detected": 0,
    "sidebands_above_minus130": 0,
-   "note": "file-level jitter test (arithmetic only)"
+   "note": "file-level jitter test (arithmetic only)",
+   "largest_sideband_db": null,
+   "largest_sideband_order": null,
+   "design": "order 8, max gain 1.3",
+   "design_floor": {
+    "order": 8,
+    "hinf": 1.3,
+    "ntf": "order 8, max gain 1.3",
+    "stable": true,
+    "level_dbfs": -2.922386997509154,
+    "thdn_db": -129.16,
+    "thd_db": -139.5,
+    "sinad_db": 129.16,
+    "lobe_noise_db": -148.3
+   }
   },
   "polarity": "normal",
   "crosstalk": {
    "1000": {
-    "left_to_right_db": -166.4897077967373,
-    "right_to_left_db": -166.4897077967373,
+    "left_to_right_db": -179.06802837146307,
+    "right_to_left_db": -179.06802837146307,
     "gain_diff_db": 0.0,
     "phase_diff_deg": -0.0
    },
    "10000": {
-    "left_to_right_db": -169.49999268668927,
-    "right_to_left_db": -169.49999268668927,
+    "left_to_right_db": -189.52718469208574,
+    "right_to_left_db": -189.52718469208574,
     "gain_diff_db": 0.0,
     "phase_diff_deg": -0.0
    }
@@ -218,34 +495,39 @@
   },
   "alias_tones": {
    "output_rate": 44100,
-   "worst_image_db": -132.69311388780196,
-   "worst_tone_hz": 24051.242065429688,
-   "worst_image_hz": 20048.757934570312,
+   "worst_image_db": -156.27943625753355,
+   "worst_tone_hz": 24102.383422851562,
+   "worst_image_hz": 19997.616577148438,
    "rows": [
     {
-     "tone_hz": 24051.242065429688,
-     "alias_hz": 20048.757934570312,
-     "image_db": -132.69311388780196
+     "tone_hz": 24102.383422851562,
+     "alias_hz": 19997.616577148438,
+     "image_db": -156.27943625753355
     },
     {
-     "tone_hz": 26051.138305664062,
-     "alias_hz": 21887.155151367188,
-     "image_db": -141.4880016803694
+     "tone_hz": 26102.279663085938,
+     "alias_hz": 17997.720336914062,
+     "image_db": -162.17650722444918
     },
     {
-     "tone_hz": 28051.034545898438,
-     "alias_hz": 21901.959228515625,
-     "image_db": -144.35588069067515
+     "tone_hz": 28102.175903320312,
+     "alias_hz": 15997.824096679688,
+     "image_db": -172.65554834980904
     },
     {
-     "tone_hz": 30050.930786132812,
-     "alias_hz": 22035.195922851562,
-     "image_db": -143.82816879658427
+     "tone_hz": 30102.072143554688,
+     "alias_hz": 13997.927856445312,
+     "image_db": -170.67363160453874
     },
     {
-     "tone_hz": 32050.827026367188,
-     "alias_hz": 21829.28466796875,
-     "image_db": -145.30278013595452
+     "tone_hz": 32101.968383789062,
+     "alias_hz": 11998.031616210938,
+     "image_db": -173.71914853007198
+    },
+    {
+     "tone_hz": 34101.86462402344,
+     "alias_hz": 9998.135375976562,
+     "image_db": -180.02135679424495
     }
    ],
    "note": "image level relative to the input tone; includes the device noise floor"
@@ -253,9 +535,21 @@
   "overload_recovery": {
    "burst_level_dbfs": -2.922386997509154,
    "burst_ms": 50.0,
-   "recovery_ms": 47.505668934240354,
-   "residual_peak_over_baseline_db": 117.26853613087044,
-   "method": "1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms"
+   "recovery_ms": 7.5963718820861725,
+   "residual_peak_over_baseline_db": 122.32047213161349,
+   "method": "1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms (5 ms windows, the recovery is read to the end of the last window that is out)",
+   "design": "order 8, max gain 1.3",
+   "design_floor": {
+    "order": 8,
+    "hinf": 1.3,
+    "ntf": "order 8, max gain 1.3",
+    "stable": true,
+    "level_dbfs": -2.922386997509154,
+    "thdn_db": -129.16,
+    "thd_db": -139.5,
+    "sinad_db": 129.16,
+    "lobe_noise_db": -148.3
+   }
   }
  },
  "not_run": {

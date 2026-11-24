@@ -1,0 +1,134 @@
+{
+ "devices": [
+  "reference-decoder",
+  "reference-modulator"
+ ],
+ "conclusions": [
+  {
+   "id": "floor",
+   "verdict": "floor",
+   "label": "Measurement floor",
+   "text": "Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool: it is at least that good.",
+   "metrics": [
+    "reference_floor.chain.dr_a_db",
+    "reference_floor.chain.sinad_db",
+    "reference_floor.margin_db",
+    "tone_0dbsacd.sinad_db"
+   ],
+   "evidence": [
+    {
+     "metric": "reference_floor.chain.sinad_db",
+     "label": "SINAD of the reference chain at DSD64",
+     "value": "147.0 dB"
+    },
+    {
+     "metric": "reference_floor.chain.dr_a_db",
+     "label": "dynamic range of the reference chain, A-weighted",
+     "value": "151.8 dB"
+    },
+    {
+     "metric": "reference_floor.margin_db",
+     "label": "margin",
+     "value": "6 dB"
+    },
+    {
+     "metric": "tone_0dbsacd.sinad_db",
+     "label": "SINAD of this device",
+     "value": "146.7 dB"
+    },
+    {
+     "metric": "reference_floor.chain.sinad_db",
+     "label": "SINAD above which a converter cannot be ranked",
+     "value": "141.0 dB"
+    }
+   ],
+   "thresholds": [
+    "floor_margin_db"
+   ]
+  },
+  {
+   "id": "floor-agreement",
+   "verdict": "fact",
+   "label": "Finding",
+   "text": "The parts of the chain agree: SINAD is 146.7 dB for reference decoder and 146.7 dB for reference modulator, a spread of 0.01 dB.",
+   "metrics": [
+    "tone_0dbsacd.sinad_db"
+   ],
+   "evidence": [
+    {
+     "metric": "tone_0dbsacd.sinad_db",
+     "label": "SINAD",
+     "value": "146.7 dB",
+     "device": "reference decoder"
+    },
+    {
+     "metric": "tone_0dbsacd.sinad_db",
+     "label": "SINAD",
+     "value": "146.7 dB",
+     "device": "reference modulator"
+    },
+    {
+     "metric": "tone_0dbsacd.sinad_db",
+     "label": "spread of SINAD",
+     "value": "0.01 dB"
+    }
+   ],
+   "thresholds": [
+    "same_db"
+   ]
+  },
+  {
+   "id": "pending",
+   "verdict": "pending",
+   "label": "Not concluded",
+   "text": "Not compared in this version: filter and ringing, polarity, multitone, J-Test, peak-level SINAD and modulator stability. These figures are not validated yet or not used by any rule, and converters often differ most in their filters and ultrasonic noise, so this comparison is not the whole picture.",
+   "metrics": [
+    "filter_summary",
+    "impulse",
+    "jtest",
+    "multitone",
+    "polarity",
+    "stability",
+    "tone_peak"
+   ],
+   "evidence": [
+    {
+     "metric": "impulse",
+     "label": "filter and ringing",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "filter_summary",
+     "label": "filter and ringing",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "polarity",
+     "label": "polarity",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "multitone",
+     "label": "multitone",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "jtest",
+     "label": "J-Test",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "tone_peak",
+     "label": "peak-level SINAD",
+     "value": "measured, not concluded"
+    },
+    {
+     "metric": "stability",
+     "label": "modulator stability",
+     "value": "measured, not concluded"
+    }
+   ],
+   "thresholds": []
+  }
+ ]
+}

@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dsd-measure"
-version = "0.1.0"
+version = "0.1.1"
 description = "Reproducible audiophile measurement kit for DSD and PCM converters"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"
-dependencies = ["numpy", "scipy", "matplotlib", "pyyaml"]
+dependencies = ["numpy", "scipy", "matplotlib"]
 
 [project.optional-dependencies]
 dev = ["pytest", "ruff"]
@@ -29,6 +29,7 @@ src = ["src", "tests"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: runs the measurement suite on the reference chain (minutes); skipped with -m \"not slow\""]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B"]

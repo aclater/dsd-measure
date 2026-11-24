@@ -5,7 +5,7 @@ linear-phase FIR chain (>150 dB stopband), then passed through a single-bit erro
 delta-sigma loop whose noise transfer function (NTF) has Legendre zeros in the audio band and a
 Butterworth pole set scaled to a chosen out-of-band gain (Lee's criterion). A stability guard
 picks the best design from a ladder (order 8 down to order 5) that does not overload. The loop runs in double precision in a small C
-core (``csrc/dsm.c``, built on first use with the system C compiler), with a slow pure-Python
+core (``csrc/dsm.c``, built on first use with the system C compiler into a private per-user cache), with a slow pure-Python
 fallback. Bits are returned as int8 values +1 / -1.
 
 This is a *reference*, not a product: it is meant to be stable, transparent and reproducible.
@@ -13,6 +13,8 @@ This is a *reference*, not a product: it is meant to be stable, transparent and 
 
 import ctypes
 import hashlib
+import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -74,27 +76,85 @@ def design_ntf(order=5, hinf=1.3, fs=DSD_BASE, band=20000.0):
 #: the encoder runs the first design and moves down the list when the loop overloads (|w| above
 #: ``OVERLOAD_LIMIT`` at the quantiser input). The design actually used is returned in ``info``.
 #: Measured limits (1 kHz, single sine): order 8 at 1.45 is stable to 0 dB SACD (-6 dBFS) at DSD64
-#: but not at the +3.1 dB SACD peak level; order 5 at 1.3 is stable at the peak level. Order 8 at
-#: 1.5 is stable at 0 dB SACD too but with |w| above 2, too close to the edge to be a reference.
+#: but not at the +3.1 dB SACD peak level; order 8 at 1.3 is stable at the peak level (|w| about
+#: 0.9, 1 kHz, 100 Hz and 19 kHz) and reads about 129 dB SINAD there at DSD64. Order 8 at 1.5 is
+#: stable at 0 dB SACD too but with |w| above 2, too close to the edge to be a reference. The
+#: designs further down are for stretches that overload the ones above. A report names the design
+#: each peak-level row used and carries a floor measured with that design.
 LADDERS = {
-    1: [(8, 1.45), (8, 1.4), (7, 1.4), (7, 1.3), (5, 1.3)],
-    2: [(7, 1.4), (7, 1.3), (5, 1.3)],
-    4: [(7, 1.4), (7, 1.3), (5, 1.3)],
+    1: [(8, 1.45), (8, 1.4), (7, 1.4), (8, 1.3), (7, 1.3), (5, 1.3)],
+    2: [(7, 1.4), (8, 1.3), (7, 1.3), (5, 1.3)],
+    4: [(7, 1.4), (8, 1.3), (7, 1.3), (5, 1.3)],
 }
 OVERLOAD_LIMIT = 2.0  # stable loops keep |w| near 1 (largest seen about 1.2 at 0 dB SACD)
 
 
+CFLAGS = ["-O2", "-shared", "-fPIC", "-ffp-contract=off"]
+
+
+class UnsafeCacheError(RuntimeError):
+    """The compiled-core cache is not private to the current user."""
+
+
+def _cache_dir():
+    """The per-user cache directory for the compiled core."""
+    base = os.environ.get("XDG_CACHE_HOME")
+    root = Path(base) if base and os.path.isabs(base) else Path.home() / ".cache"
+    return root / "dsd-measure"
+
+
+def _check_private(path, what):
+    """Refuse anything that is not ours or that others could write."""
+    st = os.lstat(path)
+    if stat.S_ISLNK(st.st_mode):
+        raise UnsafeCacheError(f"{what} {path} is a symbolic link")
+    if st.st_uid != os.geteuid():
+        raise UnsafeCacheError(f"{what} {path} is owned by another user")
+    if st.st_mode & 0o022:
+        raise UnsafeCacheError(f"{what} {path} is writable by group or others (mode {st.st_mode & 0o7777:o})")
+    return st
+
+
+def _private_dir(d):
+    d.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.mkdir(d, 0o700)
+    except FileExistsError:
+        pass
+    st = _check_private(d, "cache directory")
+    if not stat.S_ISDIR(st.st_mode):
+        raise UnsafeCacheError(f"{d} is not a directory")
+    if st.st_mode & 0o077:
+        raise UnsafeCacheError(f"cache directory {d} is accessible to others (mode {st.st_mode & 0o7777:o})")
+    return d
+
+
+def _build_lib(cache=None):
+    """Compile ``csrc/dsm.c`` into the private cache (atomic rename) and return the library path."""
+    src = Path(__file__).with_name("csrc") / "dsm.c"
+    tag = hashlib.sha256(src.read_bytes() + " ".join(CFLAGS).encode()).hexdigest()[:16]
+    d = _private_dir(Path(cache) if cache else _cache_dir())
+    out = d / f"dsm_{tag}.so"
+    if out.exists() or out.is_symlink():
+        _check_private(out, "compiled core")
+        return out
+    fd, tmp = tempfile.mkstemp(prefix=".build-", suffix=".so", dir=d)  # 0600, same directory
+    os.close(fd)
+    try:
+        subprocess.run(["cc", *CFLAGS, str(src), "-o", tmp], check=True, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.PIPE)
+        os.chmod(tmp, 0o700)
+        os.replace(tmp, out)  # atomic: a reader sees the whole file or none
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+    _check_private(out, "compiled core")
+    return out
+
+
 @lru_cache(maxsize=1)
 def _lib():
-    src = Path(__file__).with_name("csrc") / "dsm.c"
-    tag = hashlib.sha256(src.read_bytes()).hexdigest()[:12]
-    out = Path(tempfile.gettempdir()) / f"dsd_measure_dsm_{tag}.so"
-    if not out.exists():
-        subprocess.run(
-            ["cc", "-O2", "-shared", "-fPIC", str(src), "-o", str(out)],
-            check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-        )
-    lib = ctypes.CDLL(str(out))
+    lib = ctypes.CDLL(str(_build_lib()))
     lib.dsm_run.restype = ctypes.c_int
     return lib
 

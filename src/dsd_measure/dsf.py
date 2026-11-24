@@ -12,7 +12,12 @@ def write_dsf(path, bits, rate):
     b = np.atleast_2d(np.asarray(bits))
     ch, n = b.shape
     pad = (-n) % (BLOCK * 8)
-    bb = np.concatenate([(b > 0).astype(np.uint8), np.zeros((ch, pad), np.uint8)], axis=1)
+    # Pad with the DSD idle pattern (0x69, a repeating 01101001), not zero bits: zero bits are
+    # a burst of -100 % modulation that a decoder converting whole blocks turns into a transient
+    # at the end of the file.
+    idle = np.unpackbits(np.array([0x69], np.uint8), bitorder="little")
+    tail = np.tile(idle[(n + np.arange(pad)) % 8], (ch, 1)).astype(np.uint8)
+    bb = np.concatenate([(b > 0).astype(np.uint8), tail], axis=1)
     packed = np.packbits(bb.reshape(ch, -1, 8), axis=2, bitorder="little").reshape(ch, -1)
     nblocks = packed.shape[1] // BLOCK
     blocks = packed.reshape(ch, nblocks, BLOCK).transpose(1, 0, 2).reshape(-1)
@@ -55,7 +60,8 @@ def write_dff(path, bits, rate):
     b = np.atleast_2d(np.asarray(bits))
     ch, n = b.shape
     pad = (-n) % 8
-    bb = np.concatenate([(b > 0).astype(np.uint8), np.zeros((ch, pad), np.uint8)], axis=1)
+    idle = np.unpackbits(np.array([0x69], np.uint8))  # DSDIFF is MSB first
+    bb = np.concatenate([(b > 0).astype(np.uint8), np.tile(idle[(n + np.arange(pad)) % 8], (ch, 1))], axis=1)
     packed = np.packbits(bb.reshape(ch, -1, 8), axis=2, bitorder="big").reshape(ch, -1)
     data = packed.T.reshape(-1).tobytes()  # one byte per channel in turn
     ids = {1: [b"SLFT"], 2: [b"SLFT", b"SRGT"]}.get(ch, [b"C%03d" % i for i in range(ch)])

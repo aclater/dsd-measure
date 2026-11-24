@@ -28,6 +28,12 @@ def db(p):
     return 10 * np.log10(np.maximum(p, 1e-300))
 
 
+#: Noise levels are quoted in dBFS re the rms of a full-scale sine (AES17, ASR, RMAA), which is
+#: 3.01 dB above the mean square re a peak of 1.0. A white-noise power ``p`` therefore reads
+#: ``db(p) + SINE_REF_DB``. Tone levels already use this reference (a -6.02 dBFS sine reads -6.02).
+SINE_REF_DB = 10 * np.log10(2.0)
+
+
 def a_weight_db(f):
     """IEC 61672 A-weighting in dB (0 dB at 1 kHz)."""
     f = np.asarray(f, dtype=np.float64)
@@ -52,12 +58,20 @@ def power_spectrum(x, nfft, window="bh7"):
     return p
 
 
-def welch(x, nfft, nseg=8, overlap=0.5, window="bh7"):
-    """Power-averaged spectrum over ``nseg`` segments (Welch). Returns the averaged spectrum."""
+def welch_segments(n, nfft, nseg=8, overlap=0.5):
+    """How many segments ``welch`` really averages over a record of ``n`` points (fewer than asked when it is short)."""
     step = int(nfft * (1 - overlap))
-    need = nfft + step * (nseg - 1)
-    if len(x) < need:
-        nseg = max(1, (len(x) - nfft) // step + 1)
+    return nseg if n >= nfft + step * (nseg - 1) else max(1, (n - nfft) // step + 1)
+
+
+def welch(x, nfft, nseg=8, overlap=0.5, window="bh7"):
+    """Power-averaged spectrum over ``nseg`` segments (Welch). Returns the averaged spectrum.
+
+    A record too short for ``nseg`` segments gets fewer; ``welch_segments`` says how many, and the
+    noise results carry that number as ``averages``.
+    """
+    step = int(nfft * (1 - overlap))
+    nseg = welch_segments(len(x), nfft, nseg, overlap)
     acc = np.zeros(nfft // 2 + 1)
     for i in range(nseg):
         acc += power_spectrum(x[i * step :], nfft, window)
@@ -89,18 +103,30 @@ def notch_noise(p, k, mask, half=LOBE):
     return float(np.sum(p[m]))
 
 
-def tone_metrics(x, fs, f0, nfft=2**18, band=(20.0, 20000.0), nharm=9, fund_level_ref=None):
+def tone_metrics(x, fs, f0, nfft=2**18, band=(20.0, 20000.0), nharm=9, fund_level_ref=None, thd_wide_hz=None):
     """THD, THD+N, SINAD, noise and harmonics for a coherent tone (footprint tests 7, 8, 9)."""
     p = power_spectrum(x, nfft)
     k0 = tone_bin(f0, nfft, fs)
     fund = lobe_power(p, k0)
     mask = band_mask(nfft, fs, *band)
+    # Harmonic lobes must not overlap the fundamental's lobe or each other: below about 27 Hz
+    # (at 2^18 points, 352.8 kHz) the lobes are wider than the harmonic spacing, and the
+    # fundamental's skirt would be counted as 2nd-harmonic distortion. Each bin is counted once,
+    # and the half-width shrinks to the half-spacing where the harmonics are closer than that.
+    half = max(1, min(LOBE, (k0 - 1) // 2))
+    claimed = np.zeros(len(p), dtype=bool)
+    claimed[max(0, k0 - LOBE) : k0 + LOBE + 1] = True
     harm = {}
     for h in range(2, nharm + 1):
         fh = f0 * h
         if fh > band[1]:
             break
-        harm[h] = lobe_power(p, tone_bin(fh, nfft, fs))
+        kh = tone_bin(fh, nfft, fs)
+        sel = np.zeros(len(p), dtype=bool)
+        sel[max(0, kh - half) : kh + half + 1] = True
+        sel &= ~claimed
+        harm[h] = float(np.sum(p[sel]))
+        claimed |= sel
     hp = sum(harm.values())
     noise_total = notch_noise(p, k0, mask)  # harmonics + noise
     f = freqs(nfft, fs)
@@ -115,9 +141,46 @@ def tone_metrics(x, fs, f0, nfft=2**18, band=(20.0, 20000.0), nharm=9, fund_leve
         "thdn_db": float(db(noise_total / fund)),
         "thdn_a_db": float(db(noise_w / fund_w)),
         "sinad_db": float(-db(noise_total / fund)),
-        "noise_dbfs": float(db(noise_total - hp)) if noise_total > hp else float("-inf"),
+        "noise_dbfs": float(db(noise_total - hp) + SINE_REF_DB) if noise_total > hp else float("-inf"),
         "largest_harmonic": None if top is None else {"order": int(top), "db": float(db(harm[top] / fund))},
     }
+    if thd_wide_hz:
+        # All harmonics (2 to 9) up to ``thd_wide_hz``: the 10, 15 and 20 kHz tones have their
+        # harmonics above the 20 kHz band, which the band-limited THD cannot see. Above the band a
+        # modulator's shaped noise is much louder than any harmonic, so a harmonic counts only when
+        # its lobe is 10 dB above the local noise (mean of the bins 30 to 60 away that are in no lobe); with none,
+        # ``thd_wide_db`` is None and ``thd_wide_bound_db`` is the total of the lobes (an upper
+        # bound: "no worse than").
+        # The lobes are cut the way ``thd_db`` cuts them: each bin belongs to one lobe, and the half
+        # width shrinks where the harmonics are closer than a lobe (a 20 Hz tone). The local noise is
+        # the mean power of the bins 30 to 60 away that belong to no lobe (the mean, not the median,
+        # which sits 1.6 dB low for noise), and a harmonic counts only when 10 dB above it: with a
+        # single spectrum a lobe of pure noise varies by about 2 dB.
+        wclaimed = np.zeros(len(p), dtype=bool)
+        wclaimed[max(0, k0 - LOBE) : k0 + LOBE + 1] = True
+        lobes = []
+        for h in range(2, nharm + 1):
+            if f0 * h < min(thd_wide_hz, 0.45 * fs):
+                kh = tone_bin(f0 * h, nfft, fs)
+                sel = np.zeros(len(p), dtype=bool)
+                sel[max(0, kh - half) : kh + half + 1] = True
+                sel &= ~wclaimed
+                wclaimed |= sel
+                lobes.append((kh, sel))
+        wp = tot = 0.0
+        for kh, sel in lobes:
+            lp = float(np.sum(p[sel]))
+            ref = np.zeros(len(p), dtype=bool)
+            ref[max(0, kh - 60) : max(0, kh - 30)] = True
+            ref[kh + 30 : kh + 60] = True
+            ref &= ~wclaimed
+            nl = float(np.mean(p[ref])) * int(sel.sum()) if ref.any() else 0.0
+            tot += lp
+            if lp > 10 * nl:
+                wp += lp - nl
+        res["thd_wide_db"] = float(db(wp / fund)) if wp > 0 else None
+        res["thd_wide_bound_db"] = float(db(tot / fund)) if tot > 0 else None
+        res["thd_wide_hz"] = float(min(thd_wide_hz, 0.45 * fs))
     res["thd_percent"] = float(100 * np.sqrt(hp / fund))
     res["thdn_percent"] = float(100 * np.sqrt(noise_total / fund))
     return res
@@ -138,13 +201,16 @@ def dynamic_range(x, fs, f0, nfft=2**18, band=(20.0, 20000.0)):
     return {
         "dr_db": float(ref_rms_dbfs - db(n_un) ),
         "dr_a_db": float(ref_rms_dbfs - db(n_a)),
-        "noise_dbfs": float(db(n_un)),
-        "noise_a_dbfs": float(db(n_a)),
+        "noise_dbfs": float(db(n_un) + SINE_REF_DB),
+        "noise_a_dbfs": float(db(n_a) + SINE_REF_DB),
     }
 
 
 def noise_floor(x, fs, nfft=2**18, nseg=8, bands=((20, 20000), (20000, 40000), (40000, 96000))):
-    """Noise in dBFS (rms) over bands, plus A-weighted 20 Hz..20 kHz, plus density at 1 and 20 kHz."""
+    """Noise in dBFS (rms, re a full-scale sine) over bands, A-weighted 20 Hz..20 kHz, and density.
+
+    ``density_*`` are dBFS per Hz at 1 and 20 kHz, averaged over +-100 Hz and +-1 kHz.
+    """
     p = welch(x, nfft, nseg)
     f = freqs(nfft, fs)
     out = {"bands": {}}
@@ -154,29 +220,59 @@ def noise_floor(x, fs, nfft=2**18, nseg=8, bands=((20, 20000), (20000, 40000), (
         if lo >= hi:
             continue
         m = (f >= lo) & (f < hi)
-        out["bands"][f"{lo}-{hi}"] = float(db(np.sum(p[m])))
+        out["bands"][f"{lo}-{hi}"] = float(db(np.sum(p[m])) + SINE_REF_DB)
     m = (f >= 20) & (f <= 20000)
     aw = 10 ** (a_weight_db(np.maximum(f, 1e-3)) / 10)
-    out["a_weighted_dbfs"] = float(db(np.sum((p * aw)[m])))
-    out["unweighted_dbfs"] = float(db(np.sum(p[m])))
-    enbw = fs / nfft * 1.0  # per-bin bandwidth in Hz (power per bin -> per Hz)
-    out["density_1k_dbfs_hz"] = float(db(np.mean(p[(f > 900) & (f < 1100)]) / enbw))
-    out["density_20k_dbfs_hz"] = float(db(np.mean(p[(f > 19000) & (f < 21000)]) / enbw))
+    out["a_weighted_dbfs"] = float(db(np.sum((p * aw)[m])) + SINE_REF_DB)
+    out["unweighted_dbfs"] = float(db(np.sum(p[m])) + SINE_REF_DB)
+    df = fs / nfft  # per-bin bandwidth in Hz (power per bin -> per Hz)
+    out["density_1k_dbfs_hz"] = float(db(np.mean(p[(f > 900) & (f < 1100)]) / df) + SINE_REF_DB)
+    out["density_20k_dbfs_hz"] = float(db(np.mean(p[(f > 19000) & (f < 21000)]) / df) + SINE_REF_DB)
+    out["bin_hz"] = float(df)
+    out["averages"] = welch_segments(len(x), nfft, nseg)
     return out, f, p
 
 
-def ultrasonic_peak(x, fs, nfft=2**20, nseg=8, f_lo=20000.0, f_hi=None):
-    """Highest spectral peak between ``f_lo`` and ``f_hi`` (default 0.4 x fs, inside the decoder's
-    passband) in dBFS (power in one bin), and its frequency."""
+def ultrasonic_peak(x, fs, nfft=2**20, nseg=8, f_lo=20000.0, f_hi=None, bands=None):
+    """Ultrasonic noise: density at fixed frequencies, band levels and the 1/3-octave peak.
+
+    Levels are dBFS re a full-scale sine rms (see ``SINE_REF_DB``). ``density_dbfs_hz`` is the
+    power per Hz averaged over 1/3 octave around 50, 100 and 200 kHz (when the record reaches
+    them), ``integrated_dbfs`` is the power in each band, and ``peak_*`` is the highest 1/3-octave
+    density between ``f_lo`` and ``f_hi`` (default 0.4 x fs, inside the decoder's passband). A
+    single noisy bin is never reported: the maximum of 10^5 bins reads several dB above the
+    noise. When the peak sits within a third of an octave of the upper limit it is the edge of
+    the analysis band, not a feature of the noise: ``peak_at_band_edge`` says so.
+    """
     p = welch(x, nfft, nseg)
     f = freqs(nfft, fs)
-    m = (f > f_lo) & (f < (f_hi or 0.4 * fs))
-    i = np.argmax(np.where(m, p, 0))
-    return {"freq_hz": float(f[i]), "level_dbfs": float(db(p[i])),
+    df = fs / nfft
+    hi = f_hi or 0.4 * fs
+    third = 2 ** (1 / 6)
+    dens = {}
+    for fc in (50e3, 100e3, 200e3):
+        if fc * third < hi:
+            m = (f >= fc / third) & (f < fc * third)
+            dens[str(int(fc))] = float(db(np.mean(p[m]) / df) + SINE_REF_DB)
+    centres = []
+    c = f_lo * third
+    while c * third <= hi:
+        centres.append(c)
+        c *= 2 ** (1 / 3)
+    best, bd = None, -1e9
+    for c in centres:
+        m = (f >= c / third) & (f < c * third)
+        d = float(db(np.mean(p[m]) / df) + SINE_REF_DB)
+        if d > bd:
+            best, bd = c, d
+    edge = best is not None and best * 2 ** (1 / 3) * third > hi
+    bands = bands or ((20000, 40000), (40000, 96000), (96000, 192000))
+    return {"peak_hz": None if best is None else float(best), "peak_density_dbfs_hz": bd,
+            "peak_at_band_edge": bool(edge), "density_dbfs_hz": dens, "bin_hz": float(df),
+            "averages": welch_segments(len(x), nfft, nseg),
             "integrated_dbfs": {
-                f"{lo}-{hi}": float(db(np.sum(p[(f >= lo) & (f < min(hi, fs / 2))])))
-                for lo, hi in ((20000, 40000), (40000, 96000), (96000, 192000))
-                if lo < fs / 2}}
+                f"{lo}-{hi_}": float(db(np.sum(p[(f >= lo) & (f < min(hi_, fs / 2))])) + SINE_REF_DB)
+                for lo, hi_ in bands if lo < fs / 2}}
 
 
 def imd_smpte(x, fs, nfft, f1, f2, orders=4):
@@ -187,13 +283,19 @@ def imd_smpte(x, fs, nfft, f1, f2, orders=4):
     for n in range(1, orders + 1):
         for s in (-1, 1):
             sb += lobe_power(p, tone_bin(f2 + s * n * f1, nfft, fs))
-    return {"imd_db": float(db(sb / ref)), "imd_percent": float(100 * np.sqrt(sb / ref))}
+    # Alternative convention: the sideband amplitudes added arithmetically (as in the SMPTE
+    # recommendation) instead of root-sum-square; never lower than ``imd_db``.
+    amp = sum(np.sqrt(lobe_power(p, tone_bin(f2 + s * n * f1, nfft, fs)))
+              for n in range(1, orders + 1) for s in (-1, 1))
+    return {"imd_db": float(db(sb / ref)), "imd_percent": float(100 * np.sqrt(sb / ref)),
+            "imd_db_amplitude_sum": float(db(amp**2 / ref))}
 
 
 def imd_ccif(x, fs, nfft, f1, f2):
     """CCIF IMD: difference products (f2-f1, 2f1-f2, 2f2-f1, 3f1-... up to 3rd order)."""
     p = power_spectrum(x, nfft)
-    ref = lobe_power(p, tone_bin(f1, nfft, fs)) + lobe_power(p, tone_bin(f2, nfft, fs))
+    p1, p2 = lobe_power(p, tone_bin(f1, nfft, fs)), lobe_power(p, tone_bin(f2, nfft, fs))
+    ref = p1 + p2
     prods = [f2 - f1, 2 * f1 - f2, 2 * f2 - f1, 3 * f1 - 2 * f2, 3 * f2 - 2 * f1, 2 * (f2 - f1),
              3 * (f2 - f1)]
     lv = 0.0
@@ -201,18 +303,28 @@ def imd_ccif(x, fs, nfft, f1, f2):
     for fp in prods:
         if 20 < fp < nyq:
             lv += lobe_power(p, tone_bin(fp, nfft, fs))
-    return {"imd_db": float(db(lv / ref)), "imd_percent": float(100 * np.sqrt(lv / ref))}
+    # ``imd_db`` is referred to the power sum of the two tones. The IEC 60268-3 convention refers
+    # to the sum of their amplitudes, which reads 3.01 dB lower for equal tones.
+    return {"imd_db": float(db(lv / ref)), "imd_percent": float(100 * np.sqrt(lv / ref)),
+            "imd_db_iec": float(db(lv / (np.sqrt(p1) + np.sqrt(p2)) ** 2))}
 
 
-def multitone_metrics(x, fs, nfft, tone_bins, nseg=8, step=None):
+def multitone_metrics(x, fs, nfft, tone_bins, nseg=8, step=None, f_max=20000.0):
     """Distortion-free range: tone level minus the highest in-between residual bin.
 
     Returns the 8-average headline and the 1-average extra. ``step`` is the segment hop
     (default nfft, i.e. no overlap, so periodic coherent tones stay exactly on their bins).
+    Tones and residual bins above ``f_max`` (20 kHz, the audio band) are left out of the range:
+    the 21.4 kHz tone sits on a decoder's roll-off and would set the figure by itself.
+
+    The window is rectangular because every tone sits on a bin; that is only valid for a record
+    that holds whole periods and has nothing outside the analysis band that is not periodic.
+    A modulator's ultrasonic noise leaks through a rectangular window at 1/f, so decode it to an
+    output rate whose Nyquist frequency is just above the band (see ``measure.multitone``).
     """
     step = step or nfft
     res = {}
-    for label, n in (("avg8", nseg), ("avg1", 1)):
+    for label, n in (("averaged", nseg), ("avg1", 1)):
         acc = np.zeros(nfft // 2 + 1)
         cnt = 0
         for i in range(n):
@@ -222,13 +334,14 @@ def multitone_metrics(x, fs, nfft, tone_bins, nseg=8, step=None):
             cnt += 1
         p = acc / cnt
         bins = np.asarray(tone_bins)
+        bins = bins[bins * fs / nfft <= f_max]
         tone_p = p[bins]
         mask = np.ones_like(p, dtype=bool)
         mask[:2] = False
         for b in bins:
             mask[b] = False  # coherent tones sit exactly on their bin with a rectangular window
         f = freqs(nfft, fs)
-        mask &= f <= 22050.0
+        mask &= f <= f_max
         resid = p[mask]
         res[label] = {
             "tone_min_dbfs": float(db(tone_p.min())),
@@ -238,32 +351,65 @@ def multitone_metrics(x, fs, nfft, tone_bins, nseg=8, step=None):
             "distortion_free_range_db": float(db(tone_p.min()) - db(resid.max())),
             "per_tone_snr_db": [float(v) for v in db(tone_p) - db(resid.mean())],
         }
-    res["headline"] = res["avg8"]
+    res["headline"] = res["averaged"]
     return res
 
 
-def jtest_metrics(x, fs, nfft=2**20, nseg=8, bits=24, fs_nominal=None):
-    """Largest jitter sideband around fs/4 and the count above -130 dBFS.
+def jtest_metrics(x, fs, nfft=2**20, nseg=8, bits=24, fs_nominal=None, margin_db=6.0, level_dbfs=-3.0):
+    """Jitter-like sidebands around fs/4: the largest one above both the noise and the stimulus.
 
     ``fs_nominal`` is the sample rate the J-Test was generated at (default ``fs``); the tone
     sits at fs_nominal/4 and the sidebands at odd multiples of fs_nominal/192 around it.
+
+    Two things look like sidebands and are not. (1) Noise: each odd position is compared with the
+    mean of the two even positions next to it (its own neighbours, where a J-Test has no sideband),
+    because the noise of a noise-shaped chain changes by 20 dB or more across 2 to 20 kHz. (2) The stimulus itself:
+    fs/4 is 48 x fs/192, so every sideband position is also an odd harmonic (number 48 +- n) of
+    the +-1 LSB square wave, which the signal carries at baseband with amplitude (4/pi)/m LSB and
+    which a linear device passes unchanged. Each position is compared with that expected level
+    too (scaled by the measured carrier). A position counts only when it is ``margin_db`` above
+    both. With none, ``largest_sideband_db`` is None and ``noise_floor_db`` (median lobe power of
+    the even positions re the carrier) is the result. Levels are lobe powers (+-10 bins), so the
+    bin width matters: it is reported.
     """
     fn = fs_nominal or fs
     p = welch(x, nfft, nseg)
     k0 = tone_bin(fn / 4, nfft, fs)
     carrier = lobe_power(p, k0)
+    nominal = (10 ** (level_dbfs / 20)) ** 2 / 2  # carrier power as generated
+    lsb = 2.0 ** (1 - bits)  # peak of the square wave, 2^-(bits-1)
     spacing = fn / 192
-    side = {}
-    for n in range(1, 40, 2):
-        for s in (-1, 1):
-            k = tone_bin(fn / 4 + s * n * spacing, nfft, fs)
+    side, noise, expect, even = {}, [], {}, {}
+    for n in range(1, 41):
+        for s_ in (-1, 1):
+            k = tone_bin(fn / 4 + s_ * n * spacing, nfft, fs)
             if 0 < k < len(p):
-                side[(s * n)] = lobe_power(p, k)
-    top = max(side, key=side.get)
+                if n % 2:
+                    side[s_ * n] = lobe_power(p, k)
+                    m = 48 + s_ * n  # harmonic number of the baseband square wave
+                    expect[s_ * n] = ((4 / np.pi) * lsb / m) ** 2 / 2 * (carrier / nominal)
+                else:
+                    even[s_ * n] = lobe_power(p, k)
+                    noise.append(even[s_ * n])
+    floor = float(np.median(noise)) if noise else 0.0
+    gain = 10 ** (margin_db / 10)
+
+    def local_noise(o):
+        """Noise at a sideband position: the mean of the even positions on either side of it (the carrier is not one)."""
+        nb = [even[q] for q in (o - 1, o + 1) if q in even and q != 0]
+        return float(np.mean(nb)) if nb else floor
+
+    found = {o: v for o, v in side.items() if v > local_noise(o) * gain and v > expect[o] * gain}
     count = sum(1 for v in side.values() if db(v) > -130)
-    return {"carrier_dbfs": float(db(carrier)), "largest_sideband_db": float(db(side[top] / carrier)),
-            "largest_sideband_order": int(top), "sidebands_above_minus130": int(count),
-            "note": "file-level jitter test (arithmetic only)"}
+    res = {"carrier_dbfs": float(db(carrier)), "noise_floor_db": float(db(floor / carrier)),
+           "bin_hz": float(fs / nfft), "sidebands_detected": len(found), "sidebands_above_minus130": int(count),
+           "note": "file-level jitter test (arithmetic only)"}
+    if found:
+        top = max(found, key=found.get)
+        res.update({"largest_sideband_db": float(db(found[top] / carrier)), "largest_sideband_order": int(top)})
+    else:
+        res.update({"largest_sideband_db": None, "largest_sideband_order": None})
+    return res
 
 
 def tone_level_db(x, fs, f0, nfft):
@@ -366,6 +512,8 @@ def step_metrics(s, fs):
     """Overshoot (percent of final value) and 1 percent settling time of a step response."""
     s = np.asarray(s, dtype=np.float64)
     n = len(s)
+    if np.mean(s[int(0.9 * n) :]) < 0:
+        s = -s  # an inverting device: read the step in its own direction
     final = float(np.mean(s[int(0.9 * n) :]))
     over = 100 * (float(s.max()) - final) / abs(final) if final else float("nan")
     err = np.abs(s - final) > 0.01 * abs(final)

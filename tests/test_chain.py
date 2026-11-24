@@ -71,7 +71,7 @@ def test_decoder_passband_is_flat():
 
 def test_reference_class_a_smoke_through_runner():
     a = adapters.Reference("t", klass="A", out_rate=44100)
-    r = measure.measure_device(a, "quick", only=["polarity", "impulse"], log=lambda *_: None)
+    r = measure.measure_device(a, "quick", only=["polarity", "impulse"], log=lambda *_, **__: None)
     assert r["metrics"]["polarity"] == "normal"
     assert r["metrics"]["impulse"]["filter_type"] == "linear phase"
     assert r["metrics"]["impulse"]["post_ringing_ms"] > 0.2
@@ -83,7 +83,8 @@ def test_cli_adapter_runs_a_command(tmp_path):
     fs = 88200
     bits, _ = encode.encode(sg.sine(1000, REF_DBFS, fs, fs // 2), fs)
     dsf.write_dsf(tmp_path / "canned.dsf", bits, 2822400)
-    ad = adapters.Cli("copy", f"cp {tmp_path}/canned.dsf {{output}} # {{input}}", klass="B", workdir=tmp_path / "w")
+    ad = adapters.Cli("copy", f"cp {tmp_path}/canned.dsf {{output}} # {{input}}", klass="B", workdir=tmp_path / "w",
+                      shell=True)
     got, rate = ad.pcm_to_dsd(np.zeros(fs // 2), fs)
     assert rate == 2822400 and np.array_equal(got, bits)
     assert ad.log[0]["output_sha256"]
@@ -103,7 +104,7 @@ def test_import_adapter_reads_named_files(tmp_path):
 def test_report_is_written_and_deterministic(tmp_path):
     from dsd_measure.report import write_device_report
     a = adapters.Reference("t", klass="A", out_rate=44100)
-    r = measure.measure_device(a, "quick", only=["impulse", "polarity"], log=lambda *_: None)
+    r = measure.measure_device(a, "quick", only=["impulse", "polarity"], log=lambda *_, **__: None)
     meta = {"device": a.describe(), "profile": "quick", "reference_chain": "1"}
     write_device_report(tmp_path / "a", "t", r, meta)
     write_device_report(tmp_path / "b", "t", r, meta)

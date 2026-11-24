@@ -3,6 +3,7 @@
 import hashlib
 import platform
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -42,8 +43,39 @@ def versions():
             "matplotlib": matplotlib.__version__}
 
 
-def run_suite(path, out=None, profile=None, only=None, log=print):
+def _say(msg="", end="\n"):
+    print(msg, end=end, flush=True)
+
+
+def summary_line(name, res):
+    """One line per device for the end of a run: SINAD, dynamic range and the reference-floor flag."""
+    from .report import summary_rows
+    rows = summary_rows(res["metrics"])
+
+    def pick(pre):
+        return next((r for r in rows if r["label"].startswith(pre)), None)
+
+    bits = []
+    for lab, pre in (("SINAD", "SINAD, 1 kHz"), ("DR(A)", "Dynamic range")):
+        r = pick(pre)
+        bits.append(f"{lab} {r['value']}" if r else f"{lab} not measured")
+    if pick("SINAD, 1 kHz") or pick("Dynamic range"):
+        bits.append("at the reference floor (limited by the measurement)" if any(r["flag"] for r in rows)
+                    else "clear of the reference floor")
+    return f"  {name}: " + ", ".join(bits)
+
+
+def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, verbose=False, source=None):
+    """Run a suite file; returns ``(report folder, {device: [tests that raised]})``.
+
+    ``plan=True`` prints what would run and returns ``(None, {})`` without measuring.
+    """
+    from . import plan as pl
+    log = log or _say
     path = Path(path)
+    if plan:
+        log(pl.plan_text(path, out, profile, only, source=source))
+        return None, {}
     raw = path.read_bytes()
     cfg = tomllib.loads(raw.decode())
     suite = cfg.get("suite", {})
@@ -51,20 +83,61 @@ def run_suite(path, out=None, profile=None, only=None, log=print):
     in_rate = int(suite.get("in_rate", 88200))
     outdir = Path(out or suite.get("out", "report"))
     outdir.mkdir(parents=True, exist_ok=True)
-    results = []
-    for spec in cfg.get("device", []):
+    null_only = only == ["null"]
+    specs = [] if null_only else cfg.get("device", [])
+    t_start = time.time()
+    log(f"dsd-measure {__version__}: suite {suite.get('name', 'unnamed')!r}, profile {profile}, {len(specs)} device(s). "
+        f"Source data: synthetic test signals made by the tool (not music). Report folder: {outdir}/")
+    results, metas, failed = [], [], {}
+    seen = {}
+    for spec in specs:  # two names that sanitise to one folder would overwrite each other's report
+        key = pl.safe_name(str(spec.get("name", spec.get("adapter", "reference"))))
+        if key in seen:
+            raise ValueError(f"devices {seen[key]!r} and {spec.get('name')!r} would both write the report folder {key!r}: "
+                             "give them names that differ in letters, digits, - or _")
+        seen[key] = spec.get("name")
+    for n, spec in enumerate(specs, 1):
         adapter = make_adapter(spec)
-        log(f"measuring {adapter.name} (class {adapter.klass}, profile {profile})")
-        res = measure_device(adapter, profile, in_rate, log=log, only=only)
+        fa = pl.device_facts(adapter)
+        log("")
+        log(f"Device {n} of {len(specs)}: {adapter.name} (class {adapter.klass}, {fa['kind']}, adapter {adapter.kind})")
+        if verbose:
+            fed, ret = pl.io_text(fa, in_rate)
+            log(f"  command (example): {fa['command']}")
+            log(f"  fed with: {fed}")
+            log(f"  returns: {ret}")
+            if adapter.gain_db:
+                log(f"  gain applied to its output: {adapter.gain_db:+g} dB")
+        try:
+            res = measure_device(adapter, profile, in_rate, log=log, only=only)
+        finally:
+            adapter.close()  # temporary files go on success, failure and Ctrl-C
+        if res["errors"]:
+            failed[adapter.name] = list(res["errors"])
         meta = {"device": adapter.describe(), "profile": profile, "in_rate": in_rate,
                 "reference_chain": REFERENCE_CHAIN_VERSION, "versions": versions(),
                 "suite_sha256": hashlib.sha256(raw).hexdigest(), "adapter_calls": adapter.log[:50],
                 "command": " ".join(["dsd-measure"] + sys.argv[1:]), "timing_s": res["timing_s"],
                 "profile_settings": PROFILES[profile], "reference_modulator_designs": res.get("reference_chain_ntf", {})}
-        safe = "".join(c if c.isalnum() or c in "-_" else "-" for c in adapter.name)
+        meta["measured"] = pl.measured(adapter, profile, in_rate, res["metrics"].get("reference_floor"), suite.get("name"))
+        meta["measured"]["versions"] = meta["versions"]
+        safe = pl.safe_name(adapter.name)
         write_device_report(outdir / safe, adapter.name, res, meta)
-        results.append((safe, res))
+        results.append((adapter.name, safe, res))
+        metas.append(meta["measured"])
     if len(results) > 1:
-        write_comparison(outdir / "comparison", results, {"profile": profile})
-    log(f"report written to {outdir}/")
-    return outdir
+        write_comparison(outdir / "comparison", [(s_, r) for _, s_, r in results], {"profile": profile, "measured": metas})
+    if "null" in cfg and (only is None or "null" in only):
+        from .nulltest.run import options_from, run_null
+        ncfg = dict(cfg["null"])
+        run_null(ncfg["source"], ncfg["devices"], options_from(ncfg), ncfg.get("out", outdir / "null"),
+                 cfg.get("device", []), log=log)
+    top = outdir / ("comparison" if len(results) > 1 else results[0][1] if results else "") / "index.html"
+    secs = time.time() - t_start
+    log("")
+    log(f"Finished in {secs / 60:.1f} min. Report: {top}")
+    for name, _, res in results:
+        log(summary_line(name, res))
+    for name, tests in failed.items():
+        log(f"{name}: {len(tests)} test(s) failed: {', '.join(tests)}")
+    return outdir, failed

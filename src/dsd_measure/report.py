@@ -130,7 +130,7 @@ def plot_spectrum(d, title, fmax=None, tones=None, ylim=(-160, 0), color=None, x
     if tones:
         ax.plot(np.array(tones[0]) / 1000, tones[1], "o", ms=3, color=PALETTE[3])
     ax.set_xlabel("Frequency (kHz)")
-    ax.set_ylabel("Level (dBFS)")
+    ax.set_ylabel("Level (dBFS, tone peak; noise per bin)")
     ax.set_ylim(*ylim)
     if fmax:
         ax.set_xlim(fmin / 1000, fmax / 1000)
@@ -279,6 +279,9 @@ def takeaway(key, M):
         i = M.get("impulse")
         if not i:
             return ""
+        if not i.get("measurable", True):
+            return ("The filter cannot be read at this output rate: the noise of the DSD stream in the record is above the "
+                    "-60 dB threshold of the ringing and cut-off figures.")
         t = i["filter_type"]
         pre = i["pre_ringing_ms"]
         return (f"The filter is {t}. Ringing before the main pulse lasts {pre:.2f} ms "
@@ -324,7 +327,8 @@ def takeaway(key, M):
     if key == "thdn_freq":
         t = M.get("thdn_vs_frequency")
         return (f"Distortion plus noise is {t['1000']:.0f} dB at 1 kHz and {t['20000']:.0f} dB at 20 kHz, "
-                f"so the treble is {'as clean as' if t['20000'] < t['1000'] + 6 else 'less clean than'} the midrange.") if t else ""
+                f"so within the 20 kHz band the treble is {'as clean as' if t['20000'] < t['1000'] + 6 else 'less clean than'} the midrange "
+                "(harmonics of a tone above 10 kHz fall outside that band).") if t else ""
     if key == "imd_smpte":
         i = M.get("imd_smpte")
         return f"Mixing bass and treble creates {pct(i['imd_percent'])[:-2]} percent unwanted tones (SMPTE test)." if i else ""
@@ -337,7 +341,13 @@ def takeaway(key, M):
                 f"down at {t['audio_band']['hz'] / 1000:.1f} kHz.") if t else ""
     if key == "jtest":
         j = M.get("jtest")
-        return f"File-level J-Test: the largest sideband is {j['largest_sideband_db']:.0f} dB down (arithmetic only, not a clock test)." if j else ""
+        if not j:
+            return ""
+        if j.get("largest_sideband_db") is None:
+            return (f"File-level J-Test: no sideband stands above the noise (noise {j['noise_floor_db']:.0f} dB re the carrier "
+                    f"in {j['bin_hz']:.2f} Hz bins; arithmetic only, not a clock test).")
+        return (f"File-level J-Test: the largest sideband is {j['largest_sideband_db']:.0f} dB down, "
+                f"{j['sidebands_detected']} above the noise (arithmetic only, not a clock test).")
     if key == "density":
         s = _g(M, "stability", "levels")
         if not s:
@@ -362,7 +372,13 @@ def takeaway(key, M):
         return f"After a 50 ms burst above the working range a quiet tone is back to its normal noise level {rec}."
     if key == "noise_wide":
         u = M.get("ultrasonic")
-        return f"The highest ultrasonic noise peak is {u['level_dbfs']:.0f} dBFS at {u['freq_hz'] / 1000:.0f} kHz." if u else ""
+        if not u:
+            return ""
+        d = u.get("density_dbfs_hz", {})
+        dens = ", ".join(f"{v:.0f} dBFS/Hz at {int(k) // 1000} kHz" for k, v in d.items())
+        edge = " (the band edge, not a feature of the noise)" if u.get("peak_at_band_edge") else ""
+        return (f"Ultrasonic noise density: {dens}. The highest 1/3-octave band is {u['peak_density_dbfs_hz']:.0f} dBFS/Hz "
+                f"at {u['peak_hz'] / 1000:.0f} kHz{edge}.")
     return ""
 
 
@@ -397,59 +413,83 @@ def summary_rows(M):
     n = M.get("noise")
     if n:
         r.append(_row(H, "Noise 20 Hz-20 kHz, A-weighted", f"{n['a_weighted_dbfs']:.1f} dBFS", -n["a_weighted_dbfs"], "higher",
-                      "noise" in fl, "24-bit dithered silence in; dBFS rms"))
+                      "noise" in fl, "32-bit-level dithered silence in; dBFS re the rms of a full-scale sine"))
     pk = M.get("tone_peak")
     if pk:
-        r.append(_row(H, "SINAD at the peak level (+3.1 dB SACD, -2.9 dBFS)", f"{pk['sinad_db']:.1f} dB", pk["sinad_db"], "higher"))
+        df = pk.get("design_floor")
+        # Class A: the reference modulator's design at this level has its own, higher, floor; say so in the value
+        # so that every format (HTML, Markdown, CSV) carries it.
+        extra = f" (reference modulator {df['ntf']}: floor {df['sinad_db']:.1f} dB)" if df else ""
+        r.append(_row(H, "SINAD at the peak level (+3.1 dB SACD, -2.9 dBFS)", f"{pk['sinad_db']:.1f} dB{extra}", pk["sinad_db"],
+                      "higher", "peak_sinad" in fl,
+                      "the reference modulator is less accurate at this level than at 0 dB SACD" if df else ""))
     # filter
     im, fs_ = M.get("impulse"), M.get("filter_summary") or {}
-    if im:
+    meas = bool(im.get("measurable", True)) if im else True
+    if im and not meas:
+        r.append(_row(F, "Filter type, ringing and cut-off", "not measurable at this output rate", None, None, False,
+                      im.get("not_measurable_reason", "the noise of the DSD stream is above the -60 dB threshold")))
+    elif im:
         r.append(_row(F, "Filter type", im["filter_type"]))
         r.append(_row(F, "Ringing before / after the pulse", f"{im['pre_ringing_ms']:.2f} / {im['post_ringing_ms']:.2f} ms",
                       im["pre_ringing_ms"], "lower", False, "samples above -60 dB of the peak"))
-    if fs_:
+    if fs_ and meas:
         r.append(_row(F, "-0.1 dB / -3 dB frequency", f"{_hz(fs_.get('minus_0p1_db_hz'))} / {_hz(fs_.get('minus_3_db_hz'))}"))
-        if fs_.get("stopband_worst_db") is not None:
-            r.append(_row(F, f"Stopband above {_hz(fs_['stopband_edge_hz'])}",
-                          f"{fs_['stopband_worst_db']:.0f} dB", -fs_["stopband_worst_db"], "higher", False,
-                          "worst level from the lowest frequency that folds back below 20 kHz; deeper is better"))
+    if fs_ and fs_.get("stopband_worst_db") is not None:
+        rng = fs_.get("stopband_tested_hz")
+        span = f"{rng[0] / 1000:.1f} to {rng[1] / 1000:.1f} kHz" if rng else f"from {_hz(fs_['stopband_edge_hz'])}"
+        r.append(_row(F, "Stopband (upper bound)",
+                      f"{fs_['stopband_worst_db']:.0f} dB or deeper, tones {span}", -fs_["stopband_worst_db"], "higher", False,
+                      "worst image of the tones tested, read in the 20 Hz-20 kHz band; includes the device's own noise, "
+                      "so the true stopband is this or deeper"))
     fr = M.get("frequency_response")
     if fr:
         r += [_row(F, "Passband ripple 20 Hz-20 kHz", f"{fr['ripple_pp_db']:.3f} dB peak to peak", fr["ripple_pp_db"], "lower"),
               _row(F, "Response at 20 kHz re 1 kHz", f"{fr['at_hz']['20000']:+.3f} dB")]
     gd = M.get("group_delay_us")
-    if gd:
+    if gd and gd.get("measurable", True):
         r.append(_row(F, "Group delay 20 kHz re 1 kHz", f"{gd['at_20k'] - gd['at_1k']:+.1f} microseconds"))
     # ultrasonic
     u = M.get("ultrasonic")
     if u:
-        r.append(_row(U, "Ultrasonic noise peak", f"{u['level_dbfs']:.0f} dBFS at {u['freq_hz'] / 1000:.0f} kHz", -u["level_dbfs"], "higher",
-                      False, "highest bin between 20 kHz and 0.4 x the decode rate; lower is quieter"))
+        dd = u.get("density_dbfs_hz", {})
+        if dd:
+            r.append(_row(U, "Ultrasonic density at 50 / 100 / 200 kHz",
+                          " / ".join(f"{dd[k]:.0f}" if k in dd else "n/a" for k in ("50000", "100000", "200000")) + " dBFS/Hz",
+                          -dd.get("100000", dd.get("50000", 0.0)), "higher", False,
+                          "power per Hz in a third of an octave, dBFS re a full-scale sine; lower is quieter"))
+        r.append(_row(U, "Ultrasonic noise, highest 1/3 octave",
+                      f"{u['peak_density_dbfs_hz']:.0f} dBFS/Hz at {u['peak_hz'] / 1000:.0f} kHz"
+                      + (" (band edge)" if u.get("peak_at_band_edge") else ""), None, None, False,
+                      "a single noisy bin is never reported; at the band edge the noise still rises"))
         ig = u["integrated_dbfs"]
         r.append(_row(U, "Integrated 20-40 / 40-96 kHz", f"{ig['20000-40000']:.0f} / {ig['40000-96000']:.0f} dBFS", -ig["40000-96000"], "higher"))
     elif n and n.get("bands", {}).get("20000-40000") is not None:
         r.append(_row(U, "Noise 20-40 kHz (device output)", f"{n['bands']['20000-40000']:.0f} dBFS", -n["bands"]["20000-40000"], "higher"))
     # other
     if "imd_smpte" in M:
-        r.append(_row(O, "IMD SMPTE 60 Hz + 7 kHz, 0 dB SACD", f"{M['imd_smpte']['imd_db']:.1f} dB", -M["imd_smpte"]["imd_db"], "higher"))
+        r.append(_row(O, "IMD SMPTE 60 Hz + 7 kHz, 0 dB SACD", f"{M['imd_smpte']['imd_db']:.1f} dB", -M["imd_smpte"]["imd_db"], "higher", "imd_smpte" in fl,
+                      "sideband power re the 7 kHz tone; includes noise in the lobes"))
     if "imd_ccif" in M:
-        r.append(_row(O, "IMD CCIF 19 + 20 kHz", f"{M['imd_ccif']['imd_db']:.1f} dB", -M["imd_ccif"]["imd_db"], "higher"))
+        r.append(_row(O, "IMD CCIF 19 + 20 kHz", f"{M['imd_ccif']['imd_db']:.1f} dB", -M["imd_ccif"]["imd_db"], "higher", "imd_ccif" in fl,
+                      "products re the power sum of the two tones (3.01 dB higher than the IEC 60268-3 amplitude-sum value)"))
     sw = M.get("imd_sweep")
     if sw:
         r.append(_row(O, "IMD sweep, worst CCIF / SMPTE", f"{sw['ccif_worst_db']:.1f} / {sw['smpte_worst_db']:.1f} dB",
                       -sw["ccif_worst_db"], "higher", False, "CCIF pairs 10-19.5 kHz; SMPTE -60 to 0 dB SACD"))
     mt = _g(M, "multitone", "headline")
     if mt:
-        r.append(_row(O, "Multitone distortion-free range", f"{mt['distortion_free_range_db']:.1f} dB", mt["distortion_free_range_db"], "higher"))
+        r.append(_row(O, "Multitone distortion-free range", f"{mt['distortion_free_range_db']:.1f} dB", mt["distortion_free_range_db"], "higher", "multitone" in fl,
+                      "tones and residual up to 20 kHz"))
     ct = M.get("crosstalk")
     if ct:
         worst = max(max(v["left_to_right_db"], v["right_to_left_db"]) for v in ct.values())
-        r.append(_row(O, "Crosstalk, worst of 1 and 10 kHz", f"{worst:.0f} dB", -worst, "higher", False,
+        r.append(_row(O, "Crosstalk, worst of 1 and 10 kHz", f"{worst:.0f} dB", -worst, "higher", "crosstalk" in fl,
                       "software paths show only the dither floor; a recorded analogue path shows real crosstalk"))
         r.append(_row(O, "Channel gain difference", f"{ct['1000']['gain_diff_db']:+.4f} dB, phase {ct['1000']['phase_diff_deg']:+.3f} deg"))
     al = M.get("alias_tones")
     if al:
-        r.append(_row(O, "Worst alias image, tones above Nyquist", f"{al['worst_image_db']:.0f} dB re tone", -al["worst_image_db"], "higher"))
+        r.append(_row(O, "Worst alias image, tones above Nyquist", f"{al['worst_image_db']:.0f} dB re tone", -al["worst_image_db"], "higher", "alias" in fl))
     ov = M.get("overload_recovery")
     if ov:
         rec = ov["recovery_ms"]
@@ -469,7 +509,9 @@ def summary_rows(M):
         for k, v in rt.items():
             ex = f"SINAD {v['sinad_db']:.0f} dB, DR(A) {v['dr_a_db']:.0f} dB"
             if "ultrasonic" in v:
-                ex += f", ultrasonic peak {v['ultrasonic']['level_dbfs']:.0f} dBFS"
+                dd = v["ultrasonic"].get("density_dbfs_hz", {})
+                if "100000" in dd:
+                    ex += f", ultrasonic {dd['100000']:.0f} dBFS/Hz at 100 kHz"
             r.append(_row(O, f"{k} (1 kHz, 0 dB SACD)", ex, v["sinad_db"], "higher"))
     f = M.get("reference_floor")
     if f:
@@ -528,6 +570,8 @@ details{margin:.6em 0}summary{cursor:pointer;font-weight:600}.warn{color:#b3261e
 tr.sec td{background:var(--card);font-weight:600;color:var(--mut);font-size:.85em;text-transform:uppercase;letter-spacing:.04em}
 td.h{color:var(--mut);font-size:.8em}.best{font-weight:700}
 .legend{font-size:.88em;color:var(--mut);border-left:3px solid var(--line);padding-left:10px}
+td{word-break:break-word}.card ul{margin:.3em 0;padding-left:1.2em}.card h2{margin-top:.2em}
+.concl{border-left:4px solid var(--acc)}.concl li{margin:.35em 0}.concl li.c-pending{color:var(--mut)}
 a{color:var(--acc)}footer{margin-top:2em;color:var(--mut);font-size:.85em}
 """
 
@@ -563,7 +607,7 @@ def device_plots(results, keyset="key"):
               "noise": "Welch 8 averages, BH7 window, dBFS per Hz; plotted in 1/48-octave power buckets.",
               "levels": "Coherent 1 kHz, BH7 window, notch method 20 Hz-20 kHz.",
               "multitone": "32 tones, 17.6 Hz-21.4 kHz, crest 13.3 dB, peak at 0 dB SACD.",
-              "spectrum_1k": "Coherent 1 kHz at 0 dB SACD (-6.02 dBFS), BH7 window.",
+              "spectrum_1k": "Coherent 1 kHz at 0 dB SACD (-6.02 dBFS), BH7 window; the tone reads at its level, noise per 1.35 Hz bin.",
               "impulse": "Averaged response to 8 impulses at 0 dB SACD, raw output samples."}
     items = []
     if ser("fr"):
@@ -614,7 +658,7 @@ def device_plots(results, keyset="key"):
             _logx(ax, 1000, None)
             ax.set_ylim(-190, -40)
             ax.set_ylabel("dBFS per Hz")
-            ax.set_title("Ultrasonic noise (705.6 kHz decode)")
+            ax.set_title(f"Ultrasonic noise ({d.get('decode_rate', 705600) / 1000:g} kHz decode)")
             items.append(("detail", "noise_wide", _svg(fig), tk("noise_wide")))
         if "density" in r:
             items.append(("detail", "density", plot_density(r["density"]), tk("density")))
@@ -622,7 +666,8 @@ def device_plots(results, keyset="key"):
 
 
 LEGEND = ("Levels: dBFS is relative to PCM full scale. 0 dB SACD is the reference tone level, 50 % modulation, "
-          "-6.02 dBFS. Distortion and noise figures are in dB below the 1 kHz tone unless they say dBFS. Bandwidth "
+          "-6.02 dBFS; noise in dBFS is referred to the rms of a full-scale sine (AES17, ASR). Distortion and noise figures "
+          "are in dB below the 1 kHz tone unless they say dBFS. Bandwidth "
           "20 Hz to 20 kHz, unweighted unless marked A-weighted. SINAD is THD+N turned positive. Because the tone is "
           "6 dB below full scale, a noise-limited device would read about 6 dB better at full scale; compare reports "
           "made at the same level.")
@@ -640,7 +685,7 @@ def _hero(M):
         if x:
             cards.append((lab, x["value"], x["flag"]))
     ft, fs_ = M.get("impulse"), M.get("filter_summary") or {}
-    if ft:
+    if ft and ft.get("measurable", True):
         cards.append(("Filter", f"{ft['filter_type']}, -3 dB at {_hz(fs_.get('minus_3_db_hz'))}", False))
     x = pick("Ultrasonic noise peak")
     if x:
@@ -674,6 +719,80 @@ def _methods(meta):
     return "<table>" + "".join(f"<tr><td>{html.escape(a)}</td><td>{html.escape(b)}</td></tr>" for a, b in rows) + "</table>"
 
 
+def _notes_html(notes):
+    if not notes:
+        return ""
+    return "<h2>Notes</h2><div class=card><ul>" + "".join(f"<li>{html.escape(n)}</li>" for n in notes) + "</ul></div>"
+
+
+def _notes_md(notes):
+    return ["", "## Notes", ""] + [f"- {n}" for n in notes] if notes else []
+
+
+def _measured_html(ms):
+    """The "What was measured" block: ``ms`` is a list of ``meta["measured"]`` (one device, or all in a comparison)."""
+    from .plan import measured_details, measured_summary
+    if len(ms) == 1:
+        lines = measured_summary(ms[0])
+    else:
+        m0 = ms[0]
+        lines = [("Devices", "; ".join(f"{m['device']['name']} (class {m['device']['class']}, {m['device']['adapter']})" for m in ms)
+                  + ". Every device was fed the identical signals."),
+                 ("Source signals", "Synthetic and deterministic test signals made by the toolkit (not music), the same for every device."),
+                 ("Reference chain", measured_summary(m0)[2][1]),
+                 ("Profile and date", measured_summary(m0)[3][1])]
+    body = "".join(f"<li><b>{html.escape(a)}:</b> {html.escape(b)}</li>" for a, b in lines)
+    det = ""
+    for m in ms:
+        rows = "".join(f"<tr><td>{html.escape(a)}</td><td>{html.escape(str(b))}</td></tr>" for a, b in measured_details(m))
+        head = f"<p><b>{html.escape(m['device']['name'])}</b></p>" if len(ms) > 1 else ""
+        det += head + f"<table>{rows}</table>"
+    return (f"<div class=card><h2>What was measured</h2><ul>{body}</ul>"
+            f"<details><summary>Details: rates, word lengths, signal file hashes, versions</summary>{det}</details></div>")
+
+
+def _measured_md(ms):
+    from .plan import measured_summary
+    lines = measured_summary(ms[0]) if len(ms) == 1 else [
+        ("Devices", "; ".join(m["device"]["name"] for m in ms) + ". Every device was fed the identical signals."),
+        measured_summary(ms[0])[1], measured_summary(ms[0])[2], measured_summary(ms[0])[3]]
+    return ["## What was measured", ""] + [f"- **{a}:** {b}" for a, b in lines] + [""]
+
+
+# ----------------------------------------------------------------------------- conclusions
+
+def _conclusions_html(cs):
+    """The "Conclusions" card: one bullet per conclusion, then the evidence and thresholds, collapsed."""
+    from .conclusions import DOC_URL, SCOPE, THRESHOLDS
+    if not cs:
+        return ""
+    lis = "".join(f"<li class='c-{html.escape(c['verdict'])}'>{html.escape(c['text'])}</li>" for c in cs)
+    rows = ""
+    for c in cs:
+        for e in c["evidence"]:
+            who = f"{html.escape(e['device'])}: " if e.get("device") else ""
+            rows += (f"<tr><td>{html.escape(c['label'])}</td><td>{who}{html.escape(e['label'])}</td>"
+                     f"<td class=v>{html.escape(e['value'])}</td><td class=h>{html.escape(e['metric'])}</td></tr>")
+    used = sorted({t for c in cs for t in c["thresholds"]})
+    th = ""
+    for t in used:
+        d = THRESHOLDS[t]
+        val = "" if d["value"] is None else f" = {d['value']:g} {html.escape(d['unit'])}"
+        th += f"<li><b>{html.escape(t)}</b>{val}: {html.escape(d['meaning'])}</li>"
+    return (f"<div class='card concl'><h2>Conclusions</h2><ul>{lis}</ul><p class=det>{html.escape(SCOPE)} "
+            f"<a href='{DOC_URL}'>How the conclusions are drawn, with thresholds and sources</a>.</p>"
+            f"<details><summary>Evidence: the figures and thresholds behind each conclusion</summary>"
+            f"<table><tr><th>Conclusion</th><th>Figure</th><th class=v>Value</th><th>Key in results.json</th></tr>{rows}</table>"
+            f"<ul>{th}</ul></details></div>")
+
+
+def _conclusions_md(cs):
+    from .conclusions import DOC_URL, SCOPE
+    if not cs:
+        return []
+    return ["## Conclusions", ""] + [f"- {c['text']}" for c in cs] + ["", f"{SCOPE} [How the conclusions are drawn]({DOC_URL}).", ""]
+
+
 def write_device_report(outdir, name, result, meta):
     out = Path(outdir)
     (out / "plots").mkdir(parents=True, exist_ok=True)
@@ -682,8 +801,12 @@ def write_device_report(outdir, name, result, meta):
     key = "".join(_card(s, t, d) for kind, _, s, t, d in plots if kind == "key")
     det = "".join(_card(s, t, d) for kind, _, s, t, d in plots if kind == "detail")
     nr = "".join(f"<li><b>{html.escape(k)}</b>: {html.escape(v)}</li>" for k, v in result["not_run"].items())
-    body = (f"<div class=hero>{_hero(M)}</div><p class=legend>{html.escape(LEGEND)}</p>"
+    mm = [meta["measured"]] if meta.get("measured") else []
+    from .conclusions import device_conclusions
+    concl = device_conclusions(M, meta.get("device"))
+    body = (f"{_conclusions_html(concl)}{_measured_html(mm) if mm else ''}<div class=hero>{_hero(M)}</div><p class=legend>{html.escape(LEGEND)}</p>"
             f"<h2>Summary</h2><div class=card><table>{_table(M)}</table></div>"
+            f"{_notes_html(result.get('notes'))}"
             f"<h2>Key plots</h2><div class=grid>{key}</div>"
             f"<details><summary>More plots</summary><div class=grid>{det}</div></details>"
             f"<details><summary>Method and settings</summary>{_methods(meta)}</details>"
@@ -696,15 +819,16 @@ def write_device_report(outdir, name, result, meta):
     (out / "index.html").write_text(_page(f"{name}: measurement report", body, sub))
     for _kind, key_, svg, *_ in plots:
         (out / "plots" / f"{key_}.svg").write_text(svg)
-    (out / "results.json").write_text(json.dumps({"metrics": M, "not_run": result["not_run"], "notes": result["notes"]}, indent=1, default=str))
+    (out / "results.json").write_text(json.dumps({"conclusions": concl, "metrics": M, "not_run": result["not_run"], "notes": result["notes"]}, indent=1, default=str))
     (out / "provenance.json").write_text(json.dumps(meta, indent=1, default=str))
     with open(out / "results.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["metric", "value"])
         for k, v in flatten(M):
             w.writerow([k, v])
-    md = [f"# {name}: measurement report", "", sub, "", f"> {LEGEND}", "", "| Metric | Value |", "|---|---|"]
+    md = [f"# {name}: measurement report", "", sub, ""] + _conclusions_md(concl) + (_measured_md(mm) if mm else []) + [f"> {LEGEND}", "", "| Metric | Value |", "|---|---|"]
     md += [f"| {a} | {b} |" for a, b in summary_pairs(M)]
+    md += _notes_md(result.get("notes"))
     md += ["", "Plots: see `plots/`. Raw numbers: `results.csv`, `results.json`.", ""]
     for _kind, key_, _, take, _ in plots:
         if take:
@@ -712,8 +836,17 @@ def write_device_report(outdir, name, result, meta):
     (out / "index.md").write_text("\n".join(md) + "\n")
 
 
+_FILTER_LABELS = ("Filter type", "Ringing before", "-0.1 dB", "Stopband", "Group delay", "Worst alias image")
+
+
+def _absent(klass, label):
+    """What a comparison cell says when a device has no such row: a modulator's filter rows are the reference decoder's."""
+    return "not shown (a modulator's filter is the reference decoder's)" if klass == "B" and label.startswith(_FILTER_LABELS) else "not run"
+
+
 def write_comparison(outdir, results, meta):
     out = Path(outdir)
+    klass = {n: r["metrics"].get("device_class", "A") for n, r in results}
     (out / "plots").mkdir(parents=True, exist_ok=True)
     names = [n for n, _ in results]
     rows_by = {n: {x["label"]: x for x in summary_rows(r["metrics"])} for n, r in results}
@@ -735,7 +868,7 @@ def write_comparison(outdir, results, meta):
         for n in names:
             x = rows_by[n].get(k)
             if not x:
-                cells.append("<td class=v>not run</td>")
+                cells.append(f"<td class=v>{html.escape(_absent(klass[n], k))}</td>")
                 continue
             cls = "v best" if best is not None and x["num"] == best else "v"
             tag = ' <span class=fl-tag>floor</span>' if x["flag"] else ""
@@ -745,13 +878,19 @@ def write_comparison(outdir, results, meta):
     plots = device_plots(results)
     cards = "".join(_card(s, "", d) for kind, _, s, t, d in plots if kind == "key")
     det = "".join(_card(s, "", d) for kind, _, s, t, d in plots if kind == "detail")
-    body = (f"<p class=legend>{html.escape(LEGEND)} Bold marks the better figure in a row; 'floor' marks a figure within 6 dB of that "
+    mm = meta.get("measured") or []
+    from .conclusions import comparison_conclusions
+    devs = [m.get("device") for m in mm] if len(mm) == len(results) else [None] * len(results)
+    concl = comparison_conclusions([((d or {}).get("name") or n, r["metrics"], d) for (n, r), d in zip(results, devs, strict=True)])
+    (out / "results.json").write_text(json.dumps({"devices": names, "conclusions": concl}, indent=1, default=str))
+    body = (f"{_conclusions_html(concl)}{_measured_html(mm) if mm else ''}<p class=legend>{html.escape(LEGEND)} Bold marks the better figure in a row; 'floor' marks a figure within 6 dB of that "
             f"device's reference floor, so it may be limited by the measurement.</p>"
             f"<h2>Summary</h2><div class=card><table><tr><th>Metric</th>{head}</tr>{''.join(trs)}</table></div>"
             f"<h2>Overlays</h2><div class=grid>{cards}</div>"
+            f"{_notes_html([f'{n}: {t}' for n, r in results for t in r.get('notes', [])])}"
             f"<details><summary>More overlays</summary><div class=grid>{det}</div></details>"
             f"<p>Per-device reports: " + ", ".join(f"<a href='../{html.escape(n)}/index.html'>{html.escape(n)}</a>" for n in names)
-            + ". Raw numbers: <a href=results.csv>results.csv</a>.</p>")
+            + ". Raw numbers: <a href=results.csv>results.csv</a>; conclusions as data: <a href=results.json>results.json</a>.</p>")
     (out / "index.html").write_text(_page("Comparison report", body, f"{len(names)} devices; profile {meta['profile']}."))
     for _kind, key_, svg, *_ in plots:
         (out / "plots" / f"{key_}.svg").write_text(svg)
@@ -761,7 +900,8 @@ def write_comparison(outdir, results, meta):
         for n, r in results:
             for k, v in flatten(r["metrics"]):
                 w.writerow([n, k, v])
-    md = ["# Comparison report", "", f"> {LEGEND}", "", "| Metric | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
+    md = ["# Comparison report", ""] + _conclusions_md(concl) + (_measured_md(mm) if mm else []) + [f"> {LEGEND}", "", "| Metric | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
     for k in labels:
-        md.append(f"| {k} | " + " | ".join((rows_by[n][k]["value"] + (" (floor)" if rows_by[n][k]["flag"] else "")) if k in rows_by[n] else "not run" for n in names) + " |")
+        md.append(f"| {k} | " + " | ".join((rows_by[n][k]["value"] + (" (floor)" if rows_by[n][k]["flag"] else "")) if k in rows_by[n] else _absent(klass[n], k) for n in names) + " |")
+    md += _notes_md([f"{n}: {t}" for n, r in results for t in r.get("notes", [])])
     (out / "index.md").write_text("\n".join(md) + "\n")

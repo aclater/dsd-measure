@@ -1,7 +1,9 @@
 """The measurements of docs/footprint.md, run against one adapter.
 
 ``measure_device(adapter, profile)`` returns a result dict:
-``{"metrics": {...}, "plots": {...}, "not_run": {...}, "notes": [...]}``. ``plots`` holds the
+``{"metrics": {...}, "plots": {...}, "not_run": {...}, "errors": [...], "notes": [...]}``.
+``errors`` names the tests that raised (a subset of ``not_run``; tests skipped on purpose are not
+errors). ``plots`` holds the
 arrays that ``report`` draws; ``metrics`` is what goes into JSON and CSV.
 """
 
@@ -18,6 +20,23 @@ from .levels import PEAK_DBFS, REF_DBFS
 REF_FS = 352800
 REF_NFFT = 2**18
 DSD64 = 2822400
+#: Version of the metric definitions in results.json. 2: noise in dBFS re the rms of a full-scale
+#: sine, 32-bit dither on silent inputs, ultrasonic noise as densities, stopband from alias tones,
+#: multitone range to 20 kHz on a windowed-or-decimated path, J-Test sidebands against the noise.
+ANALYSIS_VERSION = 2
+#: Dither for "silent" inputs: TPDF at 32-bit level (about -194.85 dBFS over 20 kHz, dBFS re a full-scale
+#: sine), far below the floor of every converter measured here, so what is read is the device and not
+#: the stimulus. (-162 dBFS is the A-weighted noise of the reference chain with this dither in.)
+DITHER_LSB = 2.0**-31
+
+
+def tpdf(n, rng):
+    """TPDF noise of +-1 LSB at ``DITHER_LSB`` (2 LSB peak to peak)."""
+    return (rng.random(n) - rng.random(n)) * DITHER_LSB
+
+
+class NotRun(Exception):
+    """A test that cannot run for a stated reason (shown as "not run: reason", never as a number)."""
 
 
 def rate_name(r):
@@ -50,12 +69,36 @@ class Chain:
         self.in_rate = in_rate
         self.tag = None
         self.ntf = {}  # reference modulator design used per call (class A), for provenance
+        self._lat = None
 
     @property
     def dsd_rate(self):
         return self.a.dsd_rate
 
-    def run(self, x, tag, in_rate=None, decode_rate=REF_FS):
+    def latency(self, in_rate):
+        """Device delay in seconds, found once from a single impulse in dithered silence.
+
+        The output is searched from 0.1 s on (a start-up click at the first samples is not the
+        impulse); the impulse went in at 0.3 s, so delays from -0.2 s to +0.9 s are found. The peak is
+        the reference point of every time-domain test, so a late device reads like an aligned one.
+        None when the probe cannot be run (an imported set made before the probe existed).
+        """
+        if self._lat is not None:
+            return self._lat[0]
+        n, at = int(1.2 * in_rate), int(0.3 * in_rate)
+        x = tpdf(n, np.random.default_rng(5))
+        x[at] += 10 ** (REF_DBFS / 20)
+        try:
+            y, fs, _ = self.run(x, "latency", in_rate=in_rate)
+        except FileNotFoundError:
+            self._lat = (None, None)
+            return None
+        k0 = int(0.1 * fs)
+        peak = k0 + int(np.argmax(np.abs(y[k0:])))
+        self._lat = (peak / fs - at / in_rate, fs)
+        return self._lat[0]
+
+    def run(self, x, tag, in_rate=None, decode_rate=REF_FS, decode_passband=20000.0):
         """Class A: PCM -> reference modulator -> device. Class B: PCM -> device -> reference decoder.
 
         ``x`` is mono (1-D) or stereo (2 x n); the result has the same shape.
@@ -71,16 +114,17 @@ class Chain:
             for c in chans:
                 b, info = enc.encode(c, r, self.dsd_rate)
                 bl.append(b)
-                self.ntf[tag] = {"ntf": info["ntf"], "fallbacks": info["fallbacks"], "overload": info["overload_samples"]}
+                self.ntf[tag] = {"ntf": info["ntf"], "order": info["order"], "hinf": info["hinf"],
+                                 "fallbacks": info["fallbacks"], "overload": info["overload_samples"]}
             bits = np.array(bl) if x.ndim == 2 else bl[0]
             y, fs = self.a.dsd_to_pcm(bits, self.dsd_rate)
             return y, fs, bits
         bits, rate = self.a.pcm_to_dsd(x, r)
         g = 10 ** (self.a.gain_db / 20)
         if x.ndim == 2:
-            y = np.array([dec.decode(b, rate, decode_rate) for b in bits]) * g
+            y = np.array([dec.decode(b, rate, decode_rate, passband=decode_passband) for b in bits]) * g
         else:
-            y = dec.decode(bits, rate, decode_rate) * g
+            y = dec.decode(bits, rate, decode_rate, passband=decode_passband) * g
         return y, decode_rate, bits
 
 
@@ -104,11 +148,13 @@ def _thin(f, p_db, per_octave=48, f_min=10.0):
     return out_f, out_p
 
 
-def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None):
+def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None):
+    log = log or (lambda msg, end="\n": print(msg, end=end, flush=True))
     prof = PROFILES[profile]
     ch = Chain(adapter, in_rate)
-    res = {"metrics": {}, "plots": {}, "not_run": {}, "notes": [], "timing_s": {}}
+    res = {"metrics": {}, "plots": {}, "not_run": {}, "errors": [], "notes": [], "timing_s": {}}
     M, P = res["metrics"], res["plots"]
+    M["analysis_version"] = ANALYSIS_VERSION
     A = adapter.klass == "A"
     M["device_class"] = adapter.klass
     M["dsd_rate"] = adapter.dsd_rate
@@ -116,24 +162,50 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
     def step(name, fn):
         if only and name not in only:
             return
+        from .plan import TESTS, applies, label
+        if name in TESTS and not applies(name, adapter.klass):
+            res["not_run"][name] = f"class {TESTS[name]['klass']} only"
+            log(f"-> {adapter.name}: {name} ({label(name)}) ... skipped: {res['not_run'][name]}")
+            return
+        what = label(name) if name in TESTS else ""
+        log(f"-> {adapter.name}: {name}" + (f" ({what})" if what else "") + " ... ", end="")
         t0 = time.time()
         try:
             fn()
+        except NotRun as e:
+            res["not_run"][name] = str(e)
         except FileNotFoundError as e:
             res["not_run"][name] = f"missing input: {e}"
+            res["errors"].append(name)
         except Exception as e:  # a failing test must not lose the others
             res["not_run"][name] = f"failed: {type(e).__name__}: {e}"
+            res["errors"].append(name)
         res["timing_s"][name] = round(time.time() - t0, 1)
-        log(f"  {adapter.name}: {name} ({res['timing_s'][name]} s)")
+        if name in res["not_run"]:
+            log(f"skipped: {res['not_run'][name]}")
+        else:
+            log(f"done in {res['timing_s'][name]:g} s")
 
     f_tone = sg.coherent_freq(1000, REF_FS, REF_NFFT)
+
+    def _design(tag, row):
+        """Class A: name the reference modulator design a row ran on and attach that design's own floor."""
+        info = ch.ntf.get(tag) if A else None
+        if not info:
+            return
+        from .floor import design_floor
+        row["design"] = info["ntf"]
+        row["design_floor"] = design_floor(adapter.dsd_rate, info["order"], info["hinf"], in_rate)
+        if info["overload"]:
+            res["notes"].append(f"The reference modulator overloaded on the {tag.replace('_', ' ')} stimulus even at "
+                                f"{info['ntf']}: that row is not valid.")
 
     # ---------------------------------------------------------------- levels (tests 7, 8, 9, 13, 16)
     def levels():
         # The peak level runs on its own: a high-order reference modulator is stable to 0 dB SACD
         # but not to +3.1 dB SACD, and one overloaded stretch must not push the other levels
         # onto a lower-order design (the stability guard works per call).
-        lv = list(np.arange(REF_DBFS, -126.0, -prof["step_db"]))
+        lv = list(np.arange(REF_DBFS, -126.0 - 0.2, -prof["step_db"]))  # -126.02 is the last full step
         seg = int(prof["seg_s"] * in_rate)
         parts, marks, pos = [], [], 0
         for L in lv:
@@ -164,12 +236,19 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         M["tone_0dbsacd"] = {k: ref[k] for k in ("thd_db", "thdn_db", "thdn_a_db", "sinad_db", "thd_percent",
                                                     "thdn_percent", "largest_harmonic")}
         M["tone_peak"] = {k: pk[k] for k in ("thd_db", "thdn_db", "sinad_db")}
+        _design("levels_peak", M["tone_peak"])
         M["gain_error_db"] = ref["error_db"]
         low = min(rows, key=lambda r: abs(r["level_dbfs"] - (REF_DBFS - 60)))
         seg60 = _tail(y[int(marks[rows.index(low)][1] * scale) : int(marks[rows.index(low)][2] * scale)], n)
         M["dynamic_range"] = an.dynamic_range(seg60, fs, f_tone, n)
-        ok = [r["level_dbfs"] for r in rows_all if abs(r["error_db"]) <= 0.5]
-        M["linearity"] = {"lowest_level_within_0p5_db": min(ok) if ok else None,
+        # walk down from the top and stop at the first level that is out: a pass below a failure
+        # (noise happening to line up) does not count
+        lowest = None
+        for r in rows:
+            if abs(r["error_db"]) > 0.5:
+                break
+            lowest = r["level_dbfs"]
+        M["linearity"] = {"lowest_level_within_0p5_db": lowest,
                           "error_at": {str(int(r["level_dbfs"])): r["error_db"] for r in rows_all
                                        if int(r["level_dbfs"]) in (-6, -66, -90, -102, -114, -126)}}
         P["spectrum_1k"] = _spectrum_for_plot(_tail(y[int(marks[0][1] * scale) : int(marks[0][2] * scale)], n), fs, n)
@@ -185,11 +264,17 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         rows = []
         for i, f in enumerate(fl):
             sy = _tail(y[int(i * seg * sc) : int((i + 1) * seg * sc)], n)
-            m = an.tone_metrics(sy, fs, sg.coherent_freq(f, REF_FS, REF_NFFT), n)
-            rows.append({"f": f, "thdn_db": m["thdn_db"], "thd_db": m["thd_db"]})
+            m = an.tone_metrics(sy, fs, sg.coherent_freq(f, REF_FS, REF_NFFT), n, thd_wide_hz=80000.0)
+            rows.append({"f": f, "thdn_db": m["thdn_db"], "thd_db": m["thd_db"], "thd_wide_db": m.get("thd_wide_db"),
+                         "thd_wide_bound_db": m.get("thd_wide_bound_db"), "thd_wide_hz": m.get("thd_wide_hz")})
         P["thdn_freq"] = {"f": fl, "thdn_db": [r["thdn_db"] for r in rows]}
         M["thdn_vs_frequency"] = {str(r["f"]): r["thdn_db"] for r in rows}
         M["thdn_vs_frequency"]["bandwidth"] = "20 Hz to 20 kHz"
+        M["thd_wide_vs_frequency"] = {str(r["f"]): r["thd_wide_db"] for r in rows}
+        M["thd_wide_vs_frequency_bound"] = {str(r["f"]): r["thd_wide_bound_db"] for r in rows}
+        M["thd_wide_vs_frequency"]["note"] = ("harmonics 2 to 9 below 80 kHz or 0.45 x the output rate, counted when 10 dB above the "
+                                              "local noise (None: none found; the bound is then 'no worse than'); the 20 kHz band "
+                                              "cannot see the harmonics of tones at 10 kHz and above")
 
     # ---------------------------------------------------------------- frequency response (test 2)
     def fr():
@@ -218,12 +303,28 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         M["frequency_response"]["tones"] = len(freqs)
 
     # ---------------------------------------------------------------- impulse, step, filter (tests 3, 4, 5)
+    def latency_s():
+        """The device delay (seconds) that every time-domain test shifts its windows by; 0 when it cannot be found."""
+        lat = ch.latency(in_rate)
+        if "latency" not in M:
+            M["latency"] = {"seconds": lat, "method": "peak of a single impulse in dithered silence, searched from 0.1 s on"}
+            if lat is None:
+                res["notes"].append("The device delay could not be measured (no latency probe in the imported signal set); "
+                                    "the time-domain tests assume the output is aligned with the input.")
+            elif abs(lat) >= 1e-4:
+                res["notes"].append(f"The device delays its output by {lat * 1000:.2f} ms. The impulse, step, overload and "
+                                    "polarity tests are shifted by it, so their results do not depend on it.")
+        return lat or 0.0
+
     def impulse():
         # Class A: impulses at 352.8 kHz with eight sub-sample offsets, so the output samples of
         # all alignments interleave into one response at 352.8 kHz resolution (no interpolation:
         # every point is a real output sample). Class B: impulses at the input rate.
         # (Class B is decoded at the input rate: the modulator's ultrasonic noise would otherwise
         # bury the response; the in-band response is what the impulse shows.)
+        # The device delay is found first and every window is shifted by it; the first impulse is
+        # not used (the start of a record can carry a start-up click).
+        lat = latency_s()
         rin = REF_FS if A else in_rate
         unit_rate = REF_FS if A else in_rate
         u = unit_rate // rin  # input sample length in response-grid units
@@ -234,29 +335,51 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
             o = j % 8 if A else 0
             pos = sp // 2 + j * sp + (o if A else 0)
             x[pos] = 10 ** (REF_DBFS / 20)
-            ts.append((pos * u, o))
+            if j:
+                ts.append((pos * u, o))
         y, fs, _ = ch.run(x, "impulse", in_rate=rin, decode_rate=unit_rate)
-        r = unit_rate // fs if unit_rate % fs == 0 else 1
+        if unit_rate % fs:
+            res["not_run"]["impulse"] = (f"output rate {fs:g} Hz is not on the 44.1 kHz grid: the impulse, filter and group-delay "
+                                         "measurements interleave the output samples on a 352.8 kHz grid "
+                                         "(resample the device output to 44.1, 88.2, 176.4 or 352.8 kHz)")
+        else:
+            _impulse_response(y, fs, ts, u, unit_rate, lat)
+        _step_response(lat)
+
+    def _impulse_response(y, fs, ts, u, unit_rate, lat):
+        r = unit_rate // fs
+        dly = int(round(lat * fs))
         span = max(256, 4096 // r)
         size = 2 * span * r
         acc, cnt = np.zeros(size), np.zeros(size)
         for T, o in ts:
-            m0 = (T - o * u) // r
+            m0 = (T - o * u) // r + dly
+            if m0 - span < 0 or m0 + span > len(y):
+                continue
             for m in range(m0 - span, m0 + span):
-                if 0 <= m < len(y):
-                    t = (m - m0) * r - o * u
-                    k = t + span * r
-                    if 0 <= k < size:
-                        acc[k] += y[m]
-                        cnt[k] += 1
+                t = (m - m0) * r - o * u
+                k = t + span * r
+                if 0 <= k < size:
+                    acc[k] += y[m]
+                    cnt[k] += 1
         h = np.divide(acc, cnt, out=np.zeros(size), where=cnt > 0) / 10 ** (REF_DBFS / 20)
         h = h[16:-16]  # edge samples are not covered by every alignment
         fs_eff = unit_rate
         P["impulse"] = {"fs": fs_eff, "h": h.tolist(), "center": int(np.argmax(np.abs(h))), "output_rate": fs}
         M["impulse"] = an.impulse_metrics(h, fs_eff)
         M["impulse"]["output_rate"] = fs
+        # A record that carries the DSD stream's ultrasonic noise (a wide-band output) has a noise level above the
+        # -60 dB threshold: the type, the ringing and the cut-off would then be read from noise.
+        ok = M["impulse"]["floor_used_db"] <= -60.0 + 1e-6
+        M["impulse"]["measurable"] = bool(ok)
+        if not ok:
+            M["impulse"]["not_measurable_reason"] = (
+                f"the noise of the DSD stream in this record is above the -60 dB threshold ({M['impulse']['floor_used_db']:.0f} dB), "
+                "so the filter cannot be read at this output rate")
         if not A:
-            res["notes"].append("Class B impulse and step include the reference decoder's own filter.")
+            res["notes"].append("The impulse, step, filter and group-delay measurements of a modulator include the reference "
+                                "decoder's own filter, so they describe the reference decoder, not the device. They are "
+                                "kept in results.json under reference_decoder_only and are not shown in the report tables or plots.")
         M["impulse"]["method"] = ("samples of eight alignments interleaved at 352.8 kHz" if A and r > 1 else "output samples")
         hh = np.zeros(2**17)
         hh[: len(h)] = h
@@ -269,11 +392,9 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
 
         fsum = {"minus_0p1_db_hz": first_below(0.1, 15000), "minus_3_db_hz": first_below(3, 15000),
                 "minus_60_db_hz": first_below(60, 15000), "output_nyquist_hz": fs / 2 if A else None}
-        # the stopband starts at the lowest frequency that folds back into 0 to 20 kHz
-        edge = fs - 20000.0
-        if A and 22050 <= edge < fs_eff / 2 * 0.97:
-            fsum["stopband_edge_hz"] = edge
-            fsum["stopband_worst_db"] = float(rel[f >= edge].max())
+        # The stopband figure comes from the alias-tone test: an impulse of -6 dBFS in a noisy
+        # record cannot see below its own noise (about -80 dB), a filter that is -156 dB deep.
+        fsum["stopband_edge_hz"] = fs - 20000.0 if A else None
         M["filter_summary"] = fsum
         fl, ml = _thin(f[1:], mag[1:], per_octave=24)
         P["filter"] = {"f": fl, "mag_db": ml}
@@ -282,26 +403,34 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         fg, gg = f2[m][:: max(1, m.sum() // 800)], gd[m][:: max(1, m.sum() // 800)]
         P["group_delay"] = {"f": fg.tolist(), "gd_us": gg.tolist()}
         M["group_delay_us"] = {"at_1k": float(np.interp(1000, f2, gd)), "at_10k": float(np.interp(10000, f2, gd)),
-                              "at_20k": float(np.interp(20000, f2, gd))}
-        # step: 9 periods of a square wave, the 8 rising edges averaged
+                              "at_20k": float(np.interp(20000, f2, gd)), "measurable": bool(ok)}
+
+    def _step_response(lat):
+        # step: 9 periods of a square wave, the 8 rising edges averaged (those that fit after the device delay)
         per = 16384
         sx = np.tile(np.concatenate([np.zeros(per // 2), np.full(per // 2, 10 ** (REF_DBFS / 20))]), 9)
         ys, fs2, _ = ch.run(sx, "step", decode_rate=REF_FS if A else in_rate)
         sc2 = fs2 / in_rate
         pre, post = 400, int(0.01 * fs2)
-        edges = [int((per // 2 + i * per) * sc2) for i in range(1, 9)]
+        dly = int(round(lat * fs2))
+        edges = [int((per // 2 + i * per) * sc2) + dly for i in range(1, 9)]
+        edges = [c for c in edges if c - pre >= 0 and c + post <= len(ys)]
+        if not edges:
+            raise NotRun("the device delay is longer than the step record")
         sy = np.mean([ys[c - pre : c + post] for c in edges], axis=0) / 10 ** (REF_DBFS / 20)
         P["step"] = {"fs": fs2, "s": sy.tolist(), "center": pre}
         M["step"] = an.step_metrics(sy[pre - 20 :], fs2)
-        M["step"]["note"] = "average of 8 rising edges"
+        M["step"]["note"] = f"average of {len(edges)} rising edges"
 
     # ---------------------------------------------------------------- noise (test 6)
     def noise():
         n_in = int(prof["noise_s"] * in_rate)
         rng = np.random.default_rng(7)
-        x = (rng.random(n_in) - rng.random(n_in)) * 2.0**-23  # TPDF dither at 24-bit
+        x = tpdf(n_in, rng)
         y, fs, _ = ch.run(x, "noise")
-        M["noise_input"] = "24-bit TPDF-dithered silence" + (" through the reference modulator" if A else "")
+        M["noise_input"] = ("32-bit-level TPDF-dithered silence (about -194.85 dBFS over 20 kHz, below every converter here)"
+                            + (" through the reference modulator" if A else ""))
+        M["noise_reference"] = "dBFS re the rms of a full-scale sine (AES17, ASR); a full-scale square would read +3 dB"
         if A:
             # The DSD idle pattern (repeating 0x69) decodes to near-exact zero in a linear decoder,
             # so it is reported as an extra: only the device's own idle behaviour shows in it.
@@ -319,8 +448,8 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         M["noise"] = out
         M["dc"] = an.dc_offset(y)
         pd = p / (fs / n)
-        fl, pl = _thin(f[1:], an.db(pd[1:]))
-        P["noise"] = {"f": fl, "dbfs_hz": pl, "fs": fs, "ref_24bit_tpdf": float(an.db(2.0**-46 / 6 / (in_rate / 2)))}
+        fl, pl = _thin(f[1:], an.db(pd[1:]) + an.SINE_REF_DB)
+        P["noise"] = {"f": fl, "dbfs_hz": pl, "fs": fs, "ref_24bit_tpdf": float(an.db(2.0**-46 / 4 / (in_rate / 2)) + an.SINE_REF_DB)}
         if not A:
             bits, rate = adapter.pcm_to_dsd(x, in_rate)
             ur = 705600 if rate <= 2822400 else 1411200
@@ -329,8 +458,8 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
             M["ultrasonic"] = an.ultrasonic_peak(yu, ur, nfft=nu, nseg=8)
             ou, fu, pu = an.noise_floor(yu, ur, nfft=nu, nseg=8, bands=((20, 20000), (20000, 40000), (40000, 96000), (96000, 192000)))
             M["noise_wide"] = ou["bands"]
-            fl, pl = _thin(fu[1:], an.db(pu[1:] / (ur / nu)))
-            P["noise_wide"] = {"f": fl, "dbfs_hz": pl}
+            fl, pl = _thin(fu[1:], an.db(pu[1:] / (ur / nu)) + an.SINE_REF_DB)
+            P["noise_wide"] = {"f": fl, "dbfs_hz": pl, "decode_rate": ur}
             z = np.zeros(n_in)
             yz, fz, _ = ch.run(z, "noise_zero")
             oz, _, _ = an.noise_floor(yz[int(0.5 * fz) :], fz, nfft=n, nseg=4)
@@ -364,12 +493,31 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         # one extra period at each end: the onset and the end of a signal leak into a non-periodic
         # window, and with a rectangular window that would read as distortion
         x = np.concatenate([lead, np.tile(x1, periods + 2)])
-        y, fs, _ = ch.run(x, "multitone")
-        n = int(2**20 * fs / REF_FS)
+        if A:
+            y, fs, _ = ch.run(x, "multitone")
+        else:
+            # A modulator's ultrasonic noise is not periodic in the window and leaks through a
+            # rectangular window at 1/f (a record decoded at 352.8 kHz reads about 30 dB worse).
+            # Decode to 44.1 kHz with the pass edge at 21.5 kHz (so the 21.4 kHz tone survives and
+            # everything above 22.6 kHz is removed before the transform).
+            y, fs, _ = ch.run(x, "multitone", decode_rate=44100, decode_passband=21500.0)
+        out_fs = fs
+        n_exact = 2**20 * fs / REF_FS
+        if abs(n_exact - round(n_exact)) > 1e-6 or (2**20 * fs) % REF_FS:
+            raise NotRun(f"output rate {fs:g} Hz is not on the 44.1 kHz grid: the multitone period is not a whole number "
+                         "of samples (resample the device output to 44.1, 88.2, 176.4 or 352.8 kHz)")
+        if A and fs != 44100:
+            # Every record goes through the same low-pass and decimation to 44.1 kHz (pass edge 21.5 kHz,
+            # stop edge 22.6 kHz) before the rectangular window, whatever the output rate: the ultrasonic
+            # noise of the DSD stream is not periodic in the window and would leak across the band.
+            y = dec.to_rate(y, fs, 44100, 21500.0)
+            fs = 44100
+        n_exact = 2**20 * fs / REF_FS
+        n = int(round(n_exact))
         y = y[int(1.0 * fs) + n :]
         r = an.multitone_metrics(y, fs, n, bins, nseg=periods)
-        M["multitone"] = {"headline": r["avg8" if periods >= 8 else "avg8"],
-                          "avg1": r["avg1"], "averages": periods}
+        M["multitone"] = {"headline": r["averaged"], "avg1": r["avg1"], "averages": periods, "output_rate": out_fs, "analysis_rate": fs,
+                          "range_note": "tones and residual up to 20 kHz; rectangular window on whole periods; every record decimated to 44.1 kHz first"}
         for k in ("per_tone_snr_db",):
             M["multitone"]["headline"] = {a: b for a, b in M["multitone"]["headline"].items() if a != k}
             M["multitone"]["avg1"] = {a: b for a, b in M["multitone"]["avg1"].items() if a != k}
@@ -377,8 +525,8 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         for i in range(min(periods, max(1, len(y) // n))):
             acc += an.power_spectrum(y[i * n :], n, "rect")
         acc /= min(periods, max(1, len(y) // n))
-        P["multitone"] = {**_spectrum_arrays(acc, fs, n, fmax=22050), "tone_f": [float(b) * fs / n for b in bins],
-                          "tone_db": [float(an.db(acc[b])) for b in bins]}
+        P["multitone"] = {**_spectrum_arrays(acc, fs, n, fmax=22050, window="rect"), "tone_f": [float(b) * fs / n for b in bins],
+                          "tone_db": [float(an.db(acc[b]) + an.SINE_REF_DB) for b in bins]}
 
     # ---------------------------------------------------------------- 15 kHz tone (test 17)
     def tone15():
@@ -397,16 +545,18 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         x = sg.jtest(44100, n_in)
         y, fs, _ = ch.run(x, "jtest", in_rate=44100)
         y = y[int(0.5 * fs) :]
-        n = 2**18
+        n = nfft_for(fs)  # the same 1.3458 Hz bin width at every output rate
         M["jtest"] = an.jtest_metrics(y, fs, nfft=n, nseg=3, fs_nominal=44100)
         P["jtest"] = _spectrum_for_plot(y[:n], fs, n, fmin=9000, fmax=13000, linear=True)
+        _design("jtest", M["jtest"])
 
     # ---------------------------------------------------------------- polarity (test 15)
     def polarity():
-        p = sg.polarity_pulse(8192)
+        lat = latency_s()
+        p = sg.polarity_pulse(32768)  # 0.37 s: room for a device delay of a few hundred ms
         y, fs, _ = ch.run(p, "polarity")
         sc = fs / in_rate
-        c = int(len(p) // 2 * sc)
+        c = int(len(p) // 2 * sc + round(lat * fs))
         M["polarity"] = an.polarity(y[c - 200 : c + 200 + int(20 * sc)], p[len(p) // 2 - 4 : len(p) // 2 + 14])
 
     # ---------------------------------------------------------------- stability (test 18, class B)
@@ -455,7 +605,7 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         for fq in (1000, 10000):
             f0 = sg.coherent_freq(fq, REF_FS, REF_NFFT)
             tone = sg.sine(f0, REF_DBFS, in_rate, seg)
-            quiet = (rng.random(seg) - rng.random(seg)) * 2.0**-23  # 24-bit dithered silence
+            quiet = tpdf(seg, rng)  # dithered silence
             y, fs, _ = ch.run(np.array([tone, quiet]), f"crosstalk_{fq}_l")
             n = nfft_for(fs)
             ld, rs = _tail(y[0], n), _tail(y[1], n)
@@ -510,8 +660,21 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
             return
         fin = 88200 if out_rate <= 44100 else 352800
         nyq = out_rate / 2
-        tones = [nyq + d for d in (2000, 4000, 6000, 8000, 10000)]
-        tones = [f for f in tones if f < fin / 2 * 0.9]
+        # Tones start 20 kHz below the output rate and go up in 2 kHz steps, so every image
+        # (output rate minus tone) lands at or below 20 kHz, in the analysis band, at every output rate.
+        lo = out_rate - 20000.0
+        step_hz = 2 * REF_FS / REF_NFFT  # the coherent-frequency step
+        tones = []
+        for d in (0, 2000, 4000, 6000, 8000, 10000):
+            fc = sg.coherent_freq(lo + d, REF_FS, REF_NFFT)
+            while fc < lo + d - 1e-9:
+                fc += step_hz
+            if fc < fin / 2 * 0.9:
+                tones.append(fc)
+        if not tones:
+            res["not_run"]["alias_tones"] = (f"output rate {out_rate / 1000:g} kHz: the tones would start at {lo / 1000:g} kHz, "
+                                             "above what the 352.8 kHz test signal can carry")
+            return
         rows = []
         ref_rms = REF_DBFS - 3.0103
         for ft in tones:
@@ -520,12 +683,20 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
             n = nfft_for(fs)
             p = an.power_spectrum(_tail(y, n), n)
             f = an.freqs(n, fs)
-            q = np.where(f < 20, 0, p)
-            i = int(np.argmax(q))
-            lv = float(an.db(an.lobe_power(q, i)) - ref_rms)
+            # the image of a tone at ft folds to out_rate - ft; read that bin, not the largest bin (which is noise)
+            fi = out_rate - fc
+            i = an.tone_bin(fi, n, fs)
+            lv = float(an.db(an.lobe_power(p, i)) - ref_rms)
             rows.append({"tone_hz": float(fc), "alias_hz": float(f[i]), "image_db": lv})
         P["alias"] = {"tone": [r["tone_hz"] for r in rows], "image_db": [r["image_db"] for r in rows], "nyquist": nyq}
         worst = max(rows, key=lambda r: r["image_db"])
+        fsum = M.setdefault("filter_summary", {})
+        fsum["stopband_worst_db"] = worst["image_db"]
+        fsum["stopband_edge_hz"] = out_rate - 20000.0
+        fsum["stopband_tested_hz"] = [float(rows[0]["tone_hz"]), float(rows[-1]["tone_hz"])]
+        fsum["stopband_method"] = ("worst image of tones from the output rate minus 20 kHz upward, read at the folded frequency "
+                                   "(output rate minus tone, 20 kHz or lower), re the tone; includes the device's own noise, so "
+                                   "it is an upper bound on the filter's stopband level: the true level is this or deeper")
         M["alias_tones"] = {"output_rate": out_rate, "worst_image_db": worst["image_db"], "worst_tone_hz": worst["tone_hz"],
                             "worst_image_hz": worst["alias_hz"], "rows": rows,
                             "note": "image level relative to the input tone; includes the device noise floor"}
@@ -542,9 +713,12 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
         amp[n1 : n1 + nb] = 10 ** (burst_db / 20)
         x = amp * np.sin(2 * np.pi * f0 * t)
         y, fs, _ = ch.run(x, "overload")
-        # Band-pass 300 Hz to 20 kHz (linear phase, 4097 taps: +-6 ms of smearing around the burst),
+        # Band-pass 300 Hz to 20 kHz (linear phase, 11.6 ms long: +-6 ms of smearing around the burst),
         # then in 5 ms windows (five cycles) fit and remove the 1 kHz tone and take the residual rms.
-        bp = signal.firwin(4097, [300.0, 20000.0], pass_zero=False, fs=fs, window=("kaiser", 8.0))
+        # The filter is sized in seconds (11.6 ms, 4097 taps at 352.8 kHz) so its smearing around the
+        # burst is the same at every output rate: a fixed tap count spans +-46 ms at 44.1 kHz.
+        taps = int(round(0.0116 * fs)) | 1
+        bp = signal.firwin(taps, [300.0, 20000.0], pass_zero=False, fs=fs, window=("kaiser", 8.0))
         yb = signal.fftconvolve(y, bp, mode="same")
         win = int(round(0.005 * fs))
         nwin = len(yb) // win
@@ -556,7 +730,8 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
             coef, *_ = np.linalg.lstsq(basis, seg_, rcond=None)
             rms[i] = np.sqrt(np.mean((seg_ - basis @ coef) ** 2))
         t_w = (np.arange(nwin) + 0.5) * win / fs
-        t_b0, t_b1 = n1 / in_rate, (n1 + nb) / in_rate
+        lat = latency_s()
+        t_b0, t_b1 = n1 / in_rate + lat, (n1 + nb) / in_rate + lat  # the burst as the device delivers it
         base = rms[(t_w > 0.3) & (t_w < t_b0 - 0.03)]
         base_rms = float(np.median(base))
         after = np.where((t_w > t_b1) & (t_w < t_w[-1] - 0.03))[0]  # the last 30 ms is filter edge
@@ -567,7 +742,8 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
                          "base_db": float(20 * np.log10(base_rms)), "burst_start_ms": float((t_b0 - t_b1) * 1000)}
         M["overload_recovery"] = {"burst_level_dbfs": burst_db, "burst_ms": burst_s * 1000, "recovery_ms": rec_ms,
                                   "residual_peak_over_baseline_db": peak_excess,
-                                  "method": "1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms"}
+                                  "method": "1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms (5 ms windows, the recovery is read to the end of the last window that is out)"}
+        _design("overload", M["overload_recovery"])
 
     # ---------------------------------------------------------------- DSD rate table (tests 8, 19 at other rates)
     def rate_table():
@@ -594,7 +770,7 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
                     pk, rate = adapter.pcm_to_dsd(sg.sine(f_tone, PEAK_DBFS, in_rate, int(4 * in_rate)), in_rate)
                     row["stability_peak"] = {"saturated": an.stability_report(pk[int(0.5 * rate):], rate)["saturated"]}
                     rng = np.random.default_rng(7)
-                    xs = (rng.random(int(5 * in_rate)) - rng.random(int(5 * in_rate))) * 2.0**-23
+                    xs = tpdf(int(5 * in_rate), rng)
                     bits, rate = adapter.pcm_to_dsd(xs, in_rate)
                     ur = 705600 if rate <= 2822400 else 1411200
                     yu = dec.decode(bits, rate, ur)[int(0.5 * ur) :]
@@ -615,13 +791,36 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=print, only=None
                      ("rate_table", rate_table)):
         step(name, fn)
     res["reference_chain_ntf"] = ch.ntf
+    if not A:
+        # S5: for a modulator these figures are the reference decoder's, not the device's. Keep them
+        # (the reference chain's floor needs them) under a name that says so, and out of every table.
+        moved = {k: M.pop(k) for k in ("impulse", "filter_summary", "group_delay_us", "step") if k in M}
+        if moved:
+            M["reference_decoder_only"] = moved
+        for k in ("impulse", "filter", "group_delay", "step"):
+            P.pop(k, None)
     return res
 
 
-def _spectrum_arrays(p, fs, n, fmin=10.0, fmax=None):
+def _plot_offset_db(n, window):
+    """Shift that makes a spectrum plot read like an analyser display.
+
+    ``power_spectrum`` sums to the mean square, so a coherent tone's peak bin holds only
+    1/ENBW of its power under a window (7-term Blackman-Harris: 2.63 bins = 4.2 dB) and a
+    sine's rms is 3.01 dB below its peak. Adding both makes a -6.02 dBFS tone peak at
+    -6.02 dBFS (the ASR and Stereophile convention); noise then reads per bin, so the bin width
+    (fs / n) belongs in the caption.
+    """
+    if window == "rect":
+        return an.SINE_REF_DB
+    w = an.bh7(n)
+    return float(10 * np.log10(n * np.sum(w**2) / np.sum(w) ** 2) + an.SINE_REF_DB)
+
+
+def _spectrum_arrays(p, fs, n, fmin=10.0, fmax=None, window="bh7"):
     f = np.fft.rfftfreq(n, 1 / fs)
     m = (f >= fmin) & (f <= (fmax or fs / 2))
-    fl, pl = f[m], an.db(p[m])
+    fl, pl = f[m], an.db(p[m]) + _plot_offset_db(n, window)
     if len(fl) > 2000:  # keep the peaks when thinning
         k = int(np.ceil(len(fl) / 2000))
         cut = len(fl) // k * k

@@ -1,6 +1,6 @@
 # Security policy
 
-dsd-measure reads audio files that tools and devices produce and runs commands you give it, so it should be run on data you trust.
+dsd-measure reads audio files that tools and devices produce and runs commands you give it, so it should be run on data you trust. A suite file's `command` entries run as shell commands with your privileges: only run suite files you trust (see the [user guide](docs/user-guide.md#a-suite-file-is-a-program-only-run-suite-files-you-trust)). The compiled modulator core is built and loaded only from a private per-user cache directory.
 
 ## Supported versions
 

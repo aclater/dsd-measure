@@ -61,6 +61,25 @@ def decode(bits, dsd_rate, out_rate=BASE, passband=20000.0):
     return x
 
 
+def to_rate(y, fs, out_rate=44100, passband=21500.0):
+    """Low-pass and decimate a PCM record from ``fs`` to ``out_rate`` (160 dB stopband).
+
+    The pass edge is ``passband`` and the stop edge ``out_rate - passband``, so nothing that
+    aliases lands below ``passband``. ``fs`` must be a whole multiple of ``out_rate``; with
+    ``fs == out_rate`` the record is returned unchanged. Used before a rectangular-window
+    transform: the ultrasonic noise of a DSD stream would otherwise leak across the band.
+    """
+    y = np.asarray(y, dtype=np.float64)
+    fs, out_rate = int(round(fs)), int(out_rate)
+    if fs == out_rate:
+        return y
+    if fs % out_rate:
+        raise ValueError(f"{fs} Hz is not a whole multiple of {out_rate} Hz")
+    q = fs // out_rate
+    taps, _ = decimator(fs, q, passband)
+    return signal.resample_poly(y, 1, q, window=taps)
+
+
 def total_taps_report(dsd_rate, out_rate):
     """Human-readable filter description recorded in provenance."""
     keep, fs, parts = keep_edge(out_rate), dsd_rate, []
