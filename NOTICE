@@ -1,0 +1,28 @@
+dsd-measure — DSD Toolbox, https://github.com/dsd-toolbox/dsd-measure
+Copyright 2026 The dsd-measure authors
+
+The code is licensed under MIT OR Apache-2.0 (LICENSE-MIT, LICENSE-APACHE). The
+documentation, methodology, example reports and measurement data are licensed under
+CC BY 4.0 (LICENSES/CC-BY-4.0.txt); README.md, section "Licence and credits", lists
+what that covers.
+
+This product draws on a sister project of the DSD Toolbox:
+
+- the dsd2pcm quality tools (https://github.com/dsd-toolbox/dsd2pcm-rs, tools/quality),
+  Copyright (c) 2026 The dsd2pcm-rs authors, MIT OR Apache-2.0: the Legendre-zero
+  modulator design that the reference modulator in src/dsd_measure/encode.py extends
+  to higher order, and the table of SoX-DSD filters per DSD rate in
+  src/dsd_measure/adapters.py.
+
+Everything else (the reference decoder, the analysers, the C modulator core and the
+32-tone multitone, whose phases come from the seeded search in
+src/dsd_measure/signals.py) is written for this project.
+
+Methods and measurement practice that this product follows, without taking code from
+their authors, are credited in README.md and docs/footprint.md ("Sources and credit").
+
+Third-party tools that dsd-measure runs as separate programs are not part of this
+product and are not distributed with it: SoX-DSD (GPL-2.0-or-later), sacd_extract
+(GPL-2.0-or-later), ffmpeg (LGPL-2.1-or-later) and SoX (GPL-2.0-or-later). The files
+under containers/ only say how to build each one from its own source, and
+docs/reference-tools.md names their authors.

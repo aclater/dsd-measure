@@ -1,0 +1,18 @@
+# Self-test of the gate action: the previous version is the reference decoder, the candidate is a
+# stand-in tool that decodes with the same decoder and adds white noise at -120 dBFS.
+# The gate must fail.
+[suite]
+name = "gate self-test, worse"
+in_rate = 88200
+
+[[device]]
+name = "previous"
+adapter = "reference"
+class = "A"
+out_rate = 352800
+
+[[device]]
+name = "candidate"
+adapter = "cli"
+class = "A"
+command = "python3 tests/stubtool.py {input} {output} --noise-dbfs -120"

@@ -7,18 +7,18 @@ reference-decoder,reference_floor.target_db,-140.0
 reference-decoder,reference_floor.margin_db,6.0
 reference-decoder,reference_floor.ntf,"order 8, max gain 1.45"
 reference-decoder,reference_floor.ntf_fallbacks,0
-reference-decoder,reference_floor.chain.thdn_db,-146.99
-reference-decoder,reference_floor.chain.thd_db,-163.28
-reference-decoder,reference_floor.chain.thdn_a_db,-150.37
-reference-decoder,reference_floor.chain.sinad_db,146.99
+reference-decoder,reference_floor.chain.thdn_db,-147.05
+reference-decoder,reference_floor.chain.thd_db,-164.35
+reference-decoder,reference_floor.chain.thdn_a_db,-150.52
+reference-decoder,reference_floor.chain.sinad_db,147.05
 reference-decoder,reference_floor.chain.noise_dbfs,-159.06
 reference-decoder,reference_floor.chain.noise_a_dbfs,-162.45
-reference-decoder,reference_floor.chain.dr_db,148.46
-reference-decoder,reference_floor.chain.dr_a_db,151.8
+reference-decoder,reference_floor.chain.dr_db,148.47
+reference-decoder,reference_floor.chain.dr_a_db,151.67
 reference-decoder,reference_floor.chain.metric_floors.lobe_noise_db,-183.5
-reference-decoder,reference_floor.chain.metric_floors.imd_smpte_db,-144.78
-reference-decoder,reference_floor.chain.metric_floors.imd_ccif_db,-134.89
-reference-decoder,reference_floor.chain.metric_floors.multitone_dfr_db,150.7
+reference-decoder,reference_floor.chain.metric_floors.imd_smpte_db,-145.23
+reference-decoder,reference_floor.chain.metric_floors.imd_ccif_db,-134.1
+reference-decoder,reference_floor.chain.metric_floors.multitone_dfr_db,153.0
 reference-decoder,reference_floor.decoder_alone.thdn_db,-280.92
 reference-decoder,reference_floor.decoder_alone.thd_db,-309.97
 reference-decoder,reference_floor.decoder_alone.thdn_a_db,-282.12
@@ -36,71 +36,71 @@ reference-decoder,reference_floor.decoder_alone.metric_floors.lobe_noise_db,-369
 reference-decoder,reference_floor.decoder_alone.metric_floors.imd_smpte_db,-294.92
 reference-decoder,reference_floor.decoder_alone.metric_floors.imd_ccif_db,-279.67
 reference-decoder,reference_floor.meets_target,True
-reference-decoder,tone_0dbsacd.thd_db,-163.52429145736764
-reference-decoder,tone_0dbsacd.thdn_db,-146.71499182470743
-reference-decoder,tone_0dbsacd.thdn_a_db,-150.23977919158128
-reference-decoder,tone_0dbsacd.sinad_db,146.71499182470743
-reference-decoder,tone_0dbsacd.thd_percent,6.664773998402769e-07
-reference-decoder,tone_0dbsacd.thdn_percent,4.615836412001137e-06
+reference-decoder,tone_0dbsacd.thd_db,-164.03336088803113
+reference-decoder,tone_0dbsacd.thdn_db,-146.90868458724822
+reference-decoder,tone_0dbsacd.thdn_a_db,-150.37068921926783
+reference-decoder,tone_0dbsacd.sinad_db,146.90868458724822
+reference-decoder,tone_0dbsacd.thd_percent,6.285386025112838e-07
+reference-decoder,tone_0dbsacd.thdn_percent,4.5140438196822945e-06
 reference-decoder,tone_0dbsacd.largest_harmonic.order,3
-reference-decoder,tone_0dbsacd.largest_harmonic.db,-166.5194096425144
-reference-decoder,tone_peak.thd_db,-139.583626531261
-reference-decoder,tone_peak.thdn_db,-129.24924598031797
-reference-decoder,tone_peak.sinad_db,129.24924598031797
+reference-decoder,tone_0dbsacd.largest_harmonic.db,-166.92036072856442
+reference-decoder,tone_peak.thd_db,-139.75563532367994
+reference-decoder,tone_peak.thdn_db,-129.10732381627997
+reference-decoder,tone_peak.sinad_db,129.10732381627997
 reference-decoder,tone_peak.design,"order 8, max gain 1.3"
 reference-decoder,tone_peak.design_floor.order,8
 reference-decoder,tone_peak.design_floor.hinf,1.3
 reference-decoder,tone_peak.design_floor.ntf,"order 8, max gain 1.3"
 reference-decoder,tone_peak.design_floor.stable,True
 reference-decoder,tone_peak.design_floor.level_dbfs,-2.922386997509154
-reference-decoder,tone_peak.design_floor.thdn_db,-129.16
-reference-decoder,tone_peak.design_floor.thd_db,-139.5
-reference-decoder,tone_peak.design_floor.sinad_db,129.16
+reference-decoder,tone_peak.design_floor.thdn_db,-129.23
+reference-decoder,tone_peak.design_floor.thd_db,-139.52
+reference-decoder,tone_peak.design_floor.sinad_db,129.23
 reference-decoder,tone_peak.design_floor.lobe_noise_db,-148.3
-reference-decoder,gain_error_db,1.8864395858742e-06
-reference-decoder,dynamic_range.dr_db,147.2663316109587
-reference-decoder,dynamic_range.dr_a_db,150.48270356308288
-reference-decoder,dynamic_range.noise_dbfs,-153.28693156759851
-reference-decoder,dynamic_range.noise_a_dbfs,-156.5033035197227
+reference-decoder,gain_error_db,1.8838783617525223e-06
+reference-decoder,dynamic_range.dr_db,147.0288792066134
+reference-decoder,dynamic_range.dr_a_db,150.2576327519791
+reference-decoder,dynamic_range.noise_dbfs,-153.0494791632532
+reference-decoder,dynamic_range.noise_a_dbfs,-156.2782327086189
 reference-decoder,linearity.lowest_level_within_0p5_db,-126.02059991327965
-reference-decoder,linearity.error_at.-6,1.8864395858742e-06
-reference-decoder,linearity.error_at.-66,8.342170346509192e-06
-reference-decoder,linearity.error_at.-90,-7.657069662059257e-05
-reference-decoder,linearity.error_at.-102,9.2239655387516e-05
-reference-decoder,linearity.error_at.-114,0.0003041494082367535
-reference-decoder,linearity.error_at.-126,-0.005927222161034251
-reference-decoder,thdn_vs_frequency.20,-146.31856112611175
-reference-decoder,thdn_vs_frequency.100,-146.51220541247267
-reference-decoder,thdn_vs_frequency.1000,-146.86498006341066
-reference-decoder,thdn_vs_frequency.5000,-146.5008048146156
-reference-decoder,thdn_vs_frequency.10000,-147.0289364409075
-reference-decoder,thdn_vs_frequency.15000,-146.94212473954028
-reference-decoder,thdn_vs_frequency.20000,-146.88744490707617
+reference-decoder,linearity.error_at.-6,1.8838783617525223e-06
+reference-decoder,linearity.error_at.-66,8.573352843654902e-06
+reference-decoder,linearity.error_at.-90,-1.6968456151289502e-06
+reference-decoder,linearity.error_at.-102,0.0002698046568667678
+reference-decoder,linearity.error_at.-114,0.0006408101656347753
+reference-decoder,linearity.error_at.-126,0.000322449545251402
+reference-decoder,thdn_vs_frequency.20,-146.5255637948142
+reference-decoder,thdn_vs_frequency.100,-146.32119827638715
+reference-decoder,thdn_vs_frequency.1000,-146.83976957178373
+reference-decoder,thdn_vs_frequency.5000,-146.56846320450575
+reference-decoder,thdn_vs_frequency.10000,-146.98507834334092
+reference-decoder,thdn_vs_frequency.15000,-146.94649766319952
+reference-decoder,thdn_vs_frequency.20000,-146.7867558068259
 reference-decoder,thdn_vs_frequency.bandwidth,20 Hz to 20 kHz
-reference-decoder,thd_wide_vs_frequency.20,-155.1106630438554
-reference-decoder,thd_wide_vs_frequency.100,-155.9748144984813
-reference-decoder,thd_wide_vs_frequency.1000,-166.90702859728842
-reference-decoder,thd_wide_vs_frequency.5000,-158.21146445210297
+reference-decoder,thd_wide_vs_frequency.20,-155.35911698466674
+reference-decoder,thd_wide_vs_frequency.100,-155.57316358822825
+reference-decoder,thd_wide_vs_frequency.1000,-166.71797435795327
+reference-decoder,thd_wide_vs_frequency.5000,-158.46930243423938
 reference-decoder,thd_wide_vs_frequency.10000,
 reference-decoder,thd_wide_vs_frequency.15000,
 reference-decoder,thd_wide_vs_frequency.20000,
 reference-decoder,thd_wide_vs_frequency.note,"harmonics 2 to 9 below 80 kHz or 0.45 x the output rate, counted when 10 dB above the local noise (None: none found; the bound is then 'no worse than'); the 20 kHz band cannot see the harmonics of tones at 10 kHz and above"
-reference-decoder,thd_wide_vs_frequency_bound.20,-154.91708989279348
-reference-decoder,thd_wide_vs_frequency_bound.100,-155.34116387093437
-reference-decoder,thd_wide_vs_frequency_bound.1000,-163.9445624265603
-reference-decoder,thd_wide_vs_frequency_bound.5000,-158.13993185111138
+reference-decoder,thd_wide_vs_frequency_bound.20,-155.11307506874584
+reference-decoder,thd_wide_vs_frequency_bound.100,-154.96096768360832
+reference-decoder,thd_wide_vs_frequency_bound.1000,-163.91522793170543
+reference-decoder,thd_wide_vs_frequency_bound.5000,-158.3955065430991
 reference-decoder,thd_wide_vs_frequency_bound.10000,
 reference-decoder,thd_wide_vs_frequency_bound.15000,
 reference-decoder,thd_wide_vs_frequency_bound.20000,
-reference-decoder,frequency_response.ripple_pp_db,3.961051051604159e-06
+reference-decoder,frequency_response.ripple_pp_db,3.954951456108802e-06
 reference-decoder,frequency_response.minus_0p1_db_hz,21000.0
 reference-decoder,frequency_response.minus_1p0_db_hz,21500.0
 reference-decoder,frequency_response.minus_3p0_db_hz,
-reference-decoder,frequency_response.at_hz.20,2.0210782736285182e-07
+reference-decoder,frequency_response.at_hz.20,2.065250885863179e-07
 reference-decoder,frequency_response.at_hz.1000,0.0
-reference-decoder,frequency_response.at_hz.10000,-2.488357438323874e-06
-reference-decoder,frequency_response.at_hz.15000,-1.7289770841699692e-06
-reference-decoder,frequency_response.at_hz.20000,-2.4250194332609e-06
+reference-decoder,frequency_response.at_hz.10000,-2.4898924095850816e-06
+reference-decoder,frequency_response.at_hz.15000,-1.7335280723277232e-06
+reference-decoder,frequency_response.at_hz.20000,-2.417615331040679e-06
 reference-decoder,frequency_response.method,stepped coherent tones
 reference-decoder,frequency_response.tones,34
 reference-decoder,latency.seconds,0.0
@@ -110,8 +110,8 @@ reference-decoder,impulse.pre_ringing_samples,236
 reference-decoder,impulse.post_ringing_samples,236
 reference-decoder,impulse.pre_ringing_ms,0.6689342403628118
 reference-decoder,impulse.post_ringing_ms,0.6689342403628118
-reference-decoder,impulse.pre_energy_fraction,0.43669468135080414
-reference-decoder,impulse.symmetry,0.9999999999205067
+reference-decoder,impulse.pre_energy_fraction,0.4366939940703601
+reference-decoder,impulse.symmetry,0.9999999999086142
 reference-decoder,impulse.floor_used_db,-60.0
 reference-decoder,impulse.filter_type,linear phase
 reference-decoder,impulse.output_rate,44100
@@ -122,16 +122,16 @@ reference-decoder,filter_summary.minus_3_db_hz,21775.45166015625
 reference-decoder,filter_summary.minus_60_db_hz,23500.799560546875
 reference-decoder,filter_summary.output_nyquist_hz,22050.0
 reference-decoder,filter_summary.stopband_edge_hz,24100.0
-reference-decoder,filter_summary.stopband_worst_db,-156.27943625753355
+reference-decoder,filter_summary.stopband_worst_db,-159.2594256833124
 reference-decoder,filter_summary.stopband_tested_hz,"[24102.383422851562, 34101.86462402344]"
 reference-decoder,filter_summary.stopband_method,"worst image of tones from the output rate minus 20 kHz upward, read at the folded frequency (output rate minus tone, 20 kHz or lower), re the tone; includes the device's own noise, so it is an upper bound on the filter's stopband level: the true level is this or deeper"
-reference-decoder,group_delay_us.at_1k,0.0042883181998717166
-reference-decoder,group_delay_us.at_10k,-0.0003675692740187811
-reference-decoder,group_delay_us.at_20k,0.010883488547712821
+reference-decoder,group_delay_us.at_1k,0.003977248868851856
+reference-decoder,group_delay_us.at_10k,0.0034473087621619304
+reference-decoder,group_delay_us.at_20k,0.00329908486735578
 reference-decoder,group_delay_us.measurable,True
-reference-decoder,step.overshoot_percent,6.811188609664112
+reference-decoder,step.overshoot_percent,6.811191847329749
 reference-decoder,step.settle_1pct_ms,0.31746031746031744
-reference-decoder,step.final,1.0000002214953647
+reference-decoder,step.final,1.0000002238952213
 reference-decoder,step.note,average of 8 rising edges
 reference-decoder,noise_input,"32-bit-level TPDF-dithered silence (about -194.85 dBFS over 20 kHz, below every converter here) through the reference modulator"
 reference-decoder,noise_reference,"dBFS re the rms of a full-scale sine (AES17, ASR); a full-scale square would read +3 dB"
@@ -146,33 +146,33 @@ reference-decoder,noise.bin_hz,0.336456298828125
 reference-decoder,noise.averages,8
 reference-decoder,dc.dc,2.9396869518645274e-11
 reference-decoder,dc.dc_dbfs,-210.6339783054745
-reference-decoder,imd_smpte.imd_db,-144.72471198271336
-reference-decoder,imd_smpte.imd_percent,5.804494457829975e-06
-reference-decoder,imd_smpte.imd_db_amplitude_sum,-137.11136207424698
-reference-decoder,imd_ccif.imd_db,-136.76562545547054
-reference-decoder,imd_ccif.imd_percent,1.4511714554537843e-05
-reference-decoder,imd_ccif.imd_db_iec,-139.77592541211035
-reference-decoder,multitone.headline.tone_min_dbfs,-34.343879644693025
-reference-decoder,multitone.headline.tone_mean_dbfs,-34.34387569289274
-reference-decoder,multitone.headline.residual_max_dbfs,-188.60593208888878
-reference-decoder,multitone.headline.residual_mean_dbfs,-203.6610924272897
-reference-decoder,multitone.headline.distortion_free_range_db,154.26205244419575
-reference-decoder,multitone.avg1.tone_min_dbfs,-34.343879682200075
-reference-decoder,multitone.avg1.tone_mean_dbfs,-34.34387568972144
-reference-decoder,multitone.avg1.residual_max_dbfs,-184.45027228524413
-reference-decoder,multitone.avg1.residual_mean_dbfs,-203.61195010180455
-reference-decoder,multitone.avg1.distortion_free_range_db,150.10639260304404
+reference-decoder,imd_smpte.imd_db,-143.91273390047215
+reference-decoder,imd_smpte.imd_percent,6.3732844910657105e-06
+reference-decoder,imd_smpte.imd_db_amplitude_sum,-136.66118441900832
+reference-decoder,imd_ccif.imd_db,-134.7224496207797
+reference-decoder,imd_ccif.imd_percent,1.836020470297926e-05
+reference-decoder,imd_ccif.imd_db_iec,-137.73274957741953
+reference-decoder,multitone.headline.tone_min_dbfs,-34.343879630256254
+reference-decoder,multitone.headline.tone_mean_dbfs,-34.3438756906773
+reference-decoder,multitone.headline.residual_max_dbfs,-188.8136777785246
+reference-decoder,multitone.headline.residual_mean_dbfs,-203.67191760996815
+reference-decoder,multitone.headline.distortion_free_range_db,154.46979814826835
+reference-decoder,multitone.avg1.tone_min_dbfs,-34.34387963750585
+reference-decoder,multitone.avg1.tone_mean_dbfs,-34.34387569136835
+reference-decoder,multitone.avg1.residual_max_dbfs,-183.55019238808035
+reference-decoder,multitone.avg1.residual_mean_dbfs,-203.65020952449112
+reference-decoder,multitone.avg1.distortion_free_range_db,149.2063127505745
 reference-decoder,multitone.averages,8
 reference-decoder,multitone.output_rate,44100
 reference-decoder,multitone.analysis_rate,44100
 reference-decoder,multitone.range_note,tones and residual up to 20 kHz; rectangular window on whole periods; every record decimated to 44.1 kHz first
-reference-decoder,tone_15k.audio_band.db,-155.55766520669562
-reference-decoder,tone_15k.audio_band.hz,19938.400268554688
-reference-decoder,tone_15k.above_audio.db,-137.8694909066312
-reference-decoder,tone_15k.above_audio.hz,22048.654174804688
+reference-decoder,tone_15k.audio_band.db,-157.0504011650048
+reference-decoder,tone_15k.audio_band.hz,19927.633666992188
+reference-decoder,tone_15k.above_audio.db,-134.47466158409048
+reference-decoder,tone_15k.above_audio.hz,21817.172241210938
 reference-decoder,tone_15k.count_above,0
-reference-decoder,jtest.carrier_dbfs,-6.01029619641092
-reference-decoder,jtest.noise_floor_db,-159.7881795348889
+reference-decoder,jtest.carrier_dbfs,-6.010296192454765
+reference-decoder,jtest.noise_floor_db,-159.31828257493768
 reference-decoder,jtest.bin_hz,1.3458251953125
 reference-decoder,jtest.sidebands_detected,0
 reference-decoder,jtest.sidebands_above_minus130,0
@@ -185,42 +185,42 @@ reference-decoder,jtest.design_floor.hinf,1.3
 reference-decoder,jtest.design_floor.ntf,"order 8, max gain 1.3"
 reference-decoder,jtest.design_floor.stable,True
 reference-decoder,jtest.design_floor.level_dbfs,-2.922386997509154
-reference-decoder,jtest.design_floor.thdn_db,-129.16
-reference-decoder,jtest.design_floor.thd_db,-139.5
-reference-decoder,jtest.design_floor.sinad_db,129.16
+reference-decoder,jtest.design_floor.thdn_db,-129.23
+reference-decoder,jtest.design_floor.thd_db,-139.52
+reference-decoder,jtest.design_floor.sinad_db,129.23
 reference-decoder,jtest.design_floor.lobe_noise_db,-148.3
 reference-decoder,polarity,normal
-reference-decoder,crosstalk.1000.left_to_right_db,-179.06802837146307
-reference-decoder,crosstalk.1000.right_to_left_db,-179.06802837146307
+reference-decoder,crosstalk.1000.left_to_right_db,-179.06802837392257
+reference-decoder,crosstalk.1000.right_to_left_db,-179.06802837392257
 reference-decoder,crosstalk.1000.gain_diff_db,0.0
 reference-decoder,crosstalk.1000.phase_diff_deg,-0.0
-reference-decoder,crosstalk.10000.left_to_right_db,-189.52718469208574
-reference-decoder,crosstalk.10000.right_to_left_db,-189.52718469208574
+reference-decoder,crosstalk.10000.left_to_right_db,-189.52718469442388
+reference-decoder,crosstalk.10000.right_to_left_db,-189.52718469442388
 reference-decoder,crosstalk.10000.gain_diff_db,0.0
 reference-decoder,crosstalk.10000.phase_diff_deg,-0.0
-reference-decoder,imd_sweep.ccif_worst_db,-135.28275192115308
+reference-decoder,imd_sweep.ccif_worst_db,-134.92251076418236
 reference-decoder,imd_sweep.ccif_worst_centre_hz,19500
-reference-decoder,imd_sweep.ccif_by_centre.10000,-158.31329386122337
-reference-decoder,imd_sweep.ccif_by_centre.12000,-157.9719642223585
-reference-decoder,imd_sweep.ccif_by_centre.14000,-157.80999725564797
-reference-decoder,imd_sweep.ccif_by_centre.16000,-154.35022075161822
-reference-decoder,imd_sweep.ccif_by_centre.18000,-148.05038847644136
-reference-decoder,imd_sweep.ccif_by_centre.19500,-135.28275192115308
-reference-decoder,imd_sweep.smpte_worst_db,-92.71392380101568
-reference-decoder,imd_sweep.smpte_by_level_db_sacd.-60,-92.71392380101568
-reference-decoder,imd_sweep.smpte_by_level_db_sacd.-40,-113.88025833463695
-reference-decoder,imd_sweep.smpte_by_level_db_sacd.-20,-130.37821579043975
-reference-decoder,imd_sweep.smpte_by_level_db_sacd.-10,-140.04883964099915
-reference-decoder,imd_sweep.smpte_by_level_db_sacd.0,-144.8562515223022
+reference-decoder,imd_sweep.ccif_by_centre.10000,-157.9229905261902
+reference-decoder,imd_sweep.ccif_by_centre.12000,-157.06533176161938
+reference-decoder,imd_sweep.ccif_by_centre.14000,-159.2579470600435
+reference-decoder,imd_sweep.ccif_by_centre.16000,-154.08538164880486
+reference-decoder,imd_sweep.ccif_by_centre.18000,-151.70073768231308
+reference-decoder,imd_sweep.ccif_by_centre.19500,-134.92251076418236
+reference-decoder,imd_sweep.smpte_worst_db,-93.11006411159528
+reference-decoder,imd_sweep.smpte_by_level_db_sacd.-60,-93.11006411159528
+reference-decoder,imd_sweep.smpte_by_level_db_sacd.-40,-113.46504829049378
+reference-decoder,imd_sweep.smpte_by_level_db_sacd.-20,-130.99173497731962
+reference-decoder,imd_sweep.smpte_by_level_db_sacd.-10,-141.23644737312887
+reference-decoder,imd_sweep.smpte_by_level_db_sacd.0,-144.69820764128391
 reference-decoder,alias_tones.output_rate,44100
-reference-decoder,alias_tones.worst_image_db,-156.27943625753355
+reference-decoder,alias_tones.worst_image_db,-159.2594256833124
 reference-decoder,alias_tones.worst_tone_hz,24102.383422851562
 reference-decoder,alias_tones.worst_image_hz,19997.616577148438
 reference-decoder,alias_tones.note,image level relative to the input tone; includes the device noise floor
 reference-decoder,overload_recovery.burst_level_dbfs,-2.922386997509154
 reference-decoder,overload_recovery.burst_ms,50.0
 reference-decoder,overload_recovery.recovery_ms,7.5963718820861725
-reference-decoder,overload_recovery.residual_peak_over_baseline_db,122.32047213161346
+reference-decoder,overload_recovery.residual_peak_over_baseline_db,122.35995646315038
 reference-decoder,overload_recovery.method,"1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms (5 ms windows, the recovery is read to the end of the last window that is out)"
 reference-decoder,overload_recovery.design,"order 8, max gain 1.3"
 reference-decoder,overload_recovery.design_floor.order,8
@@ -228,9 +228,9 @@ reference-decoder,overload_recovery.design_floor.hinf,1.3
 reference-decoder,overload_recovery.design_floor.ntf,"order 8, max gain 1.3"
 reference-decoder,overload_recovery.design_floor.stable,True
 reference-decoder,overload_recovery.design_floor.level_dbfs,-2.922386997509154
-reference-decoder,overload_recovery.design_floor.thdn_db,-129.16
-reference-decoder,overload_recovery.design_floor.thd_db,-139.5
-reference-decoder,overload_recovery.design_floor.sinad_db,129.16
+reference-decoder,overload_recovery.design_floor.thdn_db,-129.23
+reference-decoder,overload_recovery.design_floor.thd_db,-139.52
+reference-decoder,overload_recovery.design_floor.sinad_db,129.23
 reference-decoder,overload_recovery.design_floor.lobe_noise_db,-148.3
 reference-decoder,output_format.container,internal
 reference-decoder,output_format.kind,float
@@ -245,18 +245,18 @@ reference-modulator,reference_floor.target_db,-140.0
 reference-modulator,reference_floor.margin_db,6.0
 reference-modulator,reference_floor.ntf,"order 8, max gain 1.45"
 reference-modulator,reference_floor.ntf_fallbacks,0
-reference-modulator,reference_floor.chain.thdn_db,-146.99
-reference-modulator,reference_floor.chain.thd_db,-163.28
-reference-modulator,reference_floor.chain.thdn_a_db,-150.37
-reference-modulator,reference_floor.chain.sinad_db,146.99
+reference-modulator,reference_floor.chain.thdn_db,-147.05
+reference-modulator,reference_floor.chain.thd_db,-164.35
+reference-modulator,reference_floor.chain.thdn_a_db,-150.52
+reference-modulator,reference_floor.chain.sinad_db,147.05
 reference-modulator,reference_floor.chain.noise_dbfs,-159.06
 reference-modulator,reference_floor.chain.noise_a_dbfs,-162.45
-reference-modulator,reference_floor.chain.dr_db,148.46
-reference-modulator,reference_floor.chain.dr_a_db,151.8
+reference-modulator,reference_floor.chain.dr_db,148.47
+reference-modulator,reference_floor.chain.dr_a_db,151.67
 reference-modulator,reference_floor.chain.metric_floors.lobe_noise_db,-183.5
-reference-modulator,reference_floor.chain.metric_floors.imd_smpte_db,-144.78
-reference-modulator,reference_floor.chain.metric_floors.imd_ccif_db,-134.89
-reference-modulator,reference_floor.chain.metric_floors.multitone_dfr_db,150.7
+reference-modulator,reference_floor.chain.metric_floors.imd_smpte_db,-145.23
+reference-modulator,reference_floor.chain.metric_floors.imd_ccif_db,-134.1
+reference-modulator,reference_floor.chain.metric_floors.multitone_dfr_db,153.0
 reference-modulator,reference_floor.decoder_alone.thdn_db,-280.92
 reference-modulator,reference_floor.decoder_alone.thd_db,-309.97
 reference-modulator,reference_floor.decoder_alone.thdn_a_db,-282.12
@@ -274,64 +274,64 @@ reference-modulator,reference_floor.decoder_alone.metric_floors.lobe_noise_db,-3
 reference-modulator,reference_floor.decoder_alone.metric_floors.imd_smpte_db,-294.92
 reference-modulator,reference_floor.decoder_alone.metric_floors.imd_ccif_db,-279.67
 reference-modulator,reference_floor.meets_target,True
-reference-modulator,tone_0dbsacd.thd_db,-163.548479837981
-reference-modulator,tone_0dbsacd.thdn_db,-146.725927401796
-reference-modulator,tone_0dbsacd.thdn_a_db,-150.25522950601743
-reference-modulator,tone_0dbsacd.sinad_db,146.725927401796
-reference-modulator,tone_0dbsacd.thd_percent,6.646239819756485e-07
-reference-modulator,tone_0dbsacd.thdn_percent,4.610028708351317e-06
+reference-modulator,tone_0dbsacd.thd_db,-164.0543496619968
+reference-modulator,tone_0dbsacd.thdn_db,-146.91344155841077
+reference-modulator,tone_0dbsacd.thdn_a_db,-150.37726754859673
+reference-modulator,tone_0dbsacd.sinad_db,146.91344155841077
+reference-modulator,tone_0dbsacd.thd_percent,6.270216216365506e-07
+reference-modulator,tone_0dbsacd.thdn_percent,4.511572305747115e-06
 reference-modulator,tone_0dbsacd.largest_harmonic.order,3
-reference-modulator,tone_0dbsacd.largest_harmonic.db,-166.52596269726274
-reference-modulator,tone_peak.thd_db,-139.58480229011903
-reference-modulator,tone_peak.thdn_db,-129.24940666056816
-reference-modulator,tone_peak.sinad_db,129.24940666056816
-reference-modulator,gain_error_db,1.9109644586734476e-06
-reference-modulator,dynamic_range.dr_db,147.27565232702614
-reference-modulator,dynamic_range.dr_a_db,150.49837250596434
-reference-modulator,dynamic_range.noise_dbfs,-153.29625228366595
-reference-modulator,dynamic_range.noise_a_dbfs,-156.51897246260415
+reference-modulator,tone_0dbsacd.largest_harmonic.db,-166.970465197605
+reference-modulator,tone_peak.thd_db,-139.7571840045122
+reference-modulator,tone_peak.thdn_db,-129.10762018184636
+reference-modulator,tone_peak.sinad_db,129.10762018184636
+reference-modulator,gain_error_db,1.9081284676758514e-06
+reference-modulator,dynamic_range.dr_db,147.03776543631196
+reference-modulator,dynamic_range.dr_a_db,150.27404259101058
+reference-modulator,dynamic_range.noise_dbfs,-153.05836539295177
+reference-modulator,dynamic_range.noise_a_dbfs,-156.2946425476504
 reference-modulator,linearity.lowest_level_within_0p5_db,-126.02059991327965
-reference-modulator,linearity.error_at.-6,1.9109644586734476e-06
-reference-modulator,linearity.error_at.-66,8.399248415003058e-06
-reference-modulator,linearity.error_at.-90,-7.541922590803551e-05
-reference-modulator,linearity.error_at.-102,8.155800840370375e-05
-reference-modulator,linearity.error_at.-114,0.00030626665942179443
-reference-modulator,linearity.error_at.-126,-0.005517149603122107
-reference-modulator,thdn_vs_frequency.20,-146.32308002089695
-reference-modulator,thdn_vs_frequency.100,-146.51591347098554
-reference-modulator,thdn_vs_frequency.1000,-146.86821318512716
-reference-modulator,thdn_vs_frequency.5000,-146.50528918984259
-reference-modulator,thdn_vs_frequency.10000,-147.0347969905486
-reference-modulator,thdn_vs_frequency.15000,-146.9563851454595
-reference-modulator,thdn_vs_frequency.20000,-146.90079574998848
+reference-modulator,linearity.error_at.-6,1.9081284676758514e-06
+reference-modulator,linearity.error_at.-66,8.291886572919793e-06
+reference-modulator,linearity.error_at.-90,-3.0994987980648148e-06
+reference-modulator,linearity.error_at.-102,0.00027681499403797716
+reference-modulator,linearity.error_at.-114,0.0006492737904579826
+reference-modulator,linearity.error_at.-126,0.00035028226886879565
+reference-modulator,thdn_vs_frequency.20,-146.52917258611507
+reference-modulator,thdn_vs_frequency.100,-146.33240411104833
+reference-modulator,thdn_vs_frequency.1000,-146.84351297689713
+reference-modulator,thdn_vs_frequency.5000,-146.57445164358518
+reference-modulator,thdn_vs_frequency.10000,-146.99260544661615
+reference-modulator,thdn_vs_frequency.15000,-146.95338563099045
+reference-modulator,thdn_vs_frequency.20000,-146.79138873071824
 reference-modulator,thdn_vs_frequency.bandwidth,20 Hz to 20 kHz
-reference-modulator,thd_wide_vs_frequency.20,-155.09508265436605
-reference-modulator,thd_wide_vs_frequency.100,-155.9863754610107
-reference-modulator,thd_wide_vs_frequency.1000,-166.88119076635382
-reference-modulator,thd_wide_vs_frequency.5000,-158.20510052258112
-reference-modulator,thd_wide_vs_frequency.10000,-89.8432411340734
-reference-modulator,thd_wide_vs_frequency.15000,-57.31373777011456
-reference-modulator,thd_wide_vs_frequency.20000,-35.46437218858766
+reference-modulator,thd_wide_vs_frequency.20,-155.37485864186147
+reference-modulator,thd_wide_vs_frequency.100,-155.57814022355598
+reference-modulator,thd_wide_vs_frequency.1000,-166.76653821699264
+reference-modulator,thd_wide_vs_frequency.5000,-158.47157316441817
+reference-modulator,thd_wide_vs_frequency.10000,-91.5553927870989
+reference-modulator,thd_wide_vs_frequency.15000,-57.49141245160288
+reference-modulator,thd_wide_vs_frequency.20000,-35.83090864734539
 reference-modulator,thd_wide_vs_frequency.note,"harmonics 2 to 9 below 80 kHz or 0.45 x the output rate, counted when 10 dB above the local noise (None: none found; the bound is then 'no worse than'); the 20 kHz band cannot see the harmonics of tones at 10 kHz and above"
-reference-modulator,thd_wide_vs_frequency_bound.20,-154.89733369034025
-reference-modulator,thd_wide_vs_frequency_bound.100,-155.35516684702634
-reference-modulator,thd_wide_vs_frequency_bound.1000,-163.9709780104741
-reference-modulator,thd_wide_vs_frequency_bound.5000,-76.05475778858175
-reference-modulator,thd_wide_vs_frequency_bound.10000,-43.95251962937098
-reference-modulator,thd_wide_vs_frequency_bound.15000,-41.541346886786556
-reference-modulator,thd_wide_vs_frequency_bound.20000,-35.40586273039615
-reference-modulator,frequency_response.ripple_pp_db,3.7621585580183137e-06
+reference-modulator,thd_wide_vs_frequency_bound.20,-155.1213074408042
+reference-modulator,thd_wide_vs_frequency_bound.100,-154.96220189941914
+reference-modulator,thd_wide_vs_frequency_bound.1000,-163.9369176538495
+reference-modulator,thd_wide_vs_frequency_bound.5000,-74.47640822382323
+reference-modulator,thd_wide_vs_frequency_bound.10000,-46.282614343932295
+reference-modulator,thd_wide_vs_frequency_bound.15000,-41.214780613912374
+reference-modulator,thd_wide_vs_frequency_bound.20000,-35.76504695218688
+reference-modulator,frequency_response.ripple_pp_db,3.7550783300588364e-06
 reference-modulator,frequency_response.minus_0p1_db_hz,
 reference-modulator,frequency_response.minus_1p0_db_hz,
 reference-modulator,frequency_response.minus_3p0_db_hz,
-reference-modulator,frequency_response.at_hz.20,1.7729616708095364e-07
+reference-modulator,frequency_response.at_hz.20,1.8281782487861165e-07
 reference-modulator,frequency_response.at_hz.1000,0.0
-reference-modulator,frequency_response.at_hz.10000,-2.2692796388668057e-06
-reference-modulator,frequency_response.at_hz.15000,-1.5658759201033133e-06
-reference-modulator,frequency_response.at_hz.20000,-1.975914276641788e-06
+reference-modulator,frequency_response.at_hz.10000,-2.2698183546054906e-06
+reference-modulator,frequency_response.at_hz.15000,-1.5697482935093734e-06
+reference-modulator,frequency_response.at_hz.20000,-1.9682639660345558e-06
 reference-modulator,frequency_response.method,stepped coherent tones
 reference-modulator,frequency_response.tones,42
-reference-modulator,latency.seconds,0.0
+reference-modulator,latency.seconds,-2.834467120182982e-06
 reference-modulator,latency.method,"peak of a single impulse in dithered silence, searched from 0.1 s on"
 reference-modulator,noise_input,"32-bit-level TPDF-dithered silence (about -194.85 dBFS over 20 kHz, below every converter here)"
 reference-modulator,noise_reference,"dBFS re the rms of a full-scale sine (AES17, ASR); a full-scale square would read +3 dB"
@@ -362,33 +362,33 @@ reference-modulator,noise_wide.20000-40000,-79.26633866204831
 reference-modulator,noise_wide.40000-96000,-34.606741584693594
 reference-modulator,noise_wide.96000-192000,-26.41459243633414
 reference-modulator,noise_zero_input,-162.51340063969113
-reference-modulator,imd_smpte.imd_db,-144.7151166177219
-reference-modulator,imd_smpte.imd_percent,5.810910267906808e-06
-reference-modulator,imd_smpte.imd_db_amplitude_sum,-137.1116154150071
-reference-modulator,imd_ccif.imd_db,-134.80282683430582
-reference-modulator,imd_ccif.imd_percent,1.8191087309110448e-05
-reference-modulator,imd_ccif.imd_db_iec,-137.81312679094563
-reference-modulator,multitone.headline.tone_min_dbfs,-34.34387963917131
-reference-modulator,multitone.headline.tone_mean_dbfs,-34.34387567967553
-reference-modulator,multitone.headline.residual_max_dbfs,-188.5915606370925
-reference-modulator,multitone.headline.residual_mean_dbfs,-203.66017021732262
-reference-modulator,multitone.headline.distortion_free_range_db,154.24768099792118
-reference-modulator,multitone.avg1.tone_min_dbfs,-34.34387967675951
-reference-modulator,multitone.avg1.tone_mean_dbfs,-34.343875676512134
-reference-modulator,multitone.avg1.residual_max_dbfs,-184.47493126721454
-reference-modulator,multitone.avg1.residual_mean_dbfs,-203.60677658892234
-reference-modulator,multitone.avg1.distortion_free_range_db,150.13105159045503
+reference-modulator,imd_smpte.imd_db,-143.91200044723334
+reference-modulator,imd_smpte.imd_percent,6.373822686197616e-06
+reference-modulator,imd_smpte.imd_db_amplitude_sum,-136.65030691335636
+reference-modulator,imd_ccif.imd_db,-133.34227176675424
+reference-modulator,imd_ccif.imd_percent,2.152218755148207e-05
+reference-modulator,imd_ccif.imd_db_iec,-136.35257172339405
+reference-modulator,multitone.headline.tone_min_dbfs,-34.34387962473614
+reference-modulator,multitone.headline.tone_mean_dbfs,-34.34387567745962
+reference-modulator,multitone.headline.residual_max_dbfs,-188.82271240827458
+reference-modulator,multitone.headline.residual_mean_dbfs,-203.67072388267235
+reference-modulator,multitone.headline.distortion_free_range_db,154.47883278353845
+reference-modulator,multitone.avg1.tone_min_dbfs,-34.34387963193933
+reference-modulator,multitone.avg1.tone_mean_dbfs,-34.34387567814533
+reference-modulator,multitone.avg1.residual_max_dbfs,-183.56904910216434
+reference-modulator,multitone.avg1.residual_mean_dbfs,-203.64842704509837
+reference-modulator,multitone.avg1.distortion_free_range_db,149.225169470225
 reference-modulator,multitone.averages,8
 reference-modulator,multitone.output_rate,44100
 reference-modulator,multitone.analysis_rate,44100
 reference-modulator,multitone.range_note,tones and residual up to 20 kHz; rectangular window on whole periods; every record decimated to 44.1 kHz first
-reference-modulator,tone_15k.audio_band.db,-155.5382236107756
-reference-modulator,tone_15k.audio_band.hz,19938.400268554688
-reference-modulator,tone_15k.above_audio.db,-36.838729434541186
-reference-modulator,tone_15k.above_audio.hz,71599.24621582031
-reference-modulator,tone_15k.count_above,18673
-reference-modulator,jtest.carrier_dbfs,-6.010295931840175
-reference-modulator,jtest.noise_floor_db,-159.7879522467538
+reference-modulator,tone_15k.audio_band.db,-157.03801273480255
+reference-modulator,tone_15k.audio_band.hz,19927.633666992188
+reference-modulator,tone_15k.above_audio.db,-35.07282137376163
+reference-modulator,tone_15k.above_audio.hz,68400.2197265625
+reference-modulator,tone_15k.count_above,18579
+reference-modulator,jtest.carrier_dbfs,-6.010295927936733
+reference-modulator,jtest.noise_floor_db,-159.31866689170394
 reference-modulator,jtest.bin_hz,1.3458251953125
 reference-modulator,jtest.sidebands_detected,0
 reference-modulator,jtest.sidebands_above_minus130,0
@@ -402,11 +402,11 @@ reference-modulator,stability.levels.0 dB SACD.min_density,0.17857142857142858
 reference-modulator,stability.levels.0 dB SACD.max_modulation_pct,64.28571428571428
 reference-modulator,stability.levels.0 dB SACD.min_modulation_pct,-64.28571428571428
 reference-modulator,stability.levels.0 dB SACD.saturated,False
-reference-modulator,stability.levels.0 dB SACD.longest_run,10
+reference-modulator,stability.levels.0 dB SACD.longest_run,11
 reference-modulator,stability.levels.0 dB SACD.mean_density,0.50000016673336
-reference-modulator,stability.levels.0 dB SACD.thdn_start_db,-147.04929309977857
-reference-modulator,stability.levels.0 dB SACD.thdn_end_db,-146.87221963085142
-reference-modulator,stability.levels.0 dB SACD.thdn_drift_db,0.17707346892714781
+reference-modulator,stability.levels.0 dB SACD.thdn_start_db,-146.74984826443549
+reference-modulator,stability.levels.0 dB SACD.thdn_end_db,-146.89538725375957
+reference-modulator,stability.levels.0 dB SACD.thdn_drift_db,-0.1455389893240806
 reference-modulator,stability.levels.+3.1 dB SACD (peak).max_density,0.8928571428571429
 reference-modulator,stability.levels.+3.1 dB SACD (peak).min_density,0.10714285714285714
 reference-modulator,stability.levels.+3.1 dB SACD (peak).max_modulation_pct,78.57142857142858
@@ -414,51 +414,51 @@ reference-modulator,stability.levels.+3.1 dB SACD (peak).min_modulation_pct,-78.
 reference-modulator,stability.levels.+3.1 dB SACD (peak).saturated,False
 reference-modulator,stability.levels.+3.1 dB SACD (peak).longest_run,14
 reference-modulator,stability.levels.+3.1 dB SACD (peak).mean_density,0.5000002381905143
-reference-modulator,stability.levels.+3.1 dB SACD (peak).thdn_start_db,-129.14000349129722
-reference-modulator,stability.levels.+3.1 dB SACD (peak).thdn_end_db,-129.13447252905834
-reference-modulator,stability.levels.+3.1 dB SACD (peak).thdn_drift_db,0.005530962238879056
+reference-modulator,stability.levels.+3.1 dB SACD (peak).thdn_start_db,-129.1905050683238
+reference-modulator,stability.levels.+3.1 dB SACD (peak).thdn_end_db,-129.0931477485542
+reference-modulator,stability.levels.+3.1 dB SACD (peak).thdn_drift_db,0.09735731976959983
 reference-modulator,stability.levels.20 kHz at peak.max_density,0.8928571428571429
 reference-modulator,stability.levels.20 kHz at peak.min_density,0.10714285714285714
 reference-modulator,stability.levels.20 kHz at peak.max_modulation_pct,78.57142857142858
 reference-modulator,stability.levels.20 kHz at peak.min_modulation_pct,-78.57142857142857
 reference-modulator,stability.levels.20 kHz at peak.saturated,False
-reference-modulator,stability.levels.20 kHz at peak.longest_run,15
-reference-modulator,stability.levels.20 kHz at peak.mean_density,0.5000000655023914
-reference-modulator,stability.levels.20 kHz at peak.thdn_start_db,-129.59902305975717
-reference-modulator,stability.levels.20 kHz at peak.thdn_end_db,-129.63227522758666
-reference-modulator,stability.levels.20 kHz at peak.thdn_drift_db,-0.033252167829488144
-reference-modulator,crosstalk.1000.left_to_right_db,-179.20794546385667
-reference-modulator,crosstalk.1000.right_to_left_db,-179.20794546385667
+reference-modulator,stability.levels.20 kHz at peak.longest_run,14
+reference-modulator,stability.levels.20 kHz at peak.mean_density,0.5000000714571543
+reference-modulator,stability.levels.20 kHz at peak.thdn_start_db,-129.64119304542794
+reference-modulator,stability.levels.20 kHz at peak.thdn_end_db,-129.7819840334746
+reference-modulator,stability.levels.20 kHz at peak.thdn_drift_db,-0.14079098804666046
+reference-modulator,crosstalk.1000.left_to_right_db,-179.207945466676
+reference-modulator,crosstalk.1000.right_to_left_db,-179.207945466676
 reference-modulator,crosstalk.1000.gain_diff_db,0.0
 reference-modulator,crosstalk.1000.phase_diff_deg,-0.0
-reference-modulator,crosstalk.10000.left_to_right_db,-190.215514792167
-reference-modulator,crosstalk.10000.right_to_left_db,-190.215514792167
+reference-modulator,crosstalk.10000.left_to_right_db,-190.2155147945884
+reference-modulator,crosstalk.10000.right_to_left_db,-190.2155147945884
 reference-modulator,crosstalk.10000.gain_diff_db,0.0
-reference-modulator,crosstalk.10000.phase_diff_deg,-1.454243453886956e-15
-reference-modulator,imd_sweep.ccif_worst_db,-133.85832084302427
+reference-modulator,crosstalk.10000.phase_diff_deg,-0.0
+reference-modulator,imd_sweep.ccif_worst_db,-134.6227867613072
 reference-modulator,imd_sweep.ccif_worst_centre_hz,19500
-reference-modulator,imd_sweep.ccif_by_centre.10000,-158.2778783940653
-reference-modulator,imd_sweep.ccif_by_centre.12000,-157.99562667625725
-reference-modulator,imd_sweep.ccif_by_centre.14000,-157.8310845056363
-reference-modulator,imd_sweep.ccif_by_centre.16000,-154.36261068744525
-reference-modulator,imd_sweep.ccif_by_centre.18000,-148.05260896352542
-reference-modulator,imd_sweep.ccif_by_centre.19500,-133.85832084302427
-reference-modulator,imd_sweep.smpte_worst_db,-92.69105955356615
-reference-modulator,imd_sweep.smpte_by_level_db_sacd.-60,-92.69105955356615
-reference-modulator,imd_sweep.smpte_by_level_db_sacd.-40,-113.95661372285248
-reference-modulator,imd_sweep.smpte_by_level_db_sacd.-20,-130.33534879351848
-reference-modulator,imd_sweep.smpte_by_level_db_sacd.-10,-140.07133073433215
-reference-modulator,imd_sweep.smpte_by_level_db_sacd.0,-144.86107295623054
+reference-modulator,imd_sweep.ccif_by_centre.10000,-157.9341720710446
+reference-modulator,imd_sweep.ccif_by_centre.12000,-157.0766659898833
+reference-modulator,imd_sweep.ccif_by_centre.14000,-159.24999406424806
+reference-modulator,imd_sweep.ccif_by_centre.16000,-154.0983567329638
+reference-modulator,imd_sweep.ccif_by_centre.18000,-151.69719683578836
+reference-modulator,imd_sweep.ccif_by_centre.19500,-134.6227867613072
+reference-modulator,imd_sweep.smpte_worst_db,-93.11930863112488
+reference-modulator,imd_sweep.smpte_by_level_db_sacd.-60,-93.11930863112488
+reference-modulator,imd_sweep.smpte_by_level_db_sacd.-40,-113.39065299125639
+reference-modulator,imd_sweep.smpte_by_level_db_sacd.-20,-130.87859844059128
+reference-modulator,imd_sweep.smpte_by_level_db_sacd.-10,-141.24500940063797
+reference-modulator,imd_sweep.smpte_by_level_db_sacd.0,-144.71267970598933
 reference-modulator,overload_recovery.burst_level_dbfs,0.0
 reference-modulator,overload_recovery.burst_ms,50.0
-reference-modulator,overload_recovery.recovery_ms,10.000000000000009
-reference-modulator,overload_recovery.residual_peak_over_baseline_db,102.96438803026284
+reference-modulator,overload_recovery.recovery_ms,10.002834467120136
+reference-modulator,overload_recovery.residual_peak_over_baseline_db,103.0211161937122
 reference-modulator,overload_recovery.method,"1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms (5 ms windows, the recovery is read to the end of the last window that is out)"
-reference-modulator,rates.DSD128.thdn_db,-175.7869043198153
-reference-modulator,rates.DSD128.thd_db,-184.50000110935218
-reference-modulator,rates.DSD128.sinad_db,175.7869043198153
-reference-modulator,rates.DSD128.thdn_a_db,-177.16868030314245
-reference-modulator,rates.DSD128.dr_a_db,175.74819273440895
+reference-modulator,rates.DSD128.thdn_db,-175.8213224755304
+reference-modulator,rates.DSD128.thd_db,-184.10040445541324
+reference-modulator,rates.DSD128.sinad_db,175.8213224755304
+reference-modulator,rates.DSD128.thdn_a_db,-177.22159387767076
+reference-modulator,rates.DSD128.dr_a_db,175.532364200542
 reference-modulator,rates.DSD128.stability_peak.saturated,False
 reference-modulator,rates.DSD128.ultrasonic.peak_hz,452548.3399593904
 reference-modulator,rates.DSD128.ultrasonic.peak_density_dbfs_hz,-73.38355271078157
@@ -477,18 +477,18 @@ reference-modulator,rates.DSD128.reference_floor.target_db,-140.0
 reference-modulator,rates.DSD128.reference_floor.margin_db,6.0
 reference-modulator,rates.DSD128.reference_floor.ntf,"order 7, max gain 1.4"
 reference-modulator,rates.DSD128.reference_floor.ntf_fallbacks,0
-reference-modulator,rates.DSD128.reference_floor.chain.thdn_db,-175.81
-reference-modulator,rates.DSD128.reference_floor.chain.thd_db,-184.55
-reference-modulator,rates.DSD128.reference_floor.chain.thdn_a_db,-177.2
-reference-modulator,rates.DSD128.reference_floor.chain.sinad_db,175.81
+reference-modulator,rates.DSD128.reference_floor.chain.thdn_db,-175.87
+reference-modulator,rates.DSD128.reference_floor.chain.thd_db,-184.19
+reference-modulator,rates.DSD128.reference_floor.chain.thdn_a_db,-177.28
+reference-modulator,rates.DSD128.reference_floor.chain.sinad_db,175.87
 reference-modulator,rates.DSD128.reference_floor.chain.noise_dbfs,-183.51
 reference-modulator,rates.DSD128.reference_floor.chain.noise_a_dbfs,-184.78
 reference-modulator,rates.DSD128.reference_floor.chain.dr_db,176.05
-reference-modulator,rates.DSD128.reference_floor.chain.dr_a_db,176.94
+reference-modulator,rates.DSD128.reference_floor.chain.dr_a_db,177.06
 reference-modulator,rates.DSD128.reference_floor.chain.metric_floors.lobe_noise_db,-203.7
-reference-modulator,rates.DSD128.reference_floor.chain.metric_floors.imd_smpte_db,-179.48
-reference-modulator,rates.DSD128.reference_floor.chain.metric_floors.imd_ccif_db,-163.91
-reference-modulator,rates.DSD128.reference_floor.chain.metric_floors.multitone_dfr_db,183.5
+reference-modulator,rates.DSD128.reference_floor.chain.metric_floors.imd_smpte_db,-179.98
+reference-modulator,rates.DSD128.reference_floor.chain.metric_floors.imd_ccif_db,-163.7
+reference-modulator,rates.DSD128.reference_floor.chain.metric_floors.multitone_dfr_db,184.4
 reference-modulator,rates.DSD128.reference_floor.decoder_alone.thdn_db,-286.09
 reference-modulator,rates.DSD128.reference_floor.decoder_alone.thd_db,-320.13
 reference-modulator,rates.DSD128.reference_floor.decoder_alone.thdn_a_db,-288.33
@@ -506,11 +506,11 @@ reference-modulator,rates.DSD128.reference_floor.decoder_alone.metric_floors.lob
 reference-modulator,rates.DSD128.reference_floor.decoder_alone.metric_floors.imd_smpte_db,-299.6
 reference-modulator,rates.DSD128.reference_floor.decoder_alone.metric_floors.imd_ccif_db,-280.06
 reference-modulator,rates.DSD128.reference_floor.meets_target,True
-reference-modulator,rates.DSD256.thdn_db,-177.7751260425747
-reference-modulator,rates.DSD256.thd_db,-197.882908279874
-reference-modulator,rates.DSD256.sinad_db,177.7751260425747
-reference-modulator,rates.DSD256.thdn_a_db,-179.25633815818006
-reference-modulator,rates.DSD256.dr_a_db,177.18387819821626
+reference-modulator,rates.DSD256.thdn_db,-177.80939992746448
+reference-modulator,rates.DSD256.thd_db,-195.86297465608322
+reference-modulator,rates.DSD256.sinad_db,177.80939992746448
+reference-modulator,rates.DSD256.thdn_a_db,-179.2873872270406
+reference-modulator,rates.DSD256.dr_a_db,177.34246726910726
 reference-modulator,rates.DSD256.stability_peak.saturated,False
 reference-modulator,rates.DSD256.ultrasonic.peak_hz,452548.3399593904
 reference-modulator,rates.DSD256.ultrasonic.peak_density_dbfs_hz,-87.6325064854438
@@ -529,18 +529,18 @@ reference-modulator,rates.DSD256.reference_floor.target_db,-140.0
 reference-modulator,rates.DSD256.reference_floor.margin_db,6.0
 reference-modulator,rates.DSD256.reference_floor.ntf,"order 7, max gain 1.4"
 reference-modulator,rates.DSD256.reference_floor.ntf_fallbacks,0
-reference-modulator,rates.DSD256.reference_floor.chain.thdn_db,-177.81
-reference-modulator,rates.DSD256.reference_floor.chain.thd_db,-197.99
-reference-modulator,rates.DSD256.reference_floor.chain.thdn_a_db,-179.29
-reference-modulator,rates.DSD256.reference_floor.chain.sinad_db,177.81
+reference-modulator,rates.DSD256.reference_floor.chain.thdn_db,-177.85
+reference-modulator,rates.DSD256.reference_floor.chain.thd_db,-195.76
+reference-modulator,rates.DSD256.reference_floor.chain.thdn_a_db,-179.32
+reference-modulator,rates.DSD256.reference_floor.chain.sinad_db,177.85
 reference-modulator,rates.DSD256.reference_floor.chain.noise_dbfs,-180.99
 reference-modulator,rates.DSD256.reference_floor.chain.noise_a_dbfs,-184.13
-reference-modulator,rates.DSD256.reference_floor.chain.dr_db,177.19
-reference-modulator,rates.DSD256.reference_floor.chain.dr_a_db,178.28
+reference-modulator,rates.DSD256.reference_floor.chain.dr_db,177.09
+reference-modulator,rates.DSD256.reference_floor.chain.dr_a_db,178.21
 reference-modulator,rates.DSD256.reference_floor.chain.metric_floors.lobe_noise_db,-207.3
-reference-modulator,rates.DSD256.reference_floor.chain.metric_floors.imd_smpte_db,-184.61
-reference-modulator,rates.DSD256.reference_floor.chain.metric_floors.imd_ccif_db,-196.48
-reference-modulator,rates.DSD256.reference_floor.chain.metric_floors.multitone_dfr_db,192.6
+reference-modulator,rates.DSD256.reference_floor.chain.metric_floors.imd_smpte_db,-183.11
+reference-modulator,rates.DSD256.reference_floor.chain.metric_floors.imd_ccif_db,-196.49
+reference-modulator,rates.DSD256.reference_floor.chain.metric_floors.multitone_dfr_db,192.7
 reference-modulator,rates.DSD256.reference_floor.decoder_alone.thdn_db,-291.84
 reference-modulator,rates.DSD256.reference_floor.decoder_alone.thd_db,-323.27
 reference-modulator,rates.DSD256.reference_floor.decoder_alone.thdn_a_db,-294.83
@@ -559,27 +559,27 @@ reference-modulator,rates.DSD256.reference_floor.decoder_alone.metric_floors.imd
 reference-modulator,rates.DSD256.reference_floor.decoder_alone.metric_floors.imd_ccif_db,-295.2
 reference-modulator,rates.DSD256.reference_floor.meets_target,True
 reference-modulator,reference_decoder_only.impulse.peak_index,4080
-reference-modulator,reference_decoder_only.impulse.pre_ringing_samples,134
-reference-modulator,reference_decoder_only.impulse.post_ringing_samples,124
-reference-modulator,reference_decoder_only.impulse.pre_ringing_ms,1.5192743764172336
-reference-modulator,reference_decoder_only.impulse.post_ringing_ms,1.4058956916099774
-reference-modulator,reference_decoder_only.impulse.pre_energy_fraction,0.036874047673333736
-reference-modulator,reference_decoder_only.impulse.symmetry,0.99911887955108
+reference-modulator,reference_decoder_only.impulse.pre_ringing_samples,124
+reference-modulator,reference_decoder_only.impulse.post_ringing_samples,137
+reference-modulator,reference_decoder_only.impulse.pre_ringing_ms,1.4058956916099774
+reference-modulator,reference_decoder_only.impulse.post_ringing_ms,1.5532879818594105
+reference-modulator,reference_decoder_only.impulse.pre_energy_fraction,0.03670425700838211
+reference-modulator,reference_decoder_only.impulse.symmetry,0.9990753170603375
 reference-modulator,reference_decoder_only.impulse.floor_used_db,-60.0
 reference-modulator,reference_decoder_only.impulse.filter_type,linear phase
 reference-modulator,reference_decoder_only.impulse.output_rate,88200
 reference-modulator,reference_decoder_only.impulse.measurable,True
 reference-modulator,reference_decoder_only.impulse.method,output samples
-reference-modulator,reference_decoder_only.filter_summary.minus_0p1_db_hz,30212.429809570312
-reference-modulator,reference_decoder_only.filter_summary.minus_3_db_hz,40549.04022216797
-reference-modulator,reference_decoder_only.filter_summary.minus_60_db_hz,41523.41766357422
+reference-modulator,reference_decoder_only.filter_summary.minus_0p1_db_hz,29924.423217773438
+reference-modulator,reference_decoder_only.filter_summary.minus_3_db_hz,40334.381103515625
+reference-modulator,reference_decoder_only.filter_summary.minus_60_db_hz,41497.84698486328
 reference-modulator,reference_decoder_only.filter_summary.output_nyquist_hz,
 reference-modulator,reference_decoder_only.filter_summary.stopband_edge_hz,
-reference-modulator,reference_decoder_only.group_delay_us.at_1k,-0.03568662207074224
-reference-modulator,reference_decoder_only.group_delay_us.at_10k,0.6224468371789293
-reference-modulator,reference_decoder_only.group_delay_us.at_20k,-1.5114231538921128
+reference-modulator,reference_decoder_only.group_delay_us.at_1k,-0.15659226649349267
+reference-modulator,reference_decoder_only.group_delay_us.at_10k,-0.9092294696776028
+reference-modulator,reference_decoder_only.group_delay_us.at_20k,-0.8392150782349115
 reference-modulator,reference_decoder_only.group_delay_us.measurable,True
-reference-modulator,reference_decoder_only.step.overshoot_percent,4.471513319647145
+reference-modulator,reference_decoder_only.step.overshoot_percent,4.430571797213146
 reference-modulator,reference_decoder_only.step.settle_1pct_ms,0.1927437641723356
-reference-modulator,reference_decoder_only.step.final,1.0000047793760556
+reference-modulator,reference_decoder_only.step.final,0.9999999579751774
 reference-modulator,reference_decoder_only.step.note,average of 8 rising edges

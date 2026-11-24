@@ -5,6 +5,8 @@ spectra are one-sided power spectra normalised so that the sum over all bins equ
 mean square of the signal (so a coherent sine of amplitude A sums to A^2 / 2 over its lobe).
 """
 
+from functools import lru_cache
+
 import numpy as np
 from scipy import signal
 
@@ -16,11 +18,14 @@ _BH7 = (0.27105140069342, 0.43329793923448, 0.21812299954311, 0.06592544638803,
 LOBE = 10  # the 7-term window main lobe is +-7 bins; the margin keeps leakage below -180 dB
 
 
+@lru_cache(maxsize=8)
 def bh7(n):
+    """The 7-term Blackman-Harris window of ``n`` points (kept between calls; read-only)."""
     k = np.arange(n)
     w = np.zeros(n)
     for i, a in enumerate(_BH7):
         w += (-1) ** i * a * np.cos(2 * np.pi * i * k / n)
+    w.setflags(write=False)
     return w
 
 
@@ -606,10 +611,81 @@ def longest_run(bits):
     return int(np.max(np.diff(edges)))
 
 
+class StabilityScan:
+    """The density and run figures of ``stability_report``, taken from a record fed in pieces.
+
+    The bit density is the share of +1 bits in a sliding window of ``window`` bits; the scan keeps
+    the last ``window - 1`` bits and the open run between pieces, so the result does not depend
+    on where the pieces are cut. With ``row`` set, the largest, smallest and mean density of
+    every complete block of ``row`` window positions is kept too (the per-second plot).
+    Memory is the running results and one piece, not a copy of the record.
+    """
+
+    PIECE = 1 << 22
+
+    def __init__(self, window=28, row=None):
+        self.w, self.row = window, row
+        self.n = self.windows = self.ones = 0
+        self.max_c = self.min_c = None
+        self._tail = np.zeros(0, dtype=np.int8)
+        self._last, self._run, self.longest = None, 0, 0
+        self._rows = []  # per row: [largest count, smallest count, sum of counts]
+
+    def feed(self, bits):
+        bits = np.asarray(bits)
+        for i in range(0, len(bits), self.PIECE):
+            self._piece(bits[i : i + self.PIECE] > 0)
+
+    def _piece(self, b):
+        self.n += len(b)
+        self.ones += int(np.count_nonzero(b))
+        d = np.flatnonzero(b[1:] != b[:-1])
+        lens = np.diff(np.concatenate([[-1], d, [len(b) - 1]]))
+        if self._last is not None and b[0] == self._last:
+            lens[0] += self._run
+        self.longest = max(self.longest, int(lens.max()))
+        self._run, self._last = int(lens[-1]), b[-1]
+        ext = np.concatenate([self._tail, b.astype(np.int8)])
+        self._tail = ext[len(ext) - (self.w - 1) :] if self.w > 1 else ext[:0]
+        if len(ext) < self.w:
+            return
+        c = np.concatenate([[0], np.cumsum(ext, dtype=np.int32)])
+        c = c[self.w :] - c[: -self.w]
+        hi, lo = int(c.max()), int(c.min())
+        self.max_c = hi if self.max_c is None else max(self.max_c, hi)
+        self.min_c = lo if self.min_c is None else min(self.min_c, lo)
+        if self.row:
+            start = 0
+            while start < len(c):
+                r = (self.windows + start) // self.row
+                end = min(len(c), (r + 1) * self.row - self.windows)
+                seg = c[start:end]
+                if r == len(self._rows):
+                    self._rows.append([int(seg.max()), int(seg.min()), 0])
+                row = self._rows[r]
+                row[0], row[1] = max(row[0], int(seg.max())), min(row[1], int(seg.min()))
+                row[2] += int(seg.sum(dtype=np.int64))
+                start = end
+        self.windows += len(c)
+
+    def report(self):
+        if self.max_c is None:
+            raise ValueError("the record is shorter than the density window")
+        hi, lo = self.max_c / self.w, self.min_c / self.w
+        return {"max_density": float(hi), "min_density": float(lo),
+                "max_modulation_pct": float(100 * (2 * hi - 1)), "min_modulation_pct": float(100 * (2 * lo - 1)),
+                "saturated": bool(hi >= 1.0 or lo <= 0.0),
+                "longest_run": self.longest, "mean_density": float(self.ones / self.n)}
+
+    def rows(self):
+        """Largest, smallest and mean modulation (percent) of each complete row of window positions."""
+        done = self.windows // self.row
+        out = [(100 * (2 * (r[0] / self.w) - 1), 100 * (2 * (r[1] / self.w) - 1),
+                100 * (2 * (r[2] / self.w / self.row) - 1)) for r in self._rows[:done]]
+        return np.array(out).reshape(-1, 3).T
+
+
 def stability_report(bits, fs_dsd, window=28):
-    dens = bit_density(bits, window)
-    mod = 2 * dens - 1  # density expressed as modulation: 71.43 % is the peak level
-    return {"max_density": float(dens.max()), "min_density": float(dens.min()),
-            "max_modulation_pct": float(100 * mod.max()), "min_modulation_pct": float(100 * mod.min()),
-            "saturated": bool(dens.max() >= 1.0 or dens.min() <= 0.0),
-            "longest_run": longest_run(bits), "mean_density": float(np.mean(np.asarray(bits) > 0))}
+    scan = StabilityScan(window)
+    scan.feed(bits)
+    return scan.report()

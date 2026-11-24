@@ -60,7 +60,9 @@ def test_to_rate_keeps_the_band_and_removes_what_would_leak():
 @pytest.mark.parametrize("rate", [88200, 176400, 352800])
 def test_multitone_range_of_class_a_does_not_depend_on_its_output_rate(rate):  # N1: 138, 109, 106 dB before
     m = _run(adapters.Reference("a", klass="A", out_rate=rate), {"multitone"})["metrics"]
-    assert m["multitone"]["headline"]["distortion_free_range_db"] == pytest.approx(150.7, abs=1.0)
+    # mean and three standard deviations over noise realisations (docs/accuracy.md, Repeatability); the
+    # 0.1.1 chain read 150.7 dB in its one realisation and 151.0 to 153.7 dB over twelve
+    assert m["multitone"]["headline"]["distortion_free_range_db"] == pytest.approx(152.4, abs=2.2)
     assert m["multitone"]["analysis_rate"] == 44100 and m["multitone"]["output_rate"] == rate
 
 

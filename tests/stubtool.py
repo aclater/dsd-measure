@@ -3,7 +3,7 @@
 It decodes with the reference decoder, so its figures are the reference chain's, whatever the
 file format it writes. ``--fail-after N`` makes every call after the N-th exit with an error
 (state kept in ``--state``); ``--no-dsf`` makes it refuse DSF files as a distribution ffmpeg
-does; ``--tone`` writes a 0.5 s tone and ignores the input (for tests that need no analysis).
+does; ``--noise-dbfs`` adds seeded white noise (a decoder that got worse); ``--tone`` writes a 0.5 s tone and ignores the input (for tests that need no analysis).
 """
 
 import argparse
@@ -25,6 +25,7 @@ ap.add_argument("--state")
 ap.add_argument("--no-dsf", action="store_true")
 ap.add_argument("--tone", action="store_true")
 ap.add_argument("--silent", action="store_true")
+ap.add_argument("--noise-dbfs", type=float, help="add white noise of this rms level (seeded, the same every call)")
 a = ap.parse_args()
 
 if a.fail_after is not None:
@@ -43,4 +44,7 @@ if a.tone:
     sys.exit(0)
 bits, rate = read_dsf(a.input)
 y = np.array([decode.decode(b, rate, 352800) for b in bits])
-write_wav(a.output, y * (0.0 if a.silent else 1.0), 352800, a.format)
+y = y * (0.0 if a.silent else 1.0)
+if a.noise_dbfs is not None:
+    y = y + 10 ** (a.noise_dbfs / 20) * np.random.default_rng(1).standard_normal(y.shape)
+write_wav(a.output, y, 352800, a.format)

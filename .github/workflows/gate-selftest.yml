@@ -1,0 +1,58 @@
+# Runs the release-gate action of this repository where it will run for others: the reference
+# decoder against a copy of itself must pass, against a noisier copy it must fail.
+name: gate-selftest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-selftest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: gate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Gate, same decoder (must pass)
+        id: same
+        uses: ./.github/actions/gate  # zizmor: ignore[self-repository]
+        with:
+          suite: tests/gate/pass.toml
+          out: gate-same
+          artifact-name: gate-same-${{ matrix.os }}
+      - name: Gate, noisier candidate (must fail with exit status 1)
+        id: worse
+        continue-on-error: true
+        uses: ./.github/actions/gate  # zizmor: ignore[self-repository]
+        with:
+          suite: tests/gate/fail.toml
+          out: gate-worse
+          artifact-name: gate-worse-${{ matrix.os }}
+      - name: Check both outcomes
+        env:
+          SAME: ${{ steps.same.outputs.result }}
+          WORSE: ${{ steps.worse.outputs.result }}
+          WORSE_OUTCOME: ${{ steps.worse.outcome }}
+        run: |
+          test "$SAME" = pass
+          test "$WORSE" = fail
+          test "$WORSE_OUTCOME" = failure
+          grep -q '^FAIL: worse beyond repeatability' gate-worse/gate.txt
+          python3 -c 'import json; d = json.load(open("gate-worse/gate.json")); assert d["pass"] is False'

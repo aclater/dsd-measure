@@ -10,4 +10,4 @@ Finished reports, made with the `full` profile. Each folder holds one report per
 
 The reference device is the measurement floor itself, so its rows are marked "at the reference floor". Third-party tools (SoX-DSD, ffmpeg-free, sacd_extract) run as black boxes from the pinned containers in [tools/reftool.sh](../tools/reftool.sh); [dec.toml](suites/dec.toml) and [sox.toml](suites/sox.toml) are ready-made suites for decoders and for SoX-DSD. [quick-start.toml](suites/quick-start.toml) is what `dsd-measure init` writes.
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

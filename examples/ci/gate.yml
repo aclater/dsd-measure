@@ -1,0 +1,41 @@
+name: Quality gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-gate:
+    name: Audio quality gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out this commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check out the previous release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: PREVIOUS_TAG
+          path: previous
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Build the previous release
+        run: cargo build --release --locked --manifest-path previous/Cargo.toml
+      - name: Build this commit
+        run: cargo build --release --locked
+      - name: Measure both and compare
+        uses: dsd-toolbox/dsd-measure/.github/actions/gate@0000000000000000000000000000000000000000 # the commit of the latest dsd-measure release, see "Pin the action"
+        with:
+          suite: ci/gate.toml

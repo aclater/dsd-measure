@@ -12,4 +12,9 @@ The dsd-measure icon (a sine wave and a spectrum with its floor line), © the ds
 
 Every file here is exported from `icon.svg`. To change the icon, replace all of them together and keep the file names, so links to them keep working.
 
+## See also
+
+- [Documentation index](../README.md)
+- [README](../../README.md)
+
 Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

@@ -54,8 +54,28 @@ def inband_depth(ch):
     return 400.0 if pd <= 0 else float(10 * np.log10(pm / pd))
 
 
-def verdict(channels):
-    """Verdict for the worst channel: a dict with ``tier``, ``headline``, ``details`` and the depth used."""
+def _khz(hz):
+    return f"{hz / 1000:.1f} kHz"
+
+
+def _band_text(ch):
+    lo, hi = ch.get("null_band_hz", (20.0, 20000.0))
+    return f"{lo:g} Hz to {hi / 1000:g} kHz"
+
+
+def verdict(channels, trust=None):
+    """Verdict for the worst channel: a dict with ``tier``, ``headline``, ``details`` and the depth used.
+
+    ``trust`` is the ``trust`` record of the comparison. When the alignment cannot be trusted the verdict says so
+    and gives no depth band; a pair that is not like-for-like in band gets a detail line.
+    """
+    trust = trust or {}
+    if trust.get("untrustworthy"):
+        head = f"The alignment could not be trusted, so no depth band is given: {trust['reason']}."
+        details = ["Check that both devices decoded the same source and channels, and that the delay search (--max-delay) covers the delay."]
+        if trust.get("not_like_for_like"):
+            details.append(_nlfl_text(trust, channels[0]))
+        return {"tier": "untrustworthy", "headline": head, "details": details, "depth_db": None, "channel": channels[0]["channel"]}
     depths = [inband_depth(c) for c in channels]
     k = int(np.argmin(depths))
     ch, depth = channels[k], depths[k]
@@ -71,6 +91,8 @@ def verdict(channels):
     else:
         head = f"Difference {-depth:.0f} dB relative to the music (null depth {depth:.0f} dB): {text}{which}."
     details = []
+    if trust.get("not_like_for_like"):
+        details.append(_nlfl_text(trust, ch))
     for c in channels:
         if c["polarity_inverted"]:
             details.append(f"Channel {c['channel']}: device B has inverted polarity; it was flipped before subtracting.")
@@ -84,13 +106,22 @@ def verdict(channels):
         w = min(weak, key=lambda b: b["depth_db"])
         details.append(f"The difference is concentrated around {w['centre_hz']:.0f} Hz, where it is only {w['depth_db']:.0f} dB "
                        "below the music in that band.")
+    top = ch.get("null_band_hz", (20.0, 20000.0))[1]
     us = [b for b in ch["bands"] if b["ultrasonic"]]
     if us and tid != "identical":
         worst = min(us, key=lambda b: b["depth_db"])
         if worst["depth_db"] < 40:
-            details.append(f"From 20 kHz up the outputs differ more (down to {worst['depth_db']:.0f} dB at {worst['centre_hz'] / 1000:.0f} kHz). "
-                           "That is outside the depth above, which covers 20 Hz to 20 kHz; the level up there is reported as measured.")
+            details.append(f"From {top / 1000:g} kHz up the outputs differ more (down to {worst['depth_db']:.0f} dB at {worst['centre_hz'] / 1000:.0f} kHz). "
+                           f"That is outside the depth above, which covers {_band_text(ch)}; the level up there is reported as measured.")
     return {"tier": tid, "headline": head, "details": details, "depth_db": depth, "channel": ch["channel"]}
+
+
+def _nlfl_text(trust, ch):
+    bw = trust["bandwidth_hz"]
+    seen = f"device A passes to about {_khz(bw['A'])} and device B to about {_khz(bw['B'])} (each estimated from its own spectrum against the other's)"
+    if not trust.get("null_band_affected", True):
+        return f"The passbands differ: {seen}. The null band, {_band_text(ch)}, is not affected."
+    return f"Not like-for-like in band: {seen}. Alignment and the null depth use {_band_text(ch)}, the band both devices share."
 
 
 def apply_format_limit(v, ch, formats):
@@ -110,7 +141,8 @@ def apply_format_limit(v, ch, formats):
         if not of.limits_result(fmt):
             continue
         lsb = 2.0 ** (1 - fmt["bits"])
-        noise = 10 * np.log10(lsb * lsb / 12 * min(of.BAND_HZ / (fmt["rate"] / 2), 1.0)) + (item[2] if len(item) > 2 else 0.0)
+        band_hz = min(of.BAND_HZ, ch.get("null_band_hz", (0, of.BAND_HZ))[1])
+        noise = 10 * np.log10(lsb * lsb / 12 * min(band_hz / (fmt["rate"] / 2), 1.0)) + (item[2] if len(item) > 2 else 0.0)
         if noise - 6.0 <= ch["diff_rms_audio_dbfs"] <= noise + of.TPDF_COST_DB + 6.0:
             hit.append((name, fmt["bits"], noise))
     if not hit:
@@ -121,7 +153,7 @@ def apply_format_limit(v, ch, formats):
         name = " and ".join(h[0] for h in hit)
     ceiling = ch["music_rms_audio_dbfs"] - noise
     v["format_limited"] = [h[0] for h in hit]
-    v["details"].append(f"{name} wrote {bits}-bit integer PCM. The rounding noise alone is about {noise:.0f} dBFS from 20 Hz to 20 kHz "
+    v["details"].append(f"{name} wrote {bits}-bit integer PCM. The rounding noise alone is about {noise:.0f} dBFS from {_band_text(ch)} "
                         f"(about {of.TPDF_COST_DB:.0f} dB more with dither), "
                         f"which caps the null depth at about {ceiling:.0f} dB on this music, so the figure above describes the file format, "
                         "not the decoder. Ask the tool for floating-point output and run again.")

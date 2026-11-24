@@ -6,9 +6,12 @@ dsd-measure is a Python package with a command line tool. It needs Python 3.11 o
 
 ## Linux
 
+<!-- docs-run: packages=sudo timeout=1500 -->
 ```sh
 sudo dnf install -y gcc git python3-pip pipx
-pipx install git+https://github.com/dsd-toolbox/dsd-measure
+# facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+# /facts
 dsd-measure --version
 ```
 

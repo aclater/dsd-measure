@@ -137,7 +137,7 @@ def convert(src, dst, kind):
         elif kind == "dff":
             nbytes = (n + 7) // 8
             data_len = nbytes * ch
-            ids = {1: [b"SLFT"], 2: [b"SLFT", b"SRGT"]}.get(ch, [b"C%03d" % i for i in range(ch)])
+            ids = {1: [b"SLFT"], 2: [b"SLFT", b"SRGT"]}.get(ch, [f"C{i:03d}".encode() for i in range(ch)])
             prop = (b"SND " + _chunk(b"FS  ", struct.pack(">I", rate))
                     + _chunk(b"CHNL", struct.pack(">H", ch) + b"".join(ids))
                     + _chunk(b"CMPR", b"DSD " + bytes([14]) + b"not compressed\x00"))

@@ -48,17 +48,59 @@ def stage_plan(dsd_rate, out_rate):
     return plan
 
 
+#: Output samples per piece of a decimating stage: a long record is filtered piece by piece, so
+#: the working memory stays small whatever its length.
+PIECE = 1 << 18
+
+
+def _decimate_pieces(chunks, n, taps, q):
+    """Yield ``resample_poly(x, 1, q, window=taps)`` of a signal of ``n`` samples a piece at a time.
+
+    ``chunks`` is the signal in any number of consecutive arrays; only the input a piece still
+    needs is kept. Each piece starts on an input sample that is a multiple of ``q``, so it is
+    filtered with the same polyphase phases as the whole signal and every output sample is the
+    same sum in the same order (``tests/test_stream.py`` checks the result against the whole-signal call).
+    """
+    half = (len(taps) - 1) // 2
+    reach = -(-half // q) * q  # the input before a piece that its first output still meets, in whole outputs
+    nout = -(-n // q)
+    chunks = iter(chunks)
+    buf, base = np.empty(0), 0
+    for m0 in range(0, nout, PIECE):
+        m1 = min(nout, m0 + PIECE)
+        lo, hi = max(0, m0 * q - reach), min(n, m1 * q + half + 1)
+        while base + len(buf) < hi:
+            buf = np.concatenate([buf, np.asarray(next(chunks), dtype=np.float64)])
+        seg = buf[lo - base : hi - base]
+        y = signal.resample_poly(seg, 1, q, window=taps)
+        yield y[m0 - lo // q : m1 - lo // q]
+        keep = max(0, m1 * q - reach)
+        buf, base = buf[keep - base :], keep
+
+
 def decode(bits, dsd_rate, out_rate=BASE, passband=20000.0):
-    """DSD bits (+-1, 1-D) -> PCM float64 at ``out_rate`` with a flat 0..keep response."""
-    x = np.asarray(bits, dtype=np.float64)
+    """DSD bits (+-1, 1-D) -> PCM float64 at ``out_rate`` with a flat 0..keep response.
+
+    Runs piece by piece (``_decimate_pieces``): the bits are turned into floats a block at a
+    time, so a record of any length needs memory for its output and a few blocks, not for a
+    float64 copy of every bit.
+    """
+    bits = np.asarray(bits)
     keep = keep_edge(out_rate, passband)
-    fs = dsd_rate
+    fs, n = dsd_rate, len(bits)
+    step = 4 * PIECE
+    pieces = (bits[i : i + step].astype(np.float64) for i in range(0, n, step))
     for q in stage_plan(dsd_rate, out_rate):
         # intermediate stages keep the same edge; the stop edge is measured against *their* output
         taps, fs_out = decimator(fs, q, keep)
-        x = signal.resample_poly(x, 1, q, window=taps)
-        fs = fs_out
-    return x
+        pieces = _decimate_pieces(pieces, n, taps, q)
+        fs, n = fs_out, -(-n // q)
+    y = np.empty(n)
+    pos = 0
+    for piece in pieces:
+        y[pos : pos + len(piece)] = piece
+        pos += len(piece)
+    return y
 
 
 def to_rate(y, fs, out_rate=44100, passband=21500.0):

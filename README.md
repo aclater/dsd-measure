@@ -8,7 +8,7 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
 [![Licence: MIT OR Apache-2.0](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue)](#licence-and-credits)
 
-A deterministic measurement kit for DSD to PCM converters and PCM to DSD modulators, for audiophiles who read [Archimago](https://archimago.blogspot.com/), [ASR](https://www.audiosciencereview.com/) and [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) measurements. One command runs the kinds of test reviewers publish, on files and writes a report that opens with its conclusions in plain sentences, each backed by a figure and a stated [reference line](docs/conclusions.md) with its source and status, then a one-screen summary and a few key plots with the raw numbers beside them. Its own measurement floor is about -147 dB at DSD64 and is shown in every report, so a reader can see where the tool, not the device, sets a figure. The kit measures: it makes no statement about hearing, it is not an AES17 instrument, and it has not been validated by anyone outside the authors; [what it can and cannot claim](docs/methodology-limits.md) is listed.
+A deterministic measurement kit for DSD to PCM converters and PCM to DSD modulators, for audiophiles who read [Archimago](https://archimago.blogspot.com/), [ASR](https://www.audiosciencereview.com/) and [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) measurements. The kit measures: it makes no statement about hearing, it is not an AES17 instrument, and it has not been validated by anyone outside the authors; [what it can and cannot claim](docs/methodology-limits.md) is listed.
 
 ## Platforms
 
@@ -22,9 +22,12 @@ Tested on Fedora 43 in a container with Python 3.14.
 
 ## Quick start
 
+<!-- docs-run: packages=sudo group=quick-start drop="^xdg-open" expect="Result:" timeout=3000 -->
 ```sh
 sudo dnf install -y gcc git python3-pip pipx ffmpeg-free
-pipx install git+https://github.com/dsd-toolbox/dsd-measure
+# facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+# /facts
 dsd-measure quick ffmpeg
 xdg-open report/ffmpeg/index.html
 ```
@@ -34,6 +37,8 @@ This measures ffmpeg, as a DSD to PCM decoder, with the tool's synthetic test si
 To check the tool itself, `dsd-measure init` writes a suite file and `dsd-measure run suite.toml` measures the built-in reference decoder and modulator; that report says plainly that it shows the measurement floor, not a result for a product. A finished [example report](examples/README.md) of it is included. Add `--plan` to any `run` or `quick` command to see what it would do first.
 
 ## How it works
+
+One command runs the kinds of test reviewers publish, on files and writes a report that opens with its conclusions in plain sentences, each backed by a figure and a stated [reference line](docs/conclusions.md) with its source and status, then a one-screen summary and a few key plots with the raw numbers beside them. Its own measurement floor is about -147 dB at DSD64 and is shown in every report, so a reader can see where the tool, not the device, sets a figure.
 
 dsd-measure measures a **device under test**: your converter, a DSD to PCM decoder (class A) or a PCM to DSD modulator (class B). It can be a command-line tool, a plug-in, or a recording of a hardware DAC.
 
@@ -68,6 +73,7 @@ class = "A"
 out_rate = 352800
 ```
 
+<!-- docs-run: skip="needs compare.toml, saved by hand from the block above; scripts/container-check.sh compare runs it from the README" -->
 ```sh
 dsd-measure run compare.toml --plan
 dsd-measure run compare.toml
@@ -86,6 +92,7 @@ To measure a different tool, use `adapter = "cli"` and give its `command`: `{inp
 
 - [User guide](docs/user-guide.md): measuring a converter, reading the report, troubleshooting.
 - [Command line options](docs/options.md) and [suite file](docs/options.md#suite-file).
+- [Use dsd-measure in your project's CI](docs/ci-gate.md): the release gate as a GitHub Actions step.
 - [Conclusions](docs/conclusions.md): the rules behind each report's conclusions, with the thresholds and their sources.
 - [Methodology limits](docs/methodology-limits.md): what dsd-measure can and cannot claim today.
 - [Null test](docs/user-guide.md#compare-decoders-on-your-own-music): do two decoders differ on your own DSD file?
@@ -102,6 +109,14 @@ See [CITATION.cff](CITATION.cff); GitHub's "Cite this repository" button reads i
 
 ## Licence and credits
 
-MIT OR Apache-2.0, at your option: see [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE). The measurement set follows public practice by [Archimago](https://archimago.blogspot.com/), [Audio Science Review](https://www.audiosciencereview.com/), [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) (John Atkinson), [RMAA](http://audio.rightmark.org/) and the conventions of AES17 (only the 20 kHz band edge and the dBFS reference; see [methodology limits](docs/methodology-limits.md#what-follows-aes17)), listed in the [footprint](docs/footprint.md#sources-and-credit).
+**Code** is licensed under MIT OR Apache-2.0, at your option: see [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE). [NOTICE](NOTICE) holds the attributions to keep with it. This covers all code, scripts, workflows and suite files, and the icons in `docs/assets/`.
+
+**Documentation and measurement data** are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) ([LICENSES/CC-BY-4.0.txt](LICENSES/CC-BY-4.0.txt)): this README, the pages under `docs/` (the methodology and the measurement footprint included) and the example reports and measurement data under `examples/`. Code examples and commands in these files may also be used under the code licence. Not covered: facts and figures cited from other sources, which keep their own terms.
+
+**Your own reports are yours.** A report that you generate with dsd-measure is your own work and your own results. It is not CC BY, and you owe the project nothing for it. Every report and plot says "Measured with dsd-measure" and the version that measured it, so a reader can find the method.
+
+**How to credit** the documentation: "dsd-measure documentation, the dsd-measure authors, https://github.com/dsd-toolbox/dsd-measure, CC BY 4.0". To cite the software, see [CITATION.cff](CITATION.cff).
+
+**Credits.** The measurement set follows public practice by [Archimago](https://archimago.blogspot.com/), [Audio Science Review](https://www.audiosciencereview.com/), [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) (John Atkinson), [RMAA](http://audio.rightmark.org/) and the conventions of AES17 (only the 20 kHz band edge and the dBFS reference; see [methodology limits](docs/methodology-limits.md#what-follows-aes17)), listed in the [footprint](docs/footprint.md#sources-and-credit). No code is copied from them.
 
 Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

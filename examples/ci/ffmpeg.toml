@@ -1,0 +1,15 @@
+[suite]
+name = "ffmpeg gate"
+in_rate = 88200
+
+[[device]]
+name = "previous"
+adapter = "ffmpeg"
+class = "A"
+command = "previous/ffmpeg -v error -y -i {input} -c:a pcm_f32le {output}"
+
+[[device]]
+name = "candidate"
+adapter = "ffmpeg"
+class = "A"
+command = "candidate/ffmpeg -v error -y -i {input} -c:a pcm_f32le {output}"

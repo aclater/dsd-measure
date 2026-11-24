@@ -14,7 +14,7 @@
    "id": "floor",
    "verdict": "floor",
    "label": "Measurement floor",
-   "text": "Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool.",
+   "text": "Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.1 dB and dynamic range 151.7 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.1 dB) cannot be ranked by this tool.",
    "metrics": [
     "reference_floor.chain.dr_a_db",
     "reference_floor.chain.sinad_db",
@@ -25,12 +25,12 @@
     {
      "metric": "reference_floor.chain.sinad_db",
      "label": "SINAD of the reference chain at DSD64",
-     "value": "147.0 dB"
+     "value": "147.1 dB"
     },
     {
      "metric": "reference_floor.chain.dr_a_db",
      "label": "dynamic range of the reference chain, A-weighted",
-     "value": "151.8 dB"
+     "value": "151.7 dB"
     },
     {
      "metric": "reference_floor.margin_db",
@@ -40,12 +40,12 @@
     {
      "metric": "tone_0dbsacd.sinad_db",
      "label": "SINAD of this device",
-     "value": "146.7 dB"
+     "value": "146.9 dB"
     },
     {
      "metric": "reference_floor.chain.sinad_db",
      "label": "SINAD above which a converter cannot be ranked",
-     "value": "141.0 dB"
+     "value": "141.1 dB"
     }
    ],
    "thresholds": [
@@ -56,7 +56,7 @@
    "id": "floor-agreement",
    "verdict": "fact",
    "label": "Finding",
-   "text": "The parts of the chain agree: SINAD is 146.7 dB for reference decoder and 146.7 dB for reference modulator, a spread of 0.01 dB.",
+   "text": "The parts of the chain agree: SINAD is 146.9 dB for reference decoder and 146.9 dB for reference modulator, a spread of less than 0.01 dB.",
    "metrics": [
     "tone_0dbsacd.sinad_db"
    ],
@@ -64,19 +64,19 @@
     {
      "metric": "tone_0dbsacd.sinad_db",
      "label": "SINAD",
-     "value": "146.7 dB",
+     "value": "146.9 dB",
      "device": "reference decoder"
     },
     {
      "metric": "tone_0dbsacd.sinad_db",
      "label": "SINAD",
-     "value": "146.7 dB",
+     "value": "146.9 dB",
      "device": "reference modulator"
     },
     {
      "metric": "tone_0dbsacd.sinad_db",
      "label": "spread of SINAD",
-     "value": "0.01 dB"
+     "value": "less than 0.01 dB"
     }
    ],
    "thresholds": [

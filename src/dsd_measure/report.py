@@ -9,6 +9,8 @@ from pathlib import Path
 
 import matplotlib
 
+from . import __version__
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -22,7 +24,44 @@ plt.rcParams.update({
 })
 
 
+PROJECT_URL = "https://github.com/dsd-toolbox/dsd-measure"
+_version = __version__
+
+
+def use_version(version=None):
+    """Set the version that the report and plots being written name as having measured (default: the running one).
+
+    A report written from saved results passes the version recorded in them, not the running one.
+    """
+    global _version
+    _version = version or __version__
+
+
+def measured_with():
+    """The plain provenance line, the same in every report and plot."""
+    return f"Measured with dsd-measure {_version}"
+
+
+def _measured_with_html():
+    """The line for HTML: a version recorded in a results file is data, so it is escaped."""
+    return html.escape(measured_with())
+
+
+def _measured_with_safe():
+    """The line for Markdown and for plots (Matplotlib reads $ as the start of math text): the version keeps to
+    letters, digits and . _ + ~ -; anything else becomes ?."""
+    return "Measured with dsd-measure " + re.sub(r"[^A-Za-z0-9._+~-]", "?", str(_version))
+
+
+def _footer(fig):
+    """The provenance line in small grey text under everything else in the figure (the saved crop includes it)."""
+    box = fig.get_tightbbox(fig.canvas.get_renderer())
+    fig.text(box.x0 / fig.get_figwidth(), (box.y0 - 0.06) / fig.get_figheight(), f"{_measured_with_safe()}, {PROJECT_URL}",
+             ha="left", va="top", fontsize=6, color="#7a7a7a")
+
+
 def _svg(fig):
+    _footer(fig)
     buf = io.StringIO()
     fig.savefig(buf, format="svg", metadata={"Date": None, "Creator": "dsd-measure"}, bbox_inches="tight")
     plt.close(fig)
@@ -596,7 +635,7 @@ def _card(svg, take, detail=""):
 def _page(title, body, sub=""):
     return (f"<!doctype html><html lang=en-GB><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
             f"<title>{html.escape(title)}</title><style>{CSS}</style><body><h1>{html.escape(title)}</h1>"
-            f"<p class=lead>{sub}</p>{body}<footer>Made with dsd-measure. Part of the "
+            f"<p class=lead>{sub}</p>{body}<footer>{_measured_with_html()}, <a href='{PROJECT_URL}'>github.com/dsd-toolbox/dsd-measure</a>. Part of the "
             f"<a href='https://github.com/dsd-toolbox/dsd-toolbox'>DSD Toolbox</a>.</footer></body></html>")
 
 
@@ -807,10 +846,15 @@ def _conclusions_md(cs):
     return ["## Conclusions", ""] + [f"- {c['text']}" for c in cs] + ["", f"{SCOPE} [How the conclusions are drawn]({DOC_URL}).", ""]
 
 
+def _measured_with_md():
+    return f"{_measured_with_safe()}, [github.com/dsd-toolbox/dsd-measure]({PROJECT_URL})."
+
+
 def write_device_report(outdir, name, result, meta):
     out = Path(outdir)
     (out / "plots").mkdir(parents=True, exist_ok=True)
     M = result["metrics"]
+    use_version((meta.get("versions") or {}).get("dsd_measure"))
     plots = device_plots([(name, result)])
     key = "".join(_card(s, t, d) for kind, _, s, t, d in plots if kind == "key")
     det = "".join(_card(s, t, d) for kind, _, s, t, d in plots if kind == "detail")
@@ -848,6 +892,7 @@ def write_device_report(outdir, name, result, meta):
     for _kind, key_, _, take, _ in plots:
         if take:
             md.append(f"- **{key_}**: {take}")
+    md += ["", _measured_with_md()]
     (out / "index.md").write_text("\n".join(md) + "\n")
     return headline
 
@@ -893,6 +938,7 @@ def write_comparison(outdir, results, meta):
             cells.append(f"<td class='{cls}'>{html.escape(x['value'])}{tag}</td>")
         trs.append(f"<tr><td>{html.escape(k)}</td>{''.join(cells)}</tr>")
     head = "".join(f"<th class=v>{html.escape(n)}</th>" for n in names)
+    use_version(next((v for m in meta.get("measured") or [] if (v := (m.get("versions") or {}).get("dsd_measure"))), None))
     plots = device_plots(results)
     cards = "".join(_card(s, "", d) for kind, _, s, t, d in plots if kind == "key")
     det = "".join(_card(s, "", d) for kind, _, s, t, d in plots if kind == "detail")
@@ -928,5 +974,6 @@ def write_comparison(outdir, results, meta):
     for k in labels:
         md.append(f"| {k} | " + " | ".join((rows_by[n][k]["value"] + (" (floor)" if rows_by[n][k]["flag"] else "")) if k in rows_by[n] else _absent(klass[n], k) for n in names) + " |")
     md += _notes_md([f"{n}: {t}" for n, r in results for t in r.get("notes", [])])
+    md += ["", _measured_with_md()]
     (out / "index.md").write_text("\n".join(md) + "\n")
     return headline

@@ -4,6 +4,7 @@ Bug reports, new adapters and new measurements are welcome. Please open an issue
 
 ## Set up
 
+<!-- docs-run: skip="sets up a development tree and runs the whole test suite; the CI and localci test jobs run it" -->
 ```sh
 python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'

@@ -42,6 +42,7 @@ The wrapper `tools/reftool.sh` needs rootless Podman. Every run uses `--network=
 
 Build the images and write the version record:
 
+<!-- docs-run: skip="needs the pinned reference containers (rootless Podman), which a docs-run container cannot start" -->
 ```sh
 tools/reftool.sh build
 tools/reftool.sh versions versions.json
@@ -49,6 +50,7 @@ tools/reftool.sh versions versions.json
 
 Make a DSD64 file with each modulator (a 1 kHz, 24-bit, 96 kHz mono WAV in `in/tone.wav`):
 
+<!-- docs-run: skip="needs the pinned reference containers (rootless Podman), which a docs-run container cannot start" -->
 ```sh
 tools/reftool.sh sox-dsd in out /in/tone.wav /out/sdm-8.dsf rate -v 2822400 sdm -f sdm-8 -t 32 -n 32
 tools/reftool.sh sox-dsd in out /in/tone.wav /out/clans-8.dsf rate -v 2822400 sdm -f clans-8 -t 32 -n 32
@@ -56,6 +58,7 @@ tools/reftool.sh sox-dsd in out /in/tone.wav /out/clans-8.dsf rate -v 2822400 sd
 
 Decode DSD back to PCM. ffmpeg needs DSDIFF, so write that first:
 
+<!-- docs-run: skip="needs the pinned reference containers (rootless Podman), which a docs-run container cannot start" -->
 ```sh
 tools/reftool.sh sox-dsd in out /in/tone.wav /out/clans-8.dff rate -v 2822400 sdm -f clans-8 -t 32 -n 32
 tools/reftool.sh sox-dsd in out /out/clans-8.dsf -e floating-point -b 32 /out/clans-8.wav rate -v 96000
@@ -64,12 +67,14 @@ tools/reftool.sh ffmpeg in out -i /out/clans-8.dff -ar 96000 -c:a pcm_f32le /out
 
 Extract the stereo area of an SACD image as DSF (the output directory must exist):
 
+<!-- docs-run: skip="needs the pinned reference containers (rootless Podman), which a docs-run container cannot start" -->
 ```sh
 tools/reftool.sh sacd-extract in out -2 -s -o /out/x -y /out/x -i /in/disc.iso
 ```
 
 Resample with stock SoX:
 
+<!-- docs-run: skip="needs the pinned reference containers (rootless Podman), which a docs-run container cannot start" -->
 ```sh
 tools/reftool.sh sox in out /in/tone.wav /out/tone-48k.wav rate -v 48000
 ```

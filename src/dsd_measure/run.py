@@ -14,7 +14,7 @@ import scipy
 
 from . import REFERENCE_CHAIN_VERSION, __version__, preflight
 from .adapters import make_adapter
-from .measure import PROFILES, measure_device
+from .measure import PROFILE_TESTS, PROFILES, measure_device
 from .report import write_comparison, write_device_report
 
 EXAMPLE_SUITE = """\
@@ -71,10 +71,18 @@ def summary_line(name, res):
     return f"  {name}: " + ", ".join(bits)
 
 
-def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, verbose=False, source=None):
+def null_only_early(only):
+    return only == ["null"]
+
+
+def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, verbose=False, source=None,
+              jobs=None, cache=None):
     """Run a suite file; returns ``(report folder, {device: [tests that raised]})``.
 
     ``plan=True`` prints what would run and returns ``(None, {})`` without measuring.
+    ``jobs`` is the number of worker processes (None: ``parallel.default_jobs()``; 1: no workers,
+    one test after the other in this process). ``cache=False`` switches the stimulus cache off.
+    The numbers in the report do not depend on either.
     """
     from . import plan as pl
     log = log or _say
@@ -86,8 +94,21 @@ def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, ver
     cfg = tomllib.loads(raw.decode())
     suite = cfg.get("suite", {})
     profile = profile or suite.get("profile", "quick")
+    if profile not in PROFILES:
+        raise ValueError(f"unknown profile {profile!r}: use one of {', '.join(PROFILES)}")
+    if only is None and profile in PROFILE_TESTS:
+        only = list(PROFILE_TESTS[profile])
     in_rate = int(suite.get("in_rate", 88200))
     outdir = Path(out or suite.get("out", "report"))
+    from . import parallel, stimcache
+    if cache is not None:
+        stimcache.set_enabled(cache)
+    stimcache.reset_stats()
+    if stimcache.enabled() and not null_only_early(only):
+        stimcache.directory()  # a cache folder that is not private stops the run here, not test by test
+    jobs = int(jobs or suite.get("jobs", 0) or parallel.default_jobs(profile))
+    if jobs < 1:
+        raise ValueError("jobs must be 1 or more")
     null_only = only == ["null"]
     specs = [] if null_only else cfg.get("device", [])
     t_start = time.time()
@@ -111,9 +132,8 @@ def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, ver
                 log(f"  note: the version of {a.name} could not be read; the provenance records its executable hash"
                     f"{'' if ident.get('sha256') else ' where it can be found'}. Add version = \"...\" to the device to declare it.")
         outdir.mkdir(parents=True, exist_ok=True)
-        for n, (adapter, pf, ident) in enumerate(zip(adapters, pre, identities, strict=True), 1):
+        def head(n, adapter):
             fa = pl.device_facts(adapter)
-            log("")
             log(f"Device {n} of {len(specs)}: {adapter.name} (class {adapter.klass}, {fa['kind']}, adapter {adapter.kind})")
             if verbose:
                 fed, ret = pl.io_text(fa, in_rate)
@@ -122,7 +142,22 @@ def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, ver
                 log(f"  returns: {ret}")
                 if adapter.gain_db:
                     log(f"  gain applied to its output: {adapter.gain_db:+g} dB")
-            res = measure_device(adapter, profile, in_rate, log=log, only=only)
+
+        measured = None
+        if jobs > 1 and adapters:
+            # every test of every device at once; the reports are then written in suite order
+            log("")
+            for n, adapter in enumerate(adapters, 1):
+                head(n, adapter)
+            log(f"Measuring with {jobs} jobs (tests finish out of order; the report does not depend on it).")
+            measured = parallel.measure_all(adapters, specs, profile, in_rate, only, jobs, log)
+        for n, (adapter, pf, ident) in enumerate(zip(adapters, pre, identities, strict=True), 1):
+            if measured is None:
+                log("")
+                head(n, adapter)
+                res = measure_device(adapter, profile, in_rate, log=log, only=only)
+            else:
+                res = measured[n - 1]
             if res["errors"]:
                 failed[adapter.name] = list(res["errors"])
             meta = {"device": adapter.describe(), "profile": profile, "in_rate": in_rate,
@@ -152,12 +187,21 @@ def run_suite(path, out=None, profile=None, only=None, log=None, plan=False, ver
     if "null" in cfg and (only is None or "null" in only):
         from .nulltest.run import options_from, run_null
         ncfg = dict(cfg["null"])
-        run_null(ncfg["source"], ncfg["devices"], options_from(ncfg), ncfg.get("out", outdir / "null"),
-                 cfg.get("device", []), log=log)
+        res = run_null(ncfg["source"], ncfg["devices"], options_from(ncfg), ncfg.get("out", outdir / "null"),
+                       cfg.get("device", []), log=log)
+        # as for `dsd-measure null`: the report is written, but a pair whose alignment cannot be trusted is a failed test
+        bad = [f"{p['b']} against {p['a']}" for p in (res or {}).get("pairs", []) if p["result"]["trust"]["untrustworthy"]]
+        if bad:
+            failed["null"] = ["the alignment of " + ", ".join(bad) + " could not be trusted"]
     top = outdir / ("comparison" if len(results) > 1 else results[0][1] if results else "") / "index.html"
     secs = time.time() - t_start
     log("")
     log(f"Finished in {secs / 60:.1f} min. Report: {top}")
+    cs = stimcache.stats()
+    if not stimcache.enabled():
+        log("Stimulus cache: off.")
+    elif cs["hits"] or cs["misses"]:
+        log(f"Stimulus cache: {cs['hits']} test signals read back, {cs['misses']} encoded ({stimcache.usage()['directory']}).")
     for name, _, res in results:
         log(summary_line(name, res))
     for name, tests in failed.items():

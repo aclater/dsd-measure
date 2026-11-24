@@ -1,0 +1,28 @@
+# Settings for the shared DSD Toolbox docs tools (dsd-toolbox/dsd-toolbox, tools/docs and
+# docs/docs-tooling.md), run by .github/workflows/docs.yml and docs-audit.yml.
+name = "dsd-measure"
+kind = "app"                # a Python command line tool installed with pipx
+default_branch = "main"
+
+[readme]
+# "How it works" and "How to cite" sit between the standard sections.
+allow_extra = ["How it works", "How to cite"]
+
+[lint]
+# The release test plan is the gate before the tag, so the after-release audit step lives in
+# docs/release.md, not there.
+release_files = ["docs/release.md"]
+# "Multitone Analyzer" and "RightMark Audio Analyzer" are product names.
+allow_words = ["analyzer"]
+
+[touched]
+# Code, options and behaviour: the package, and the scripts and suites a user runs. A change there
+# also changes README.md, docs/ or CHANGELOG.md, or the pull request says "Docs: none needed" with
+# a reason. Tests, examples and CI never count as code.
+code = ["src/**", "scripts/validate.*", "scripts/repeatability/**", "tools/reftool.sh", "containers/**"]
+docs = ["README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "docs/**"]
+ignore = ["tests/**", "examples/**", ".github/**", "scripts/ci.sh", "scripts/audit-public.sh", "scripts/container-check.sh"]
+
+[run]
+# docs-run: dnf package names a block may install (the Fedora image has no sudo).
+packages = ["sudo"]
