@@ -2,7 +2,41 @@
 
 All notable changes are listed here, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## 0.1.1 - unreleased
+## 0.1.2 - 2026-11-24
+
+Usability fixes from a first-run study of 0.1.1. No analysis number of the reference chain changes.
+
+### Added
+
+- The output word length of every file a converter writes is read from its header, shown in the report ("Output word length") and recorded in the provenance. When a 16-bit (or shorter) integer output limits SINAD to within 6 dB of its rounding noise, the verdict is "Not judged: output format" instead of a verdict on the decoder, the comparison does not rank distortion and noise for that device, and the null test says its depth is limited by the output format and gives the ceiling.
+- An `ffmpeg` preset, so `dsd-measure quick ffmpeg`, `adapter = "ffmpeg"` and `dsd-measure null track.dsf ffmpeg` work. It asks for 32-bit float output and, if the ffmpeg build cannot read DSF files, gives it DFF files.
+- A pre-flight check: each device converts a 0.5 s test signal before anything is measured. A missing program, a failing command or an empty, silent or short output stops the run in about a second with the tool's own error printed once, no report and status 2. A suite is checked in full before its first device is measured.
+- `dsd-measure null FILE [DEVICE ...]`: a positional file and preset names, with the built-in reference decoder as the baseline when one decoder is named. A missing tool is reported before the file is read.
+- A one-sentence "Result:" at the top of every device, comparison and null report (HTML, Markdown and `results.json`) and as the last line of terminal output.
+- A numbered progress line for every test (`[3/17]`) with the time left.
+- Bare `dsd-measure` prints three lines saying what to type; a DSD file given to `quick` or on its own is answered with the `null` command for it; an unknown converter name lists the presets and the `--command` line to type.
+- Presets take extra arguments: `quick dsd2pcm --args '--filter pysacd'`, `args = "..."` in a suite file, `dsd2pcm:--filter pysacd` for the null test.
+- A stopband row that says "not measurable at this output rate", with the reason, when the output rate leaves no test tone above its Nyquist frequency (352.8 kHz and up).
+
+### Fixed
+
+- The `dsd2pcm` preset ran `dsd2pcm {input} -o {output}`, but dsd2pcm takes `IN OUT` and rejects `-o`, so `quick dsd2pcm` failed (the user guide had the same command).
+- `signals.json` recorded the hash of the sample array as `sha256`; it is now the file's SHA-256, and the array hash is `samples_sha256`.
+- The end-of-run line named "the reference floor" for a whole device when any row was at its own floor, in practice the peak-level SINAD row (floor 129.2 dB against 147 dB for the 0 dB SACD rows). It now lists the rows at their own floor.
+- SINAD and THD+N were two rows with the same number; they are one row, and THD (harmonics only) has its own.
+- The reference floor's dynamic range is shown to 0.1 dB everywhere (it read 151.8 dB in one place and 152 dB in another).
+- The null report's per-channel table labels its two null depths (20 Hz to 20 kHz, and the full analysed band).
+
+### Changed
+
+- The word-length limit follows the tone level the tool actually wrote (measured gain error and any `gain_db`), and the null test compares the rounding noise after the applied gain. The "Not judged" text says the figures cannot be told from the file format.
+- The comparison table does not mark a better figure, and tags the cell "format", when a device is format-limited. The pre-flight is capped at 120 s, converters no longer read the terminal (stdin), and WAV headers are read chunk by chunk (a `fmt ` chunk after a large chunk, a short one, or a zero rate no longer fail), including the valid bits of extensible files.
+- The README Quick start measures ffmpeg (`dsd-measure quick ffmpeg`). The reference chain's self-test (`dsd-measure init`, `dsd-measure run suite.toml`) is described as such.
+- The comparison headline says "in the audio band".
+- Messages for mistakes the user can fix no longer carry a Python exception name.
+- Links in the README and in reports point at the dsd-toolbox organisation. The report's "Run as" line shows the command template, not an example path that never existed.
+
+## 0.1.1 - 2026-11-24
 
 ### Security
 
@@ -66,4 +100,4 @@ All notable changes are listed here, newest first. The format follows [Keep a Ch
 
 An independent review found that some report figures in 0.1.0 reflect the analysis rather than the device: the stopband, the class B multitone range, the ultrasonic noise peak, the noise headline, overload recovery, the J-Test sideband, multitone at 48 kHz-family rates, and the peak-level SINAD of class A devices. They are corrected in 0.1.1 (see Fixed above). For 0.1.0 results, the figures the review confirmed are THD, THD+N and SINAD, dynamic range, gain, linearity, frequency response, single-point IMD, crosstalk and the reference floor.
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

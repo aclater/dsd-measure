@@ -2,12 +2,14 @@
 
 import argparse
 import json
+import re
 import sys
 import tempfile
 import tomllib
 from pathlib import Path
 
 from . import __version__
+from .errors import UserError
 
 #: Exit status: 0 everything ran; 1 the report was written but some tests raised an error
 #: (see "Not run, and why"); 2 a fatal error (bad suite file, unknown adapter, missing tool,
@@ -21,12 +23,33 @@ def main(argv=None):
     except KeyboardInterrupt:
         print("dsd-measure: interrupted", file=sys.stderr)
         return EXIT_INTERRUPTED
+    except UserError as e:
+        print(f"dsd-measure: error: {e}", file=sys.stderr)
+        return EXIT_FATAL
     except (OSError, ValueError, KeyError, RuntimeError, tomllib.TOMLDecodeError) as e:
         print(f"dsd-measure: error: {type(e).__name__}: {e}", file=sys.stderr)
         return EXIT_FATAL
 
 
+GUIDE = """\
+dsd-measure measures DSD to PCM converters and PCM to DSD modulators. What do you want to do?
+
+  dsd-measure quick ffmpeg                  measure a decoder you have installed (ffmpeg, dsd2pcm, sox-dsd)
+  dsd-measure null track.dsf ffmpeg         compare it with the reference decoder on your own DSF file
+  dsd-measure run suite.toml                run a suite file of several devices side by side
+
+Add --plan to quick, null or run to see what would happen first. More: dsd-measure --help
+"""
+
+
 def _main(argv=None):
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if not argv:
+        print(GUIDE, end="")
+        return EXIT_OK
+    if Path(argv[0]).suffix.lower() in (".dsf", ".dff") and not argv[0].startswith("-"):
+        raise UserError(f"{argv[0]!r} is a DSD file, not a command. To compare decoders on this file: "
+                        f"dsd-measure null {argv[0]} ffmpeg")
     ap = argparse.ArgumentParser(prog="dsd-measure", description="Reproducible measurements for DSD and PCM converters.")
     ap.add_argument("--version", action="version", version=__version__)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -40,18 +63,22 @@ def _main(argv=None):
     r.add_argument("-v", "--verbose", action="store_true", help="show device details while running")
 
     q = sub.add_parser("quick", help="measure one converter with the quick profile")
-    q.add_argument("converter", help="'reference' or a tool preset (dsd2pcm, sox-dsd, sacd_extract) or any name with --command")
+    q.add_argument("converter", help="'reference', a tool preset (ffmpeg, dsd2pcm, sox-dsd, sacd_extract) or any name with --command")
     q.add_argument("--command", help="command template with {input} and {output}")
+    q.add_argument("--args", help="extra arguments for a preset, put after the program name (for example --args '--filter pysacd'; write --args=--dither when the value starts with a dash)")
     q.add_argument("--class", dest="klass", choices=["A", "B"], default="A", help="A: DSD to PCM, B: PCM to DSD")
     q.add_argument("-o", "--out", default="report")
     q.add_argument("--profile", choices=["quick", "full"], default="quick")
     q.add_argument("--plan", action="store_true", help="print what would be measured, then exit")
     q.add_argument("-v", "--verbose", action="store_true", help="show device details while running")
 
-    n = sub.add_parser("null", help="real-music null test: how much do two decoders differ on your DSD file?")
-    n.add_argument("--source", help="DSF or DFF file (or [null] source in --suite)")
-    n.add_argument("--device", action="append", default=[], help="reference[@RATE], NAME=COMMAND with {input} and {output}, "
-                   "or a [[device]] name from --suite; give two or more (the first is the baseline)")
+    n = sub.add_parser("null", help="real-music null test: how much does a decoder differ from the reference on your DSD file?",
+                       description="Example: dsd-measure null track.dsf ffmpeg compares ffmpeg with the built-in reference decoder on track.dsf.")
+    n.add_argument("items", nargs="*", metavar="FILE|DEVICE",
+                   help="the DSF or DFF file, then the decoders to compare: a preset (ffmpeg, dsd2pcm, sox-dsd), reference[@RATE], "
+                        "NAME=COMMAND or a [[device]] name from --suite. The built-in reference decoder is the baseline unless you name two or more")
+    n.add_argument("--source", help="DSF or DFF file (or [null] source in --suite); the same as the first argument")
+    n.add_argument("--device", action="append", default=[], help="a decoder, as above; give two or more to choose the baseline (the first)")
     n.add_argument("--suite", help="suite file with [[device]] tables and an optional [null] table")
     n.add_argument("-o", "--out", "--out-dir", dest="out")
     n.add_argument("--trim-start", type=float, help="seconds cut at the start (default 0.5)")
@@ -88,6 +115,7 @@ def _main(argv=None):
         _, failed = run_suite(a.suite, a.out, a.profile, a.only, plan=a.plan, verbose=a.verbose)
         return EXIT_TESTS_FAILED if failed else EXIT_OK
     elif a.cmd == "quick":
+        from .adapters import PRESETS, unknown_name_message
         from .run import run_suite
         if a.converter == "reference":  # both halves of the reference chain
             devs = [("reference decoder", "A", 'out_rate = 44100'), ("reference modulator", "B", "")]
@@ -96,11 +124,17 @@ def _main(argv=None):
                 spec += ["", "[[device]]", f'name = "{name}"', 'adapter = "reference"', f'class = "{k}"']
                 spec += [extra] if extra else []
         else:
+            if not a.command and a.converter not in PRESETS:
+                raise UserError(unknown_name_message(a.converter))
             spec = ["[suite]", f'name = {json.dumps("quick: " + a.converter)}', f'profile = "{a.profile}"', f"out = {json.dumps(a.out)}", "", "[[device]]",
                     f"name = {json.dumps(a.converter)}", f"adapter = {json.dumps('cli' if a.command else a.converter)}",
                     f'class = "{a.klass}"']
+            if a.command and a.args:
+                raise UserError("--args goes with a preset; with --command, put the arguments in the command itself")
             if a.command:
                 spec.append(f"command = {json.dumps(a.command)}")
+            elif a.args:
+                spec.append(f"args = {json.dumps(a.args)}")
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "suite.toml"
             p.write_text("\n".join(spec) + "\n")
@@ -116,10 +150,17 @@ def _main(argv=None):
                 cfg[k] = getattr(a, k)
         if a.diff_wav:
             cfg["diff_wav"] = True
-        source = a.source or cfg.get("source")
-        devs = a.device or cfg.get("devices", [])
-        if not source or not devs:
-            ap.error("null needs --source and two or more --device (or a [null] table with source and devices)")
+        items = list(a.items)
+        source = a.source
+        if not source and items and (Path(items[0]).suffix.lower() in (".dsf", ".dff") or Path(items[0]).is_file()):
+            source = items.pop(0)
+        source = source or cfg.get("source")
+        devs = a.device + items or cfg.get("devices", [])
+        if len(devs) == 1 and not re.fullmatch(r"reference(@\d+)?", devs[0].strip()):
+            devs = ["reference"] + devs  # one decoder named: compare it with the built-in reference
+        if not source or len(devs) < 2:
+            raise UserError("null needs a DSD file and a decoder to compare, for example: dsd-measure null track.dsf ffmpeg "
+                            "(the built-in reference decoder is the baseline); see dsd-measure null --help")
         run_null(source, devs, options_from(cfg), a.out or cfg.get("out", "null-report"), sdev, a.keep_work)
     elif a.cmd == "init":
         from .run import EXAMPLE_SUITE

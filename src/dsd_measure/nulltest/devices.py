@@ -15,15 +15,12 @@ from pathlib import Path
 import numpy as np
 
 from .. import decode as _decode
-from ..adapters import run_checked, substitute
+from ..adapters import PRESET_OPTS, PRESETS, run_checked, substitute, with_args  # noqa: E402  (one list of presets for run, quick and null)
 from ..dsdstream import convert, sha256_path
+from ..errors import MissingTool, ToolFailed, UserError
+from ..outformat import audio_format
+from ..preflight import check_program
 from .tracks import WavTrack
-
-PRESETS = {
-    "dsd2pcm": "dsd2pcm {input} -o {output}",
-    "sox-dsd": "sox {input} -b 32 -e floating-point {output} rate -v 352800",
-    "sacd_extract": "sacd_extract -i {input} -p -o {output}",
-}
 
 
 class RefDecoderTrack:
@@ -96,8 +93,11 @@ class FileDevice:
 
     kind = "cli"
 
-    def __init__(self, name, command, input_ext="dsf", output_ext="wav", gain_db=0.0, timeout=7200, shell=False, **_):
+    def __init__(self, name, command, input_ext="dsf", output_ext="wav", gain_db=0.0, timeout=7200, shell=False,
+                 input_ext_fallback=None, **_):
         self.shell = bool(shell)
+        check_program(command, self.shell, name)  # a missing program fails now, not after the source has been read
+        self.input_ext_fallback = (input_ext_fallback or "").lower().lstrip(".") or None
         self.name, self.command, self.gain_db, self.timeout = name, command, float(gain_db), timeout
         self.input_ext, self.output_ext = input_ext.lower().lstrip("."), output_ext.lower().lstrip(".")
         if self.input_ext not in ("dsf", "dff"):
@@ -111,20 +111,31 @@ class FileDevice:
         work = Path(work)
         work.mkdir(parents=True, exist_ok=True)
         safe = re.sub(r"[^A-Za-z0-9_-]+", "-", self.name).strip("-") or "device"
-        if source.kind == self.input_ext:
-            inp = source.path
-        else:
-            inp = work / f"{safe}-input.{self.input_ext}"
-            convert(source.path, inp, self.input_ext)
         out = work / f"{safe}-output.{self.output_ext}"
-        if self.shell:
-            cmd = substitute(self.command, input=shlex.quote(str(inp)), output=shlex.quote(str(out)))
-        else:
-            cmd = [substitute(w, input=str(inp), output=str(out)) for w in shlex.split(self.command)]
-        run_checked(cmd, shell=self.shell, timeout=self.timeout)
+        exts = [self.input_ext] + ([self.input_ext_fallback] if self.input_ext_fallback not in (None, self.input_ext) else [])
+        for k, ext in enumerate(exts):
+            if source.kind == ext:
+                inp = source.path
+            else:
+                inp = work / f"{safe}-input.{ext}"
+                convert(source.path, inp, ext)
+            if self.shell:
+                cmd = substitute(self.command, input=shlex.quote(str(inp)), output=shlex.quote(str(out)))
+            else:
+                cmd = [substitute(w, input=str(inp), output=str(out)) for w in shlex.split(self.command)]
+            try:
+                run_checked(cmd, shell=self.shell, timeout=self.timeout)
+                break
+            except RuntimeError as e:
+                if inp != source.path:
+                    inp.unlink(missing_ok=True)
+                if k + 1 == len(exts):
+                    raise ToolFailed(f"{self.name}: the command failed" + (f" on {ext.upper()} files too" if k else "")
+                                    + f": {e}") from None
+        self.input_ext = ext  # the file type that worked
         if not out.exists():
             raise RuntimeError(f"{self.name}: the command ran but wrote no file at the {{output}} path")
-        info = {"output_sha256": sha256_path(out)}
+        info = {"output_sha256": sha256_path(out), "output_format": audio_format(out)}
         if inp != source.path:
             info["converted_input_sha256"] = sha256_path(inp)
             info["input_conversion"] = f"{source.kind} to {self.input_ext}, bit-exact"
@@ -150,10 +161,12 @@ def from_suite_spec(spec):
     if kind == "cli":
         return FileDevice(name, **spec)
     if kind in PRESETS and "reftool" not in spec:
-        cmd = spec.pop("command", PRESETS[kind])
+        cmd = with_args(spec.pop("command", PRESETS[kind]), spec.pop("args", ""))
+        if "input_ext" not in spec:
+            spec = {**PRESET_OPTS.get(kind, {}), **spec}
         exe = shlex.split(cmd)[0]
         if "/" not in exe and shutil.which(exe) is None:
-            raise FileNotFoundError(f"device {name}: {exe} not found on PATH (set command = ...)")
+            raise MissingTool(f"{exe} is not on PATH (needed by {name!r}). Install it, or set command = ... to its full path")
         return FileDevice(name, cmd, **spec)
     raise ValueError(f"device {name}: the null test runs the reference decoder and command-line tools "
                      f"(adapter 'reference', 'cli' or a preset); for a container tool use a cli device with "
@@ -164,6 +177,8 @@ def parse_device(text, suite_devices=None):
     """A device from a ``--device`` value.
 
     ``reference`` or ``reference@RATE``: the built-in decoder (default 352800 Hz).
+    A preset name (``ffmpeg``, ``dsd2pcm``, ``sox-dsd``, ``sacd_extract``): that tool with its standard command;
+    ``dsd2pcm:--filter pysacd`` adds arguments after the program name.
     ``NAME=COMMAND``: a command template with ``{input}`` and ``{output}``; start the command with
     ``dff:`` to give the tool a DFF file instead of a DSF file.
     Anything else is looked up by name among the suite file's ``[[device]]`` tables.
@@ -181,5 +196,8 @@ def parse_device(text, suite_devices=None):
     for spec in suite_devices or []:
         if spec.get("name") == t:
             return from_suite_spec(spec)
-    raise ValueError(f"unknown device {text!r}: use reference, reference@RATE, NAME=COMMAND (with {{input}} "
+    name, _, args = t.partition(":")  # "dsd2pcm" or "dsd2pcm:--filter pysacd"
+    if name in PRESETS:
+        return from_suite_spec({"adapter": name, "name": name if not args else f"{name} {args.strip()}", "args": args})
+    raise UserError(f"unknown device {text!r}: use reference, reference@RATE, NAME=COMMAND (with {{input}} "
                      f"and {{output}}), or the name of a [[device]] in --suite")

@@ -2,6 +2,8 @@
 
 Class B (PCM to DSD modulator); DSD64; profile full; reference chain 2.
 
+**Result: this is the measurement floor of the built-in reference chain (SINAD 147.0 dB, the best figure the tool can show), not a result for a product.**
+
 ## Conclusions
 
 - This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool: it is at least that good.
@@ -12,22 +14,21 @@ Class B (PCM to DSD modulator); DSD64; profile full; reference chain 2.
 - By rate: SINAD is 147 dB at DSD64, 176 dB at DSD128 and 178 dB at DSD256. Ultrasonic noise from 20 to 96 kHz is -61 dBFS at DSD128 and -107 dBFS at DSD256.
 - Not concluded in this version: polarity, modulator stability, multitone, J-Test and peak-level SINAD. These figures are either not validated yet or not used by any rule in this version, so they are in the table for reference only and are not part of any verdict here. The peak-level SINAD is shown with the floor of the reference modulator at that level.
 
-Conclusions cover the synthetic test signals and the software path measured here. They are not a listening test and say nothing about a DAC, an amplifier or a recording. [How the conclusions are drawn](https://github.com/aclater/dsd-measure/blob/main/docs/conclusions.md).
+Conclusions cover the synthetic test signals and the software path measured here. They are not a listening test and say nothing about a DAC, an amplifier or a recording. [How the conclusions are drawn](https://github.com/dsd-toolbox/dsd-measure/blob/main/docs/conclusions.md).
 
 ## What was measured
 
 - **Device:** reference modulator: class B, PCM to DSD modulator, adapter reference. Run as: built-in (no external command). in: PCM 88200 Hz, 32-bit integer WAV; out: DSD at 2822400 Hz, 1 bit; no gain applied.
 - **Source signals:** Synthetic and deterministic test signals made by the toolkit (tones, two-tone pairs, multitone, J-Test, impulses; no music), fed to the device as PCM.
-- **Reference chain:** reference decoder alone at DSD64: THD+N -280.9 dB, dynamic range (A) 342 dB. A device figure within 6 dB of it is marked as limited by the measurement.
-- **Profile and date:** full, 2026-11-24, dsd-measure 0.1.1, reference chain 2.
+- **Reference chain:** reference decoder alone at DSD64: THD+N -280.9 dB, dynamic range (A) 342.1 dB. A device figure within 6 dB of it is marked as limited by the measurement.
+- **Profile and date:** full, 2026-11-24, dsd-measure 0.1.2, reference chain 2.
 
 > Levels: dBFS is relative to PCM full scale. 0 dB SACD is the reference tone level, 50 % modulation, -6.02 dBFS; noise in dBFS is referred to the rms of a full-scale sine (AES17, ASR). Distortion and noise figures are in dB below the 1 kHz tone unless they say dBFS. Bandwidth 20 Hz to 20 kHz, unweighted unless marked A-weighted. SINAD is THD+N turned positive. Because the tone is 6 dB below full scale, a noise-limited device would read about 6 dB better at full scale; compare reports made at the same level.
 
 | Metric | Value |
 |---|---|
-| SINAD, 1 kHz at 0 dB SACD (-6.02 dBFS) | 146.7 dB |
-| THD+N, 1 kHz | -146.7 dB (under 0.0001 %) |
-| THD, 1 kHz | -163.5 dB (under 0.0001 %) |
+| SINAD, 1 kHz at 0 dB SACD (-6.02 dBFS) | 146.7 dB (THD+N -146.7 dB, under 0.0001 %) |
+| THD, 1 kHz (harmonics only) | -163.5 dB (under 0.0001 %) |
 | Dynamic range, A-weighted | 150.5 dB |
 | Noise 20 Hz-20 kHz, A-weighted | -162.5 dBFS |
 | SINAD at the peak level (+3.1 dB SACD, -2.9 dBFS) | 129.2 dB |
@@ -49,7 +50,7 @@ Conclusions cover the synthetic test signals and the software path measured here
 | Stable at +3.1 dB SACD peak | yes |
 | DSD128 (1 kHz, 0 dB SACD) | SINAD 176 dB, DR(A) 176 dB, ultrasonic -92 dBFS/Hz at 100 kHz |
 | DSD256 (1 kHz, 0 dB SACD) | SINAD 178 dB, DR(A) 177 dB, ultrasonic -141 dBFS/Hz at 100 kHz |
-| Reference floor (reference decoder alone, DSD64) | THD+N -280.9 dB, DR(A) 342 dB |
+| Reference floor (reference decoder alone, DSD64) | THD+N -280.9 dB, DR(A) 342.1 dB |
 
 ## Notes
 

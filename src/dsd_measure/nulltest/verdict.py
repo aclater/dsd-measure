@@ -96,3 +96,37 @@ def verdict(channels):
                            "That is outside the verdict because it lies above hearing, but it matters to amplifiers and to anyone listening to "
                            "the content itself.")
     return {"tier": tid, "headline": head, "details": details, "depth_db": depth, "channel": ch["channel"]}
+
+
+def apply_format_limit(v, ch, formats):
+    """Say so when an integer output of fewer than 24 bits, not the decoder, sets the null depth.
+
+    ``formats`` is a list of ``(device name, format record)`` or ``(device name, format record, gain_db)``, where
+    ``gain_db`` is the gain applied to that device's output before the difference is taken (its own ``gain_db`` plus the
+    level match), so that its rounding noise is compared in the same units as the difference. Rounding to ``bits`` adds white noise of
+    power (LSB squared) / 12; when the difference in 20 Hz to 20 kHz is within 6 dB of that noise,
+    the depth is a statement about the file format and ``v`` says so (``v["format_limited"]`` lists the devices).
+    """
+    from .. import outformat as of
+    hit = []
+    for item in formats:
+        name, fmt = item[0], item[1]
+        if not of.limits_result(fmt):
+            continue
+        lsb = 2.0 ** (1 - fmt["bits"])
+        noise = 10 * np.log10(lsb * lsb / 12 * min(of.BAND_HZ / (fmt["rate"] / 2), 1.0)) + (item[2] if len(item) > 2 else 0.0)
+        if abs(ch["diff_rms_audio_dbfs"] - noise) <= 6.0:
+            hit.append((name, fmt["bits"], noise))
+    if not hit:
+        return v
+    name, bits, noise = max(hit, key=lambda h: h[2])
+    if len(hit) > 1:  # both files are rounded: the two noises add
+        noise = float(10 * np.log10(sum(10 ** (h[2] / 10) for h in hit)))
+        name = " and ".join(h[0] for h in hit)
+    ceiling = ch["music_rms_audio_dbfs"] - noise
+    v["format_limited"] = [h[0] for h in hit]
+    v["details"].append(f"{name} wrote {bits}-bit integer PCM. The rounding noise alone is about {noise:.0f} dBFS from 20 Hz to 20 kHz, "
+                        f"which caps the null depth at about {ceiling:.0f} dB on this music, so the figure above describes the file format, "
+                        "not the decoder. Ask the tool for floating-point output and run again.")
+    v["headline"] += f" Limited by the {bits}-bit output of {name}: ask it for floating-point output to see the decoder."
+    return v

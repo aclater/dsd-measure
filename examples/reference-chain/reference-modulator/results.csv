@@ -86,7 +86,7 @@ frequency_response.ripple_pp_db,3.7621585580183137e-06
 frequency_response.minus_0p1_db_hz,
 frequency_response.minus_1p0_db_hz,
 frequency_response.minus_3p0_db_hz,
-frequency_response.at_hz.20,1.7729616885731048e-07
+frequency_response.at_hz.20,1.7729616708095364e-07
 frequency_response.at_hz.1000,0.0
 frequency_response.at_hz.10000,-2.2692796388668057e-06
 frequency_response.at_hz.15000,-1.5658759201033133e-06
@@ -326,7 +326,7 @@ reference_decoder_only.impulse.post_ringing_samples,124
 reference_decoder_only.impulse.pre_ringing_ms,1.5192743764172336
 reference_decoder_only.impulse.post_ringing_ms,1.4058956916099774
 reference_decoder_only.impulse.pre_energy_fraction,0.036874047673333736
-reference_decoder_only.impulse.symmetry,0.9991188795510796
+reference_decoder_only.impulse.symmetry,0.99911887955108
 reference_decoder_only.impulse.floor_used_db,-60.0
 reference_decoder_only.impulse.filter_type,linear phase
 reference_decoder_only.impulse.output_rate,88200

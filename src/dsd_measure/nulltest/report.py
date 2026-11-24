@@ -11,7 +11,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from ..report import PALETTE, _card, _logx, _page, _svg  # noqa: E402
-from .verdict import BASIS, SOURCES, TIERS, verdict  # noqa: E402
+from .verdict import BASIS, SOURCES, TIERS, audible_band_depth, verdict  # noqa: E402
 
 
 def _worst(res):
@@ -119,6 +119,7 @@ def write_report(outdir, run):
     fc = run["pairs"][0]["result"]["common_rate"]
     a_name = run["devices"][0]["describe"]["name"]
     sections, md = [], [f"# Null test: {run['source']['name']}", ""]
+    md += [f"**Result: {(p['b'] + ' against ' + a_name + ': ') if len(run['pairs']) > 1 else ''}{p['verdict']['headline']}**" for p in run["pairs"]] + [""]
     srows = []
     for i, p in enumerate(run["pairs"]):
         res, v = p["result"], p["verdict"]
@@ -131,8 +132,8 @@ def write_report(outdir, run):
             _card(plot_time(ch), "Whether the difference follows the music or is steady. A difference that rises in loud passages scales with the music; a flat one is a noise floor."),
             _card(plot_depth(ch), "The same two lines as a ratio. Dashed lines mark the tiers used for the verdict."),
         ])
-        per_ch = "<table><tr><th>Channel</th><th class=v>Null depth</th><th class=v>Diff RMS (dBFS)</th><th class=v>Diff peak (dBFS)</th><th class=v>Delay (samples)</th><th class=v>Level B vs A (dB)</th></tr>" + "".join(
-            f"<tr><td>{c['channel']}</td><td class=v>{_depth_txt(c['null_depth_db'])}</td><td class=v>{c['diff_rms_dbfs']:.1f}</td><td class=v>{c['diff_peak_dbfs']:.1f}</td>"
+        per_ch = "<table><tr><th>Channel</th><th class=v>Null depth, 20 Hz to 20 kHz</th><th class=v>Null depth, full analysed band</th><th class=v>Diff RMS (dBFS)</th><th class=v>Diff peak (dBFS)</th><th class=v>Delay (samples)</th><th class=v>Level B vs A (dB)</th></tr>" + "".join(
+            f"<tr><td>{c['channel']}</td><td class=v>{_depth_txt(audible_band_depth(c))}</td><td class=v>{_depth_txt(c['null_depth_db'])}</td><td class=v>{c['diff_rms_dbfs']:.1f}</td><td class=v>{c['diff_peak_dbfs']:.1f}</td>"
             f"<td class=v>{c['delay_samples']:.4f}</td><td class=v>{-c['gain_db']:+.4f}</td></tr>" for c in res["channels"]) + "</table>"
         det = "".join(f"<li>{html.escape(x)}</li>" for x in v["details"])
         wav = f"<p>Difference signal: <a href='{html.escape(p['diff_wav'])}'>{html.escape(p['diff_wav'])}</a> (32-bit float WAV at {fc} Hz; the level is {run['options']['diff_gain_db']:+g} dB from true, so turn the volume down before playing it).</p>" if p.get("diff_wav") else ""
@@ -143,7 +144,8 @@ def write_report(outdir, run):
         md += [f"## {p['b']} against {a_name}", "", f"**{v['headline']}**", ""] + [f"- {x}" for x in v["details"]] + ["", "| Measure | Value |", "|---|---|"]
         md += [f"| {a} | {b} |" for a, b in _summary_rows(ch, v)] + [""]
     hero = "".join(f"<div><span>{html.escape(b)} vs {html.escape(a_name)}</span><b>{_depth_txt(v['depth_db'])}</b><span>null depth</span></div>" for b, v, _ in srows)
-    head = "<p class=lead>" + html.escape(run["pairs"][0]["verdict"]["headline"]) + "</p>" if len(srows) == 1 else ""
+    results = [(f"{p['b']} against {a_name}: " if len(srows) > 1 else "") + p["verdict"]["headline"] for p in run["pairs"]]
+    head = "".join(f"<p class=result>Result: {html.escape(r)}</p>" for r in results)
     tiers = "".join(f"<tr><td>{'identical' if lo >= 300 else (f'{lo:g} dB or more' if lo > -1e8 else 'under 20 dB')}</td><td>{html.escape(t)}</td></tr>" for lo, _, t in TIERS)
     src = "".join(f"<li><a href='{u}'>{html.escape(n)}</a></li>" for n, u in SOURCES)
     body = (f"<div class=hero>{hero}</div>{head}{''.join(sections)}"

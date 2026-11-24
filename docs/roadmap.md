@@ -26,4 +26,4 @@ Found by the second independent review of 0.1.1 and left for 0.1.2. None changes
 - [User guide](user-guide.md)
 - [Measurement footprint](footprint.md)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

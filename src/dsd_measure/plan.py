@@ -282,7 +282,7 @@ def plan_text(suite_path, out=None, profile=None, only=None, source=None):
         L += [f"Device {n}: {a.name}",
               f"  class {a.klass}: {fa['kind']}",
               f"  adapter: {a.kind}" + (f", gain applied to its output: {a.gain_db:+g} dB" if a.gain_db else ", no gain applied"),
-              f"  command (example, 1 kHz tone): {fa['command']}",
+              f"  command (example for the 1 kHz tone; the file names are made up here, the run makes its own): {fa['command']}",
               f"  fed with: {fed}",
               f"  returns: {ret}"]
         if warn:
@@ -311,6 +311,15 @@ def plan_text(suite_path, out=None, profile=None, only=None, source=None):
     return "\n".join(L)
 
 
+def _out_word(adapter):
+    """The output word length line: what the device wrote, when a file has been read."""
+    from .outformat import name_of
+    fmt = getattr(adapter, "output_format", lambda: None)()
+    if not fmt or fmt["container"] == "internal":
+        return "as written by the device, read and analysed in 64-bit float"
+    return f"{name_of(fmt)} as written by the device ({fmt['container'].upper()}), read and analysed in 64-bit float"
+
+
 def measured(adapter, profile, in_rate, floor, suite_name=None):
     """The data behind the report's "What was measured" block."""
     fa = device_facts(adapter)
@@ -323,7 +332,7 @@ def measured(adapter, profile, in_rate, floor, suite_name=None):
     return {"device": fa, "fed_with": fed, "returns": ret, "in_rate_hz": in_rate,
             "in_word": "32-bit integer WAV" if adapter.klass == "B" else "1-bit DSD",
             "out_rate_hz": out_rate,
-            "out_word": "as written by the device, read and analysed in 64-bit float" if adapter.klass == "A"
+            "out_word": _out_word(adapter) if adapter.klass == "A"
             else "1-bit DSD, decoded to PCM by the reference decoder and analysed in 64-bit float",
             "gain_db": adapter.gain_db, "profile": profile,
             "date": datetime.date.today().isoformat(),
@@ -338,7 +347,7 @@ def _floor_text(m):
         return "not measured in this run"
     lim = f["chain"] if m["device"]["class"] == "A" else f["decoder_alone"]
     who = "reference modulator and decoder" if m["device"]["class"] == "A" else "reference decoder alone"
-    return (f"{who} at {rate_name(f['dsd_rate'])}: THD+N {lim['thdn_db']:.1f} dB, dynamic range (A) {lim['dr_a_db']:.0f} dB. "
+    return (f"{who} at {rate_name(f['dsd_rate'])}: THD+N {lim['thdn_db']:.1f} dB, dynamic range (A) {lim['dr_a_db']:.1f} dB. "
             f"A device figure within {f['margin_db']:.0f} dB of it is marked as limited by the measurement.")
 
 
@@ -350,9 +359,13 @@ def measured_summary(m):
         io = f"in: DSD {d['dsd_rate']} Hz, 1 bit; out: PCM at {out_rate}"
     else:
         io = f"in: PCM {m['in_rate_hz']} Hz, 32-bit integer WAV; out: DSD at {out_rate}, 1 bit"
+    files = ""
+    if d.get("command_template"):
+        files = (" ({input} is the DSD file made for each test signal, {output} the WAV the tool writes)" if d["class"] == "A"
+                 else " ({input} is the WAV made for each test signal, {output} the DSF the tool writes)")
     gain = f"gain applied to its output: {m['gain_db']:+g} dB" if m["gain_db"] else "no gain applied"
     return [
-        ("Device", f"{d['name']}: class {d['class']}, {d['kind']}, adapter {d['adapter']}. Run as: {d['command']}. {io}; {gain}."),
+        ("Device", f"{d['name']}: class {d['class']}, {d['kind']}, adapter {d['adapter']}. Run as: {d.get('command_template') or d['command']}{files}. {io}; {gain}."),
         ("Source signals", "Synthetic and deterministic test signals made by the toolkit (tones, two-tone pairs, multitone, J-Test, impulses; "
                            + ("no music), encoded to DSD by the built-in reference modulator." if d["class"] == "A"
                               else "no music), fed to the device as PCM.")),

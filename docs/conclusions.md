@@ -32,6 +32,7 @@ Conclusions cover the synthetic test signals and the software path that was meas
 | Technical difference | A measurable difference that is below the audibility thresholds. |
 | May matter | A difference at a level where it may be audible or may affect a comparison. |
 | Not comparable | The devices do different jobs. |
+| Not judged: output format | The file format the tool wrote limits the figures, so they describe the format, not the converter. |
 | Not concluded | Measured, but not validated or not used by any rule in this version. |
 
 No verdict names a winner. A comparison says where devices differ and whether the difference reaches a threshold.
@@ -112,4 +113,4 @@ A rule only uses figures whose analysis has been checked independently. The rest
 - [Measurement footprint](footprint.md)
 - [The reference floor](footprint.md#the-reference-floor)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

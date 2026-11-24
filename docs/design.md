@@ -50,4 +50,4 @@ Generators are deterministic and seeded; plots use a fixed hash salt and no date
 - [Reference tools](reference-tools.md)
 - [User guide](user-guide.md)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

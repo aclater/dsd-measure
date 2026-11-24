@@ -11,7 +11,7 @@ from ..dsdstream import DsdFile
 from .analyse import Options, compare, source_info
 from .devices import parse_device
 from .report import write_report
-from .verdict import verdict
+from .verdict import apply_format_limit, verdict
 
 
 def options_from(cfg):
@@ -38,14 +38,14 @@ def run_null(source, device_args, opts, out, suite_devices=None, keep_work=False
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     work = out / ".work"
+    parsed = [parse_device(text, suite_devices) for text in device_args]  # a missing tool fails here, before any decoding
     src = DsdFile(source)
     log(f"source {src.path.name}: {src.kind.upper()}, {src.channels} channels, {src.samples / src.rate:.1f} s; hashing")
     run = {"source": source_info(source), "options": dataclasses.asdict(opts), "versions": versions(),
            "command": " ".join(["dsd-measure"] + sys.argv[1:]), "devices": [], "pairs": []}
     tracks = []
     try:
-        for text in device_args:
-            dev = parse_device(text, suite_devices)
+        for dev in parsed:
             if any(dev.name == d.name for d, _ in tracks):  # the same decoder twice: tell them apart
                 dev.name += f" ({sum(d.name.split(' (')[0] == dev.name for d, _ in tracks) + 1})"
             log(f"decoding with {dev.name}")
@@ -53,18 +53,22 @@ def run_null(source, device_args, opts, out, suite_devices=None, keep_work=False
             tracks.append((dev, track))
             run["devices"].append({"describe": dev.describe(), "info": info, "rate": track.rate,
                                    "channels": track.channels, "samples": track.length})
-        for dev, track in tracks[1:]:
+        for k, (dev, track) in enumerate(tracks[1:], 1):
             log(f"comparing {dev.name} with {tracks[0][0].name}")
             safe = re.sub(r"[^A-Za-z0-9_-]+", "-", dev.name).strip("-")
             wav = f"difference-{safe}.wav" if opts.diff_wav else None
             res = compare(tracks[0][1], track, opts, out / wav if wav else None, log=log)
-            run["pairs"].append({"a": tracks[0][0].name, "b": dev.name, "result": res,
-                                 "verdict": verdict(res["channels"]), "diff_wav": wav})
+            v = verdict(res["channels"])
+            ch = next(c for c in res["channels"] if c["channel"] == v["channel"])
+            fmts = [(tracks[j][0].name, run["devices"][j].get("info", {}).get("output_format"),
+                     float(run["devices"][j]["describe"].get("gain_db", 0.0)) + (ch["gain_db"] if j == k else 0.0)) for j in (0, k)]
+            v = apply_format_limit(v, ch, fmts)
+            run["pairs"].append({"a": tracks[0][0].name, "b": dev.name, "result": res, "verdict": v, "diff_wav": wav})
     finally:
         if not keep_work:
             shutil.rmtree(work, ignore_errors=True)
     write_report(out, run)
-    for p in run["pairs"]:
-        log(f"{p['b']} against {p['a']}: {p['verdict']['headline']}")
     log(f"report written to {out}/")
+    for p in run["pairs"]:
+        log(f"Result: {p['b']} against {p['a']}: {p['verdict']['headline']}")
     return run

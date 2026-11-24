@@ -13,6 +13,7 @@ listed in one "not concluded" line and never contribute to a verdict.
 import math
 import re
 
+from . import outformat as of
 from .floor import MARGIN_DB, flags, limit_for
 from .levels import REF_DBFS
 
@@ -94,6 +95,8 @@ VERDICTS = {
     "technical": ("Technical difference", "A measurable difference that is below the audibility thresholds."),
     "may-matter": ("May matter", "A difference at a level where it may be audible or may affect a comparison."),
     "not-comparable": ("Not comparable", "The devices do different jobs."),
+    "format-limited": ("Not judged: output format", "The file format the tool wrote limits the figures, so they describe the "
+                      "format, not the converter."),
     "pending": ("Not concluded", "Measured, but not validated or not used by any rule in this version."),
 }
 
@@ -217,9 +220,40 @@ def is_reference(device):
     return bool(device) and device.get("adapter") == "reference"
 
 
+def format_limit(M):
+    """The output format record when the word length alone limits this result, else None.
+
+    True for integer output of fewer than 24 bits whose measured SINAD sits within the floor margin
+    of the SINAD that rounding to that word length allows. A device whose own noise is higher shows
+    its own noise, and one whose rounding noise is shaped or dithered out of the band is not limited.
+    """
+    fmt = M.get("output_format")
+    if M.get("device_class", "A") != "A" or not of.limits_result(fmt):
+        return None
+    sinad, lim = lookup(M, "tone_0dbsacd.sinad_db"), fmt.get("quantisation_sinad_db")
+    if sinad is None or lim is None or abs(sinad - lim) > _t("floor_margin_db"):
+        return None
+    return fmt
+
+
+def _format_conclusion(M, fmt, name=None):
+    lim = fmt["quantisation_sinad_db"]
+    ev = [_ev("output_format.bits", "word length of the output file", f"{fmt['bits']} bits"),
+          _ev("output_format.quantisation_sinad_db", f"SINAD that {fmt['bits']}-bit rounding alone allows", f"{lim:.1f} dB"),
+          _ev("tone_0dbsacd.sinad_db", "SINAD measured", f"{M['tone_0dbsacd']['sinad_db']:.1f} dB")]
+    who = f"{name} wrote" if name else "The tool wrote"
+    text = (f"Not judged: {who} {fmt['bits']}-bit integer PCM, whose rounding noise alone limits SINAD to about {lim:.1f} dB "
+            f"(measured {M['tone_0dbsacd']['sinad_db']:.1f} dB), so these figures cannot be told from the file format, and a converter noisier than the format would read about the same. "
+            "Ask the tool for floating-point output and measure again.")
+    return _c("overall", "format-limited", text, ev, ["floor_margin_db"])
+
+
 # ----------------------------------------------------------------------------- device rules
 
 def _overall(M):
+    fmt = format_limit(M)
+    if fmt:
+        return _format_conclusion(M, fmt)
     ms = margins(M)
     if not ms:
         return None
@@ -668,6 +702,17 @@ def _cmp_ultrasonic(na, a, nb, b):
 
 
 def _pair(na, a, nb, b, suffix=""):
+    limited = [(n, format_limit(M)) for n, M in ((na, a), (nb, b)) if format_limit(M)]
+    if limited:  # a word length that caps the figures: the distortion rows would compare file formats
+        found = [fn(na, a, nb, b) for fn in (_cmp_response, _cmp_level, _cmp_filter, _cmp_ultrasonic)]
+        ev = [_ev("output_format.bits", "word length of the output file", f"{f['bits']} bits", n) for n, f in limited]
+        who = _join([f"{n} wrote {f['bits']}-bit integer PCM" for n, f in limited])
+        head = _c("cmp-format", "format-limited", f"Distortion and noise were not compared: {who}, whose rounding noise alone "
+                  "limits the figures. Ask the tool for floating-point output and measure again.", ev)
+        out = [head] + [c for _, c in found if c]
+        for c in out:
+            c["id"] += suffix
+        return out
     found = [fn(na, a, nb, b) for fn in (_cmp_distortion, _cmp_response, _cmp_level, _cmp_filter, _cmp_ultrasonic)]
     out = [c for _, c in found if c]
     classes = [cls for cls, c in found if c]
@@ -680,10 +725,10 @@ def _pair(na, a, nb, b, suffix=""):
         head = _c("cmp-overall", "may-matter", f"{names} differ where it may matter: in {_join(where)}. See below. "
                   "This names the difference; it is not a ranking.", ev)
     elif "technical" in classes:
-        head = _c("cmp-overall", "technical", f"{names} measure differently, but no difference reaches the audibility "
-                  "thresholds used here. On the tests concluded here, a difference in sound is not expected.", ev)
+        head = _c("cmp-overall", "technical", f"{names} measure differently, but in the audio band no difference reaches the "
+                  "audibility thresholds used here. On the tests concluded here, a difference in sound is not expected.", ev)
     else:
-        head = _c("cmp-overall", "indistinguishable", f"{names} are indistinguishable by measurement on the tests "
+        head = _c("cmp-overall", "indistinguishable", f"{names} are indistinguishable by measurement in the audio band, on the tests "
                   "concluded here: every difference is below the reference floor or the thresholds.", ev)
     if "unsettled" in classes:
         head["text"] += " One difference has no agreed verdict (see below)."
@@ -745,9 +790,77 @@ def comparison_conclusions(entries):
 
 SCOPE = ("Conclusions cover the synthetic test signals and the software path measured here. They are not a listening "
          "test and say nothing about a DAC, an amplifier or a recording.")
-DOC_URL = "https://github.com/aclater/dsd-measure/blob/main/docs/conclusions.md"
+DOC_URL = "https://github.com/dsd-toolbox/dsd-measure/blob/main/docs/conclusions.md"
 
 
 def numbers(text):
     """The numbers in a sentence, as strings (used by the tests to check that each one is backed by evidence)."""
     return re.findall(r"(?<![\w.])-?\d+(?:\.\d+)?", text)
+
+
+# ----------------------------------------------------------------------------- the one-sentence result
+
+#: Measured but not concluded, named in the headline because converters often differ most there.
+_HEADLINE_PENDING = ("filter and ringing", "ultrasonic noise")
+
+
+def _not_judged(Ms):
+    """" Filters and ultrasonic noise are not judged in this version." when that is so for any of ``Ms``."""
+    names = []
+    for M in Ms:
+        p = _pending(M)
+        names += [e["label"] for e in (p["evidence"] if p else []) if e["label"] in _HEADLINE_PENDING]
+    names = [n for n in _HEADLINE_PENDING if n in names]
+    return f" Not judged in this version: {_join(names)}." if names else ""
+
+
+def device_headline(M, device=None, name=None):
+    """One sentence that starts "Result:" for a single device's report."""
+    who = name or (device or {}).get("name") or "this device"
+    if is_reference(device):
+        f = M.get("reference_floor")
+        sinad = f"SINAD {f['chain']['sinad_db']:.1f} dB, " if f else ""
+        return (f"Result: this is the measurement floor of the built-in reference chain ({sinad}the best figure the tool can show), "
+                "not a result for a product.")
+    fmt = format_limit(M)
+    if fmt:
+        lim = fmt["quantisation_sinad_db"]
+        return (f"Result: not judged. {who} wrote {fmt['bits']}-bit integer PCM, which alone limits SINAD to about {lim:.1f} dB, "
+                "so the figures describe the file format, not the converter; ask the tool for floating-point output and measure again.")
+    ms = margins(M)
+    if not ms:
+        return f"Result: {who} was measured, but no figure here is validated for a verdict; see the table."
+    path, label, worst, at_floor = min(ms, key=lambda m: m[2])
+    v, w = tier(worst), _down(worst)
+    least = ", at the tool's own floor, so the device is at least this good" if at_floor else ""
+    if v == "audible-risk":
+        head = (f"Result: {who} shows audible risk: {label} is only {w} below a reference-level tone{least}, "
+                "above the noise of a CD; listen for yourself.")
+    else:
+        word = "transparent" if v == "transparent" else "inaudible in normal listening"
+        head = (f"Result: {who} is {word}; the weakest figure in the audio band is {label}, {w} below a reference-level "
+                f"tone{least}.")
+    return head + _not_judged([M])
+
+
+def comparison_headline(entries, conclusions):
+    """One sentence that starts "Result:" for a comparison; ``entries`` as for ``comparison_conclusions``."""
+    names = [n for n, _, _ in entries]
+    if entries and all(is_reference(d) for _, _, d in entries):
+        return ("Result: every device here is the built-in reference chain, so this is the measurement floor of the tool, "
+                "not a result for a product.")
+    heads = [c for c in conclusions if c["id"].startswith(("cmp-overall", "cmp-format"))]
+    if not heads:
+        return f"Result: {_join(names)} were measured side by side; see the table."
+    fmt = [c for c in heads if c["verdict"] == "format-limited"]
+    if fmt:
+        return ("Result: not compared in distortion and noise. " + fmt[0]["text"].split(": ", 1)[1])
+    rank = {"indistinguishable": 0, "technical": 1, "may-matter": 2}
+    worst = max(heads, key=lambda c: rank[c["verdict"]])
+    tail = _not_judged([M for _, M, _ in entries]).replace("Not judged in this version", "Not compared in this version")
+    if worst["verdict"] == "indistinguishable":
+        return f"Result: in the audio band, {_join(names)} are indistinguishable by measurement.{tail}"
+    if worst["verdict"] == "technical":
+        return (f"Result: {_join(names)} measure differently, but in the audio band no difference reaches the audibility "
+                f"thresholds.{tail}")
+    return "Result: " + worst["text"].split(" See below.")[0].rstrip(".") + "." + tail

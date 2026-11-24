@@ -296,4 +296,4 @@ scripts/validate.sh all --out validation   # everything on this page, about 20 m
 - [Design](design.md)
 - [Reference tools](reference-tools.md)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

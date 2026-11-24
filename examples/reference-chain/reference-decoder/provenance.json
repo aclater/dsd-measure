@@ -15,9 +15,9 @@
  "in_rate": 88200,
  "reference_chain": "2",
  "versions": {
-  "dsd_measure": "0.1.1",
+  "dsd_measure": "0.1.2",
   "reference_chain": "2",
-  "python": "3.14.10",
+  "python": "3.15.2",
   "numpy": "2.5.5",
   "scipy": "1.18.1",
   "matplotlib": "3.11.2"
@@ -26,22 +26,25 @@
  "adapter_calls": [],
  "command": "dsd-measure run examples/suites/ref.toml --profile full -o examples/reference-chain",
  "timing_s": {
-  "reference_floor": 32.8,
-  "levels": 105.7,
-  "thdn_freq": 15.6,
-  "frequency_response": 44.9,
-  "impulse": 4.8,
-  "noise": 14.8,
-  "imd": 7.4,
-  "multitone": 27.8,
-  "tone_15k": 3.7,
-  "jtest": 24.9,
-  "polarity": 0.4,
-  "crosstalk": 36.7,
-  "imd_sweep": 48.3,
-  "alias_tones": 14.5,
-  "overload": 2.3,
+  "reference_floor": 13.5,
+  "levels": 41.4,
+  "thdn_freq": 7.1,
+  "frequency_response": 19.0,
+  "impulse": 2.0,
+  "noise": 6.0,
+  "imd": 3.0,
+  "multitone": 11.2,
+  "tone_15k": 1.5,
+  "jtest": 10.5,
+  "polarity": 0.2,
+  "crosstalk": 14.9,
+  "imd_sweep": 19.7,
+  "alias_tones": 6.1,
+  "overload": 1.0,
   "rate_table": 0.0
+ },
+ "preflight": {
+  "checked": "built-in"
  },
  "profile_settings": {
   "seg_s": 2.5,
@@ -351,7 +354,7 @@
   "gain_db": 0.0,
   "profile": "full",
   "date": "2026-11-24",
-  "generator": "dsd-measure 0.1.1, reference chain 2",
+  "generator": "dsd-measure 0.1.2, reference chain 2",
   "source_signal_sha256": {
    "tone_1k_0dbsacd.wav": "80d70bfdee8c9386f2f48ce778765c4f59433f62148bac1bef04447acb05fc5a",
    "tone_1k_peak.wav": "6428a12a2f4efaf6e9796e0d97f6589ded909024b3c4f69a4cf22a0ecfe85f64",
@@ -407,9 +410,9 @@
   },
   "suite": "reference chain",
   "versions": {
-   "dsd_measure": "0.1.1",
+   "dsd_measure": "0.1.2",
    "reference_chain": "2",
-   "python": "3.14.10",
+   "python": "3.15.2",
    "numpy": "2.5.5",
    "scipy": "1.18.1",
    "matplotlib": "3.11.2"

@@ -22,7 +22,7 @@ python3 -m venv .venv
 | 2 | Full test suite, slow tests included | `systemd-run --user --scope -q -p MemoryMax=6G -p MemorySwapMax=0 nice -n 19 python3 -m pytest -q tests` | no failures and no errors; skips are listed in the results |
 | 3 | Accuracy validation | `sh tools/reftool.sh build` then `sh scripts/validate.sh all` | the last line reports 0 failures; every skipped section is named in the output |
 | 4 | Public-text audit | `sh scripts/audit-public.sh` | prints "public-text audit passed" |
-| 5 | Quick start in a fresh container | `sh scripts/container-check.sh quickstart`, see [Quick start in a fresh container](#quick-start-in-a-fresh-container) | the report folder exists, the exit status is 0 and `dsd-measure --version` prints the release version |
+| 5 | Quick start in a fresh container | `sh scripts/container-check.sh quickstart` and `sh scripts/container-check.sh selftest`, see [Quick start in a fresh container](#quick-start-in-a-fresh-container) | both exit 0; the Quick start's last terminal line starts with `Result:` and `report/ffmpeg/index.md` opens with it; the self-test writes `report/comparison`; `dsd-measure --version` prints the release version |
 | 6 | README two-decoder example | `sh scripts/container-check.sh compare`, see [The two-decoder example](#the-two-decoder-example) | `--plan` lists both devices, the run exits 0 and both device reports and the comparison exist |
 | 7 | Plan mode | `dsd-measure run examples/suites/ref.toml --plan` | prints devices, signals, rates, profile and report paths, and measures nothing |
 | 8 | Null test smoke run | see [Null test smoke run](#null-test-smoke-run) | the report folder holds `index.html` and `results.json`, and the reference decoder at two rates nulls to more than 140 dB below 18 kHz and more than 100 dB in the 18 to 20 kHz band |
@@ -61,7 +61,7 @@ The README's Quick start, run from the release tree instead of from GitHub. The 
 sh scripts/container-check.sh quickstart
 ```
 
-The script installs the committed files of the tree with `pipx`, then runs `dsd-measure --version`, `dsd-measure init`, `dsd-measure run suite.toml` and lists `report/comparison`, which holds `index.html`, `index.md` and `results.csv`. The step takes about five minutes. After the release is public, repeat it once with the README's own line, `pipx install git+https://github.com/aclater/dsd-measure`.
+The `quickstart` mode installs the committed files of the tree with `pipx`, then runs `dsd-measure --version`, `dsd-measure quick ffmpeg --plan` and `dsd-measure quick ffmpeg`, and checks the last terminal line and the first line of `report/ffmpeg/index.md` for the `Result:` sentence. It takes about three minutes. The `selftest` mode is the older Quick start: `dsd-measure init`, `dsd-measure run suite.toml` and a listing of `report/comparison`, which holds `index.html`, `index.md` and `results.csv`; it takes about five minutes. After the release is public, repeat it once with the README's own line, `pipx install git+https://github.com/dsd-toolbox/dsd-measure`.
 
 ## The two-decoder example
 
@@ -113,4 +113,4 @@ Copy the table, add the commit, the machine (by CPU model), the date and the res
 - [Contributing](../CONTRIBUTING.md)
 - [Changelog](../CHANGELOG.md)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

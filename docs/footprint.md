@@ -412,4 +412,4 @@ Rules for adapters:
 - [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) (John Atkinson) for the digital measurement set
 - [AES17](https://www.aes.org/publications/standards/) for the measurement method for digital audio equipment
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

@@ -62,7 +62,7 @@ def main():
                 if target[1:] not in anchors(f):
                     bad.append((f, target, "no such heading"))
                 continue
-            own = re.match(r"https://(?:github\.com/aclater/dsd-measure/blob|raw\.githubusercontent\.com/aclater/dsd-measure)/main/(.+)", target)
+            own = re.match(r"https://(?:github\.com/(?:aclater|dsd-toolbox)/dsd-measure/blob|raw\.githubusercontent\.com/(?:aclater|dsd-toolbox)/dsd-measure)/main/(.+)", target)
             if own:  # a link to this repository's main branch: before the release is merged, check the local file
                 if not (ROOT / own.group(1).split("#")[0]).exists():
                     bad.append((f, target, "no such file in this tree"))

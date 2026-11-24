@@ -20,7 +20,7 @@ PYTHON=.venv/bin/python scripts/ci.sh
 - Tools whose source you may not read (for example proprietary or restricted decoders) are run as black boxes only; adapters never need their source.
 - Update the README and `docs/` in the same pull request.
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).
 
 ## Public-text audit
 

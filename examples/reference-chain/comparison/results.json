@@ -3,6 +3,7 @@
   "reference-decoder",
   "reference-modulator"
  ],
+ "headline": "Result: every device here is the built-in reference chain, so this is the measurement floor of the tool, not a result for a product.",
  "conclusions": [
   {
    "id": "floor",

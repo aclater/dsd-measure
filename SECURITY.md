@@ -16,4 +16,4 @@ Do not open a public issue. Use the repository's **Security** tab, **Report a vu
 
 In scope: the WAV and DSF readers, the adapter code that runs commands, the report writer. Out of scope: the third-party tools you choose to measure.
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

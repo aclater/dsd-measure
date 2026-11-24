@@ -45,6 +45,9 @@ def metrics(klass="A", sinad=110.0, dr=112.0, smpte=-108.0, ccif=-105.0, **over)
     return M
 
 
+FMT16 = {"container": "wav", "kind": "int", "bits": 16, "rate": 352800, "text": "16-bit integer", "quantisation_sinad_db": 101.5}
+
+
 def by_id(cs):
     return {c["id"]: c for c in cs}
 
@@ -305,6 +308,9 @@ def all_cases(monkeypatch):
             for pair in ((a, a), (a, b), (a, metrics(sinad=125, dr=125, smpte=-125, ccif=-125, analysis_version=ver))):
                 out.append((pair, cn.comparison_conclusions([("A", pair[0], CLI), ("B", pair[1], CLI)])))
             out.append(((a, a), cn.comparison_conclusions([("A", a, REF), ("B", a, REF)])))
+    lim = metrics(sinad=101.4, dr=103.7, analysis_version=2, output_format=FMT16)
+    out.append((lim, cn.device_conclusions(lim, CLI)))
+    out.append(((a, lim), cn.comparison_conclusions([("A", a, CLI), ("B", lim, CLI)])))
     return out
 
 

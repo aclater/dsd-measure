@@ -15,7 +15,7 @@ The device under test is your converter. The source data is a set of synthetic, 
 
 To compare devices, put them in one suite file, one `[[device]]` table each. Every device gets the identical signals and the report folder gets a `comparison` report. The reference chain is the floor: figures within 6 dB of it are marked, because the measurement, not the device, may be the limit.
 
-You choose what is measured with the suite file (devices, `profile`, `in_rate`, `dsd_rate`, `rates`) and `--only TEST`. You cannot yet bring your own music; a [real-music difference test](roadmap.md) is planned.
+You choose what is measured with the suite file (devices, `profile`, `in_rate`, `dsd_rate`, `rates`) and `--only TEST`. These synthetic measurements use no music; to compare decoders on your own DSD file use the [null test](#compare-decoders-on-your-own-music).
 
 ### See the plan first
 
@@ -30,24 +30,51 @@ For each device it shows the class, adapter, the exact command line with `{input
 
 ### The run log
 
-A run prints one line per test (the example is the two-decoder comparison from the README, shortened), then the report path:
+Before anything is measured, the pre-flight (see [below](#pre-flight-check)) converts one short signal with each device. Then a run prints one line per test, numbered, with the time left once the first tests have shown how fast the device is (the example is the two-decoder comparison from the README, shortened), and ends with the report path and a one-sentence result:
 
 ```text
-Device 1 of 2: ffmpeg (class A, DSD to PCM converter, adapter cli)
--> ffmpeg: reference_floor (reference chain alone, 1 kHz 0 dB SACD, -60 dB SACD, silence) ... done in 7.6 s
--> ffmpeg: levels (1 kHz tones, +3.1 to -120 dB SACD) ... done in 18.5 s
--> ffmpeg: stability (long loud tones, 0 dB SACD, +3.1 dB SACD) ... skipped: class B only
+Pre-flight: ffmpeg converted a 0.5 s test signal: 32-bit float, 352.8 kHz. OK
+
+Device 1 of 2: ffmpeg (class A, DSD to PCM converter, adapter ffmpeg)
+[ 1/17] -> ffmpeg: reference_floor (reference chain alone, 1 kHz 0 dB SACD, -60 dB SACD, silence) ... done in 7.6 s, about 1:24 left
+[ 2/17] -> ffmpeg: levels (1 kHz tones, +3.1 to -120 dB SACD) ... done in 18.5 s, about 1:08 left
+[12/17] -> ffmpeg: stability (long loud tones, 0 dB SACD, +3.1 dB SACD) ... skipped: class B only
 
 Finished in 3.6 min. Report: report/comparison/index.html
+Result: in the audio band, ffmpeg and reference decoder are indistinguishable by measurement. Not compared in this version: filter and ringing.
 ```
 
-After the report path, one line per device gives its SINAD, its dynamic range and whether it is at the reference floor.
+After the report path, one line per device gives its SINAD, its dynamic range and whether it is at the reference floor. The last line, `Result:`, is the same sentence that opens the report; it is the answer in one line. The time left is an estimate from the planned times of the tests still to run, scaled by how long the first tests took.
 
 `-v` adds the device details (command, what it is fed, gain) before each device.
 
 ### What was measured
 
 Every report opens with a short "What was measured" block: the device and the exact command it was run with, the adapter, the gain applied and the input and output rates; the source signals with the generator version; the reference chain and its floor; and the profile, date and tool versions. The details (word lengths, SHA-256 hashes of the reference signal files, versions) are collapsed under it. The same block is in `index.md` and in `provenance.json` under `measured`.
+
+## Measure a decoder you have installed
+
+If ffmpeg is installed, one command measures it:
+
+```sh
+dsd-measure quick ffmpeg
+```
+
+The built-in presets are `ffmpeg`, `dsd2pcm`, `sox-dsd` and `sacd_extract`. Each has a standard command, shown by `--plan`. The `ffmpeg` preset asks for 32-bit float output (`-c:a pcm_f32le`), because ffmpeg writes 16-bit WAV by default and a 16-bit file cannot show a decoder better than about 92 dB (44.1 kHz output) to 101 dB (352.8 kHz) (see [output word length](#output-word-length)). Some builds of ffmpeg read DSD from DFF files but not from DSF files; the pre-flight tries DSF first and, if ffmpeg refuses it, gives ffmpeg DFF files and says so. A preset takes extra arguments after the program name, for example `dsd-measure quick dsd2pcm --args '--filter pysacd'` (in a suite file, `args = "--filter pysacd"`; for the null test, `dsd2pcm:--filter pysacd`). Any other name needs its command:
+
+```sh
+dsd-measure quick mytool --command 'mytool {input} {output}'
+```
+
+`{input}` is the DSF file the tool reads and `{output}` the WAV it must write. An unknown name without `--command` prints this line with the name filled in, and lists the presets.
+
+### Pre-flight check
+
+Before anything is measured, each device converts one 0.5 s test signal. If the program is not installed, the command fails, the output is empty, silent or the wrong length, dsd-measure stops within a second, prints the tool's own error once, writes no report and exits with status 2. A suite with several devices is checked in full before the first one is measured. The pre-flight also reads the output file's word length and sample rate, and records them in the report.
+
+### Output word length
+
+A tool that writes 16-bit PCM adds rounding noise of about -98 dBFS, which limits SINAD to about 101.5 dB at 352.8 kHz whatever its decoder does. The same decoder reads 146.8 dB when it writes 32-bit float. So the report records the word length of every file the tool wrote ("Output word length" in the table and the "What was measured" block). When the output is integer of fewer than 24 bits and the measured SINAD is within 6 dB of what that word length allows, the verdict is "Not judged: output format" and the headline says so, instead of calling the format a property of the decoder. A comparison does not rank the distortion and noise of such a device. The fix is to ask the tool for floating-point or 32-bit output (for ffmpeg, `-c:a pcm_f32le` before the output file). 24-bit output is recorded but not called a limit: its rounding noise sits at the reference chain's own floor.
 
 ## Measure a converter
 
@@ -56,7 +83,7 @@ Pick the class. A DSD to PCM converter (class A) is given DSD files made by the 
 Any command-line tool works through a template with `{input}` and `{output}`:
 
 ```sh
-dsd-measure quick --command 'dsd2pcm {input} -o {output}' --class A my-decoder
+dsd-measure quick --command 'dsd2pcm {input} {output}' --class A my-decoder
 ```
 
 For several devices at once write a suite file (`dsd-measure init` writes an example):
@@ -71,7 +98,7 @@ out = "report"
 name = "my decoder"
 adapter = "cli"
 class = "A"
-command = "dsd2pcm {input} -o {output}"
+command = "dsd2pcm {input} {output}"
 
 [[device]]
 name = "reference decoder"
@@ -96,24 +123,32 @@ Only `{input}` and `{output}` are replaced; every other brace, as in `awk '{prin
 |---|---|
 | 0 | Everything ran |
 | 1 | The report was written, but one or more tests raised an error (for example the tool made no output file); they are listed under "Not run, and why" and on the terminal. Tests skipped on purpose, such as class A only tests on a modulator, do not count |
-| 2 | A fatal error and no report: missing or invalid suite file, unknown adapter, a tool that is not installed, a compiled-core cache that is not private (see below) |
+| 2 | A fatal error and no report: missing or invalid suite file, unknown adapter or converter name, a tool that is not installed or fails its pre-flight, a compiled-core cache that is not private (see below) |
 | 130 | Interrupted with Ctrl-C |
 
 Temporary files made for a run are removed when it ends, however it ends. To keep a device's input and output files, set `workdir` on the device.
 
 ## Devices you cannot run
 
-For a player or plug-in that cannot be scripted, write the test signals with `dsd-measure signals signals/` (add `--class B` for a modulator; see them described with `dsd-measure signals --list`). This writes every signal a run feeds a device, one file per test (a DSF for class A, a WAV for class B), and `signals.json` with the list, rates and hashes. Feed each file to the device by hand, put the results back under the same name as `<test>.wav` (class A) or `<test>.dsf` (class B) in one folder and use the `import` adapter with `directory = "results"`. It takes about two minutes and 60 MB for class A at the quick profile. The report marks these devices as imported.
+For a player or plug-in that cannot be scripted, write the test signals with `dsd-measure signals signals/` (add `--class B` for a modulator; see them described with `dsd-measure signals --list`). This writes every signal a run feeds a device, one file per test (a DSF for class A, a WAV for class B), and `signals.json` with the list, rates and hashes: `sha256` is the SHA-256 of the file (what `sha256sum` prints) and `samples_sha256` is the hash of the sample array it was made from. Feed each file to the device by hand, put the results back under the same name as `<test>.wav` (class A) or `<test>.dsf` (class B) in one folder and use the `import` adapter with `directory = "results"`. It takes about two minutes and 60 MB for class A at the quick profile. The report marks these devices as imported.
 
 ## Compare decoders on your own music
 
 The null test answers "do the outputs of these two decoders differ on my music, and by how much?" It decodes one DSD file you supply with two or more decoders, lines the outputs up, subtracts them and reports how far below the music the difference is. It is separate from the synthetic measurements above: it cannot be repeated without your file, and it shows that decoders differ, not which one is right.
 
-Run it on any DSF or DFF file (the file is only read):
+Run it on any DSF or DFF file (the file is only read), naming the decoder to compare:
+
+```sh
+dsd-measure null track.dsf ffmpeg
+xdg-open null-report/index.html
+```
+
+When you name one decoder, the built-in reference decoder at 352.8 kHz is the baseline. A decoder is a preset (`ffmpeg`, `dsd2pcm`, `sox-dsd`, `sacd_extract`), `reference@RATE`, `NAME=COMMAND` or the name of a `[[device]]` in `--suite`. A missing tool is reported before the file is read. If a decoder writes 16-bit PCM and the difference sits at its rounding noise, the verdict says that the depth is limited by the output format and gives the ceiling; ask the tool for floating-point output and run again.
+
+To choose the baseline, name two or more decoders, or use the long form:
 
 ```sh
 dsd-measure null --source track.dsf --device reference@352800 --device reference@176400 --out null-report
-xdg-open null-report/index.html
 ```
 
 `reference@352800` is the built-in decoder at 352.8 kHz output. The first device is the baseline; every other device is compared with it. Add a tool with `NAME=COMMAND`, using `{input}` and `{output}` as in the `cli` adapter, and start the command with `dff:` for a tool that reads DFF (the file is converted without changing a bit):
@@ -122,7 +157,7 @@ xdg-open null-report/index.html
 dsd-measure null --source track.dsf --device reference@352800 --device 'dsd2pcm=dsd2pcm {input} {output} --rate 176400' --device 'ffmpeg=dff: ffmpeg -v error -y -i {input} -c:a pcm_f32le {output}' --diff-wav --out null-report
 ```
 
-The report starts with one line of verdict, such as "Difference -161 dB relative to the music (null depth 161 dB): far below audibility", then the numbers, three plots and a "What was compared" block with the source file hash, each device's command, rates and the alignment used.
+The report starts with one line of verdict, `Result:`, such as "Difference -161 dB relative to the music (null depth 161 dB): far below audibility", then the numbers, three plots and a "What was compared" block with the source file hash, each device's command, rates and the alignment used.
 
 What happens to the outputs before they are subtracted:
 
@@ -155,7 +190,7 @@ A suite file can hold the same settings in a `[null]` table next to the `[[devic
 
 ## Read the report
 
-Open `index.html`. It starts with the conclusions (see [below](#reading-the-conclusions)) and what was measured. The row of big numbers (SINAD, dynamic range, noise, filter, ultrasonic noise) and the table under it are the whole result in one screen. Below it are seven key plots, each with one sentence saying what the numbers mean. "Notes" (when present) lists caveats that apply to the numbers, such as which filter a class B row really describes. "More plots" holds the detail, "Not run" lists what was skipped and why, and "Provenance" lists tool versions and file hashes. The same numbers are in `results.csv` and `results.json`, and each plot is a separate SVG in `plots/`.
+Open `index.html`. It starts with one sentence, `Result:`, which says whether the device was judged and what its weakest figure is (the same sentence ends the terminal output and is in `index.md` and `results.json`), then the conclusions (see [below](#reading-the-conclusions)) and what was measured. The row of big numbers (SINAD, dynamic range, noise, filter, ultrasonic noise) and the table under it are the whole result in one screen. Below it are seven key plots, each with one sentence saying what the numbers mean. "Notes" (when present) lists caveats that apply to the numbers, such as which filter a class B row really describes. "More plots" holds the detail, "Not run" lists what was skipped and why, and "Provenance" lists tool versions and file hashes. The same numbers are in `results.csv` and `results.json`, and each plot is a separate SVG in `plots/`.
 
 Some terms:
 
@@ -175,11 +210,12 @@ A device report says, in this order:
 - **Response and level.** Whether the response is flat (within 0.1 dB), whether gain is unity and the channels match. A level difference matters when you compare two devices by ear: match levels first.
 - **At the reference floor.** Which figures are within 6 dB of the tool's own limit. Those show the tool's limit; the device is at least that good.
 - **Image rejection, ultrasonic noise and overload recovery.** The worst image of the alias tones (converters), the noise between 20 and 96 kHz (no verdict: there is no agreed limit) and how long the output takes to settle after a loud burst.
+- **Not judged: output format.** Shown instead of a verdict when the file the tool wrote (16-bit or shorter integer) limits the figures; see [output word length](#output-word-length).
 - **Not concluded.** Figures that are measured but not validated, or not used by any rule, in this version, such as the filter and ringing, polarity, modulator stability, multitone, the J-Test and the peak-level SINAD (which is shown with the floor of the reference modulator at that level). They are in the table for reference and never reach a verdict.
 
 The report for the built-in reference chain has no verdict. It says that its figures are the measurement floor: a converter within 6 dB of them cannot be ranked by this tool.
 
-A comparison report says whether the devices are "indistinguishable by measurement" (every difference is below the floor or the thresholds), whether they "measure differently, but no difference reaches the audibility thresholds" (a technical difference), or where they differ in a way that may matter. It never names a winner. A converter and a modulator in one suite are not compared, because they do different jobs.
+A comparison report says whether the devices are "indistinguishable by measurement" in the audio band (every difference is below the floor or the thresholds), whether they "measure differently, but no difference reaches the audibility thresholds" (a technical difference), or where they differ in a way that may matter. It never names a winner. A converter and a modulator in one suite are not compared, because they do different jobs.
 
 Where research does not agree, for example on whether the ringing of a linear-phase filter is audible, the sentence says so and gives no verdict. The conclusions cover the synthetic signals and the software path measured; they are not a listening test.
 
@@ -197,6 +233,9 @@ Crosstalk and channel match use a stereo pair automatically. For a class B modul
 - **"cache directory ... is accessible to others".** The compiled modulator core is built once into `$XDG_CACHE_HOME/dsd-measure` (or `~/.cache/dsd-measure`), which must belong to you and not be accessible to anyone else, and the library inside must not be writable by others. dsd-measure refuses to load code from anywhere else. Fix it with `chmod 700 ~/.cache/dsd-measure`, or delete the folder and run again.
 - **A test says "not run".** The reason is in the report. A tool that cannot make a file, or an import folder with a missing file, is reported and the other tests still run.
 - **Levels differ by 6.02 dB.** Some tools map WAV full scale to 0 dB SACD. Set `gain_db` on the device to undo it; the gain is recorded in the report.
+- **"unknown converter".** `quick` takes a preset (`ffmpeg`, `dsd2pcm`, `sox-dsd`, `sacd_extract`) or any name with `--command`. A DSD file given to `quick` or on its own is answered with the `null` command for it.
+- **"... is not on PATH".** The program is not installed (for ffmpeg on Fedora: `sudo dnf install ffmpeg-free`), or give its full path in `--command`.
+- **A 16-bit result.** "Not judged: output format": the tool wrote 16-bit PCM; see [output word length](#output-word-length).
 - **FLAC output.** Set `output_ext = "flac"` on a `cli` device; ffmpeg converts it for reading.
 
 ## See also
@@ -208,4 +247,4 @@ Crosstalk and channel match use a stereo pair automatically. For a class B modul
 - [Design](design.md)
 - [Roadmap](roadmap.md)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

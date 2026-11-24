@@ -96,10 +96,10 @@ reference-decoder,frequency_response.ripple_pp_db,3.961051051604159e-06
 reference-decoder,frequency_response.minus_0p1_db_hz,21000.0
 reference-decoder,frequency_response.minus_1p0_db_hz,21500.0
 reference-decoder,frequency_response.minus_3p0_db_hz,
-reference-decoder,frequency_response.at_hz.20,2.0210782913920866e-07
+reference-decoder,frequency_response.at_hz.20,2.0210782736285182e-07
 reference-decoder,frequency_response.at_hz.1000,0.0
 reference-decoder,frequency_response.at_hz.10000,-2.488357438323874e-06
-reference-decoder,frequency_response.at_hz.15000,-1.7289770846775e-06
+reference-decoder,frequency_response.at_hz.15000,-1.7289770841699692e-06
 reference-decoder,frequency_response.at_hz.20000,-2.4250194332609e-06
 reference-decoder,frequency_response.method,stepped coherent tones
 reference-decoder,frequency_response.tones,34
@@ -220,7 +220,7 @@ reference-decoder,alias_tones.note,image level relative to the input tone; inclu
 reference-decoder,overload_recovery.burst_level_dbfs,-2.922386997509154
 reference-decoder,overload_recovery.burst_ms,50.0
 reference-decoder,overload_recovery.recovery_ms,7.5963718820861725
-reference-decoder,overload_recovery.residual_peak_over_baseline_db,122.32047213161349
+reference-decoder,overload_recovery.residual_peak_over_baseline_db,122.32047213161346
 reference-decoder,overload_recovery.method,"1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms (5 ms windows, the recovery is read to the end of the last window that is out)"
 reference-decoder,overload_recovery.design,"order 8, max gain 1.3"
 reference-decoder,overload_recovery.design_floor.order,8
@@ -232,6 +232,11 @@ reference-decoder,overload_recovery.design_floor.thdn_db,-129.16
 reference-decoder,overload_recovery.design_floor.thd_db,-139.5
 reference-decoder,overload_recovery.design_floor.sinad_db,129.16
 reference-decoder,overload_recovery.design_floor.lobe_noise_db,-148.3
+reference-decoder,output_format.container,internal
+reference-decoder,output_format.kind,float
+reference-decoder,output_format.bits,64
+reference-decoder,output_format.rate,44100
+reference-decoder,output_format.text,64-bit float
 reference-modulator,analysis_version,2
 reference-modulator,device_class,B
 reference-modulator,dsd_rate,2822400
@@ -319,7 +324,7 @@ reference-modulator,frequency_response.ripple_pp_db,3.7621585580183137e-06
 reference-modulator,frequency_response.minus_0p1_db_hz,
 reference-modulator,frequency_response.minus_1p0_db_hz,
 reference-modulator,frequency_response.minus_3p0_db_hz,
-reference-modulator,frequency_response.at_hz.20,1.7729616885731048e-07
+reference-modulator,frequency_response.at_hz.20,1.7729616708095364e-07
 reference-modulator,frequency_response.at_hz.1000,0.0
 reference-modulator,frequency_response.at_hz.10000,-2.2692796388668057e-06
 reference-modulator,frequency_response.at_hz.15000,-1.5658759201033133e-06
@@ -559,7 +564,7 @@ reference-modulator,reference_decoder_only.impulse.post_ringing_samples,124
 reference-modulator,reference_decoder_only.impulse.pre_ringing_ms,1.5192743764172336
 reference-modulator,reference_decoder_only.impulse.post_ringing_ms,1.4058956916099774
 reference-modulator,reference_decoder_only.impulse.pre_energy_fraction,0.036874047673333736
-reference-modulator,reference_decoder_only.impulse.symmetry,0.9991188795510796
+reference-modulator,reference_decoder_only.impulse.symmetry,0.99911887955108
 reference-modulator,reference_decoder_only.impulse.floor_used_db,-60.0
 reference-modulator,reference_decoder_only.impulse.filter_type,linear phase
 reference-modulator,reference_decoder_only.impulse.output_rate,88200

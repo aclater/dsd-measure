@@ -1,6 +1,6 @@
 [dsd-measure](../README.md) › Documentation
 
-<img src="https://raw.githubusercontent.com/aclater/dsd-measure/main/docs/assets/icon-256.png" alt="" width="96">
+<img src="https://raw.githubusercontent.com/dsd-toolbox/dsd-measure/main/docs/assets/icon-256.png" alt="" width="96">
 
 # Documentation
 
@@ -38,4 +38,4 @@ The documentation index for dsd-measure, the reproducible measurement kit for DS
 - [Measurement footprint](footprint.md)
 - [User guide](user-guide.md)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).
