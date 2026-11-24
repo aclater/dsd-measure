@@ -9,7 +9,7 @@ test of "can I hear it?" is a blind listening test, which the lower tiers point 
 import numpy as np
 
 SOURCES = [
-    ("ISO 226, normal equal-loudness-level contours (hearing in quiet)", "https://www.iso.org/standard/34222.html"),
+    ("ISO 226:2023, normal equal-loudness-level contours (hearing in quiet)", "https://www.iso.org/standard/83117.html"),
     ("Zwicker and Fastl, Psychoacoustics: Facts and Models (simultaneous masking)",
      "https://link.springer.com/book/10.1007/978-3-662-09562-1"),
     ("Clark, High-resolution subjective testing using a double-blind comparator, JAES 30(5), 1982 (match levels first)",
