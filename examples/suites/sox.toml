@@ -1,0 +1,21 @@
+[suite]
+name = "SoX-DSD modulators"
+profile = "full"
+out = "out-sox"
+in_rate = 88200
+
+[[device]]
+name = "SoX-DSD sdm-8"
+adapter = "sox-dsd"
+reftool = "tools/reftool.sh"
+class = "B"
+modulator = "sdm-8"
+rates = [5644800]
+
+[[device]]
+name = "SoX-DSD clans-8"
+adapter = "sox-dsd"
+reftool = "tools/reftool.sh"
+class = "B"
+modulator = "clans-8"
+rates = [5644800]

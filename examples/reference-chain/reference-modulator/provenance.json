@@ -1,0 +1,270 @@
+{
+ "device": {
+  "name": "reference modulator",
+  "class": "B",
+  "adapter": "reference",
+  "gain_db": 0.0,
+  "dsd_rate": 2822400,
+  "detail": {
+   "out_rate": 352800,
+   "decoder": "keep 141120 Hz, 160 dB stopband; /8: 425 taps at 2822400 Hz",
+   "modulator": "order 8 down to 5 by the stability guard (see design)"
+  }
+ },
+ "profile": "full",
+ "in_rate": 88200,
+ "reference_chain": "1",
+ "versions": {
+  "dsd_measure": "0.1.0",
+  "reference_chain": "1",
+  "python": "3.14.10",
+  "numpy": "2.5.5",
+  "scipy": "1.18.1",
+  "matplotlib": "3.11.2"
+ },
+ "suite_sha256": "6a765f6b39fd79fbfb1f96b37afa88d1fc5e288806e6cd8eb5e0041878f21400",
+ "adapter_calls": [
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.3",
+   "fallbacks": 3
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.3",
+   "fallbacks": 3
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.3",
+   "fallbacks": 3
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.3",
+   "fallbacks": 3
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 8, max gain 1.45",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": true,
+   "ntf": "order 7, max gain 1.3",
+   "fallbacks": 3
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.4",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.3",
+   "fallbacks": 1
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.4",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.4",
+   "fallbacks": 0
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.3",
+   "fallbacks": 1
+  },
+  {
+   "clipped_to_peak_level": false,
+   "ntf": "order 7, max gain 1.4",
+   "fallbacks": 0
+  }
+ ],
+ "command": "dsd-measure run suite_ref.toml",
+ "timing_s": {
+  "reference_floor": 0.0,
+  "levels": 78.3,
+  "thdn_freq": 13.4,
+  "frequency_response": 47.4,
+  "impulse": 5.5,
+  "noise": 35.3,
+  "imd": 6.2,
+  "multitone": 23.4,
+  "tone_15k": 3.1,
+  "jtest": 20.6,
+  "polarity": 0.1,
+  "stability": 143.3,
+  "crosstalk": 30.6,
+  "imd_sweep": 40.5,
+  "alias_tones": 0.0,
+  "overload": 1.8,
+  "rate_table": 90.6
+ },
+ "profile_settings": {
+  "seg_s": 2.5,
+  "step_db": 3.0,
+  "fr_every": 1,
+  "noise_s": 15.0,
+  "mt_periods": 8,
+  "imd_s": 4.0,
+  "hold_s": 60.0,
+  "jtest_s": 24.0,
+  "tone_s": 4.0
+ },
+ "reference_modulator_designs": {}
+}

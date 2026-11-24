@@ -1,0 +1,18 @@
+[suite]
+name = "decoders"
+profile = "full"
+out = "out-dec"
+in_rate = 88200
+
+[[device]]
+name = "dsd2pcm 0.1.1"
+adapter = "cli"
+class = "A"
+command = "dsd2pcm {input} {output} --rate 176400"
+
+[[device]]
+name = "ffmpeg-free 7.1.5"
+adapter = "cli"
+class = "A"
+input_ext = "dff"
+command = "tools/reftool-file.sh ffmpeg {input} {output} -v error -y -i @IN -c:a pcm_f32le @OUT"

@@ -1,0 +1,12 @@
+# Distro ffmpeg and stock SoX, for DSD decoding and resampling references.
+# Fedora ships ffmpeg-free (no patent-encumbered codecs), which includes the DSD decoders.
+# Versions are those of the pinned base image's repositories; versions.json records them.
+ARG MINIMAL=registry.fedoraproject.org/fedora-minimal:43
+FROM ${MINIMAL}
+RUN microdnf -y install --setopt=install_weak_deps=0 ffmpeg-free sox \
+    && microdnf clean all
+LABEL org.opencontainers.image.title="ffmpeg-sox" \
+      org.opencontainers.image.description="Distro ffmpeg-free and stock SoX references" \
+      org.opencontainers.image.licenses="LGPL-2.1-or-later AND GPL-2.0-or-later"
+USER 65534:65534
+WORKDIR /tmp

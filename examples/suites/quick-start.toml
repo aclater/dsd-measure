@@ -1,0 +1,17 @@
+# dsd-measure suite: devices x tests -> a report folder.
+[suite]
+name = "reference chain"
+profile = "quick"      # "quick" (minutes) or "full" (the footprint's durations)
+in_rate = 88200        # PCM rate fed to the device or modulator
+out = "report"
+
+[[device]]
+name = "reference decoder"      # class A: DSD to PCM
+adapter = "reference"
+class = "A"
+out_rate = 44100
+
+[[device]]
+name = "reference modulator"    # class B: PCM to DSD
+adapter = "reference"
+class = "B"

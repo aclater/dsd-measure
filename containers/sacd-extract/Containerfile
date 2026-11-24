@@ -1,0 +1,35 @@
+# sacd_extract from sacd-ripper (release 0.3.9.3), used strictly as a black box.
+# Source: https://github.com/sacd-ripper/sacd-ripper, pinned to one tag and one tarball hash.
+# Only the project's own build system is run; the build is not modified.
+ARG BASE=registry.fedoraproject.org/fedora:43
+ARG MINIMAL=registry.fedoraproject.org/fedora-minimal:43
+
+FROM ${BASE} AS build
+ARG SR_TAG=0.3.9.3
+ARG SR_COMMIT=a3d981c935c3224217e2842cd492f9351106c81e
+ARG SR_SHA256=2f3078041e151dd41156506668e6f158be2be1f2813d26d4ff140761fbe9e72d
+RUN dnf -y install --setopt=install_weak_deps=False \
+        gcc gcc-c++ make cmake libxml2-devel curl tar gzip \
+    && dnf clean all
+WORKDIR /src
+RUN curl -fsSL -o sr.tar.gz "https://github.com/sacd-ripper/sacd-ripper/archive/refs/tags/${SR_TAG}.tar.gz" \
+    && echo "${SR_SHA256}  sr.tar.gz" | sha256sum -c - \
+    && tar xzf sr.tar.gz --strip-components=1 \
+    && cd tools/sacd_extract \
+    && cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_C_FLAGS="-std=gnu17 -Wno-error=incompatible-pointer-types -Wno-incompatible-pointer-types -Wno-implicit-function-declaration -Wno-int-conversion" \
+    && cmake --build /build -j"$(nproc)" \
+    && install -D -m 0755 /build/sacd_extract /opt/sacd/bin/sacd_extract \
+    && echo "${SR_TAG} ${SR_COMMIT}" > /opt/sacd/SOURCE_COMMIT \
+    && install -D -m 0644 /src/COPYING /opt/sacd/COPYING
+
+FROM ${MINIMAL}
+LABEL org.opencontainers.image.title="sacd-extract" \
+      org.opencontainers.image.description="sacd_extract 0.3.9.3, pinned build, black-box reference" \
+      org.opencontainers.image.licenses="GPL-2.0-or-later" \
+      org.opencontainers.image.source="https://github.com/sacd-ripper/sacd-ripper"
+RUN microdnf -y install --setopt=install_weak_deps=0 libxml2 && microdnf clean all
+COPY --from=build /opt/sacd /opt/sacd
+USER 65534:65534
+WORKDIR /tmp
+ENTRYPOINT ["/opt/sacd/bin/sacd_extract"]

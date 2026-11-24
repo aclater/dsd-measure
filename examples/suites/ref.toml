@@ -1,0 +1,17 @@
+[suite]
+name = "reference chain"
+profile = "full"
+out = "out-ref"
+in_rate = 88200
+
+[[device]]
+name = "reference decoder"
+adapter = "reference"
+class = "A"
+out_rate = 44100
+
+[[device]]
+name = "reference modulator"
+adapter = "reference"
+class = "B"
+rates = [5644800, 11289600]
