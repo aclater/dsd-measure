@@ -273,7 +273,7 @@ def takeaway(key, M):
         r = fr["ripple_pp_db"]
         a20 = fr["at_hz"].get("20000")
         word = "flat" if r < 0.1 else ("slightly uneven" if r < 0.5 else "uneven")
-        return (f"The treble is {word}: the response varies by {r:.2f} dB from 20 Hz to 20 kHz"
+        return (f"The response is {word}: it varies by {r:.2f} dB from 20 Hz to 20 kHz"
                 f" and is {a20:+.2f} dB at 20 kHz.")
     if key == "impulse":
         i = M.get("impulse")
@@ -285,26 +285,25 @@ def takeaway(key, M):
         t = i["filter_type"]
         pre = i["pre_ringing_ms"]
         return (f"The filter is {t}. Ringing before the main pulse lasts {pre:.2f} ms "
-                f"(more than 0 means a 'pre-echo'), after it {i['post_ringing_ms']:.2f} ms.")
+                f"after it {i['post_ringing_ms']:.2f} ms.")
     if key == "noise":
         n = M.get("noise")
         if not n:
             return ""
-        return (f"Background noise is {n['a_weighted_dbfs']:.0f} dBFS weighted for hearing "
-                f"({n['unweighted_dbfs']:.0f} dBFS unweighted); quieter is better.")
+        return (f"Background noise is {n['a_weighted_dbfs']:.0f} dBFS A-weighted "
+                f"({n['unweighted_dbfs']:.0f} dBFS unweighted); a lower figure is less noise.")
     if key == "levels":
         t = M.get("tone_0dbsacd")
         if not t:
             return ""
         s = t["sinad_db"]
-        word = "excellent" if s > 100 else ("very good" if s > 90 else ("good" if s > 80 else "audible in a quiet room"))
-        return f"At reference level distortion plus noise is {t['thdn_db']:.0f} dB ({word}); higher SINAD ({s:.0f} dB) is better."
+        return f"At reference level distortion plus noise is {t['thdn_db']:.0f} dB, a SINAD of {s:.0f} dB; a higher SINAD is less distortion and noise."
     if key == "multitone":
         m = _g(M, "multitone", "headline")
         if not m:
             return ""
         return (f"With 32 tones playing at once the cleanest range is {m['distortion_free_range_db']:.0f} dB "
-                f"below the quietest tone; this shows how the device copes with music-like signals.")
+                f"below the quietest tone.")
     if key == "spectrum_1k":
         t = M.get("tone_0dbsacd")
         if not t:
@@ -323,18 +322,18 @@ def takeaway(key, M):
     if key == "linearity":
         l = M.get("linearity")
         lo = l and l["lowest_level_within_0p5_db"]
-        return f"Quiet sounds keep their level down to {lo:.0f} dBFS within 0.5 dB." if lo is not None else ""
+        return f"Quiet signals keep their level down to {lo:.0f} dBFS within 0.5 dB." if lo is not None else ""
     if key == "thdn_freq":
         t = M.get("thdn_vs_frequency")
         return (f"Distortion plus noise is {t['1000']:.0f} dB at 1 kHz and {t['20000']:.0f} dB at 20 kHz, "
-                f"so within the 20 kHz band the treble is {'as clean as' if t['20000'] < t['1000'] + 6 else 'less clean than'} the midrange "
+                f"so within the 20 kHz band the figure at 20 kHz is {'within 6 dB of' if t['20000'] < t['1000'] + 6 else 'more than 6 dB above'} the figure at 1 kHz "
                 "(harmonics of a tone above 10 kHz fall outside that band).") if t else ""
     if key == "imd_smpte":
         i = M.get("imd_smpte")
         return f"Mixing bass and treble creates {pct(i['imd_percent'])[:-2]} percent unwanted tones (SMPTE test)." if i else ""
     if key == "imd_ccif":
         i = M.get("imd_ccif")
-        return f"Two very high tones leave {pct(i['imd_percent'])[:-2]} percent unwanted tones in the audible band (CCIF test)." if i else ""
+        return f"Two very high tones leave {pct(i['imd_percent'])[:-2]} percent unwanted tones in the 20 Hz to 20 kHz band (CCIF test)." if i else ""
     if key == "tone_15k":
         t = M.get("tone_15k")
         return (f"A 15 kHz tone: the strongest unwanted tone below 20 kHz is {t['audio_band']['db']:.0f} dB "
@@ -363,7 +362,7 @@ def takeaway(key, M):
     if key == "alias":
         a = M.get("alias_tones")
         return (f"Tones above the output's own limit leave images no louder than {a['worst_image_db']:.0f} dB "
-                f"relative to the tone (worst at {a['worst_image_hz'] / 1000:.1f} kHz); lower is better.") if a else ""
+                f"relative to the tone (worst at {a['worst_image_hz'] / 1000:.1f} kHz); a lower figure is weaker images.") if a else ""
     if key == "overload":
         o = M.get("overload_recovery")
         if not o:
@@ -402,11 +401,11 @@ def summary_rows(M):
     H, F, U, O = "Headline", "Filter", "Ultrasonic", "Other tests"
     t = M.get("tone_0dbsacd")
     if t:
-        r += [_row(H, "SINAD, 1 kHz at 0 dB SACD (-6.02 dBFS)", f"{t['sinad_db']:.1f} dB", t["sinad_db"], "higher",
-                   "sinad" in fl, "ASR-style: the tone over everything else, 20 Hz to 20 kHz, unweighted"),
-              _row(H, "THD+N, 1 kHz", f"{t['thdn_db']:.1f} dB ({pct(t['thdn_percent'])})", -t["thdn_db"], "higher", "thdn" in fl),
-              _row(H, "THD, 1 kHz", f"{t['thd_db']:.1f} dB ({pct(t['thd_percent'])})", -t["thd_db"], "higher", "thd" in fl,
-                   "harmonics 2 to 9 only")]
+        r += [_row(H, "SINAD, 1 kHz at 0 dB SACD (-6.02 dBFS)", f"{t['sinad_db']:.1f} dB (THD+N {t['thdn_db']:.1f} dB, {pct(t['thdn_percent'])})", t["sinad_db"], "higher",
+                   "sinad" in fl, "the tone over everything else, 20 Hz to 20 kHz, unweighted (not the AES17 weighting). SINAD is THD+N turned positive, "
+                   "so both are shown in this one row; THD below is the harmonics alone"),
+              _row(H, "THD, 1 kHz (harmonics only)", f"{t['thd_db']:.1f} dB ({pct(t['thd_percent'])})", -t["thd_db"], "higher", "thd" in fl,
+                   "harmonics 2 to 9 only, without the noise")]
     if "dynamic_range" in M:
         r.append(_row(H, "Dynamic range, A-weighted", f"{M['dynamic_range']['dr_a_db']:.1f} dB", M["dynamic_range"]["dr_a_db"],
                       "higher", "dr" in fl, "-60 dB tone method; unweighted figure in the CSV"))
@@ -442,6 +441,9 @@ def summary_rows(M):
                       f"{fs_['stopband_worst_db']:.0f} dB or deeper, tones {span}", -fs_["stopband_worst_db"], "higher", False,
                       "worst image of the tones tested, read in the 20 Hz-20 kHz band; includes the device's own noise, "
                       "so the true stopband is this or deeper"))
+    st = M.get("stopband_status")
+    if st and not st.get("measurable", True) and not (fs_ and fs_.get("stopband_worst_db") is not None):
+        r.append(_row(F, "Stopband (upper bound)", "not measurable at this output rate", None, None, False, st["reason"]))
     fr = M.get("frequency_response")
     if fr:
         r += [_row(F, "Passband ripple 20 Hz-20 kHz", f"{fr['ripple_pp_db']:.3f} dB peak to peak", fr["ripple_pp_db"], "lower"),
@@ -513,12 +515,21 @@ def summary_rows(M):
                 if "100000" in dd:
                     ex += f", ultrasonic {dd['100000']:.0f} dBFS/Hz at 100 kHz"
             r.append(_row(O, f"{k} (1 kHz, 0 dB SACD)", ex, v["sinad_db"], "higher"))
+    of_ = M.get("output_format")
+    if of_:
+        from .conclusions import format_limit
+        cap = ""
+        if "quantisation_sinad_db" in of_:
+            cap = (f"; rounding alone limits SINAD to about {of_['quantisation_sinad_db']:.1f} dB, or "
+                   f"{of_['quantisation_sinad_dithered_db']:.1f} dB with TPDF dither" + (" (limits this result)" if format_limit(M) else ""))
+        r.append(_row(O, "Output format", f"{of_['text']}, {of_['rate'] / 1000:g} kHz{cap}", None, None, False,
+                      "the format and rate the converter wrote; an integer file cannot show a decoder's own noise below its rounding noise"))
     f = M.get("reference_floor")
     if f:
         lim = f["chain"] if M.get("device_class", "A") == "A" else f["decoder_alone"]
         who = "reference modulator + decoder" if M.get("device_class", "A") == "A" else "reference decoder alone"
         r.append(_row("Reference floor", f"Reference floor ({who}, {rate_label(f['dsd_rate'])})",
-                      f"THD+N {lim['thdn_db']:.1f} dB, DR(A) {lim['dr_a_db']:.0f} dB",
+                      f"THD+N {lim['thdn_db']:.1f} dB, DR(A) {lim['dr_a_db']:.1f} dB",
                       None, None, False,
                       f"modulator: {f['ntf']}. A device figure within {f['margin_db']:.0f} dB of this is marked and is limited by the measurement, not the device."))
     return r
@@ -568,10 +579,11 @@ details{margin:.6em 0}summary{cursor:pointer;font-weight:600}.warn{color:#b3261e
 .hero b{display:block;font-size:1.35rem;font-variant-numeric:tabular-nums}.hero span{color:var(--mut);font-size:.8em}
 .hero .fl{border-color:#b3261e}.fl-tag{color:#b3261e;font-weight:600;font-size:.8em}
 tr.sec td{background:var(--card);font-weight:600;color:var(--mut);font-size:.85em;text-transform:uppercase;letter-spacing:.04em}
-td.h{color:var(--mut);font-size:.8em}.best{font-weight:700}
+td.h{color:var(--mut);font-size:.8em}
 .legend{font-size:.88em;color:var(--mut);border-left:3px solid var(--line);padding-left:10px}
 td{word-break:break-word}.card ul{margin:.3em 0;padding-left:1.2em}.card h2{margin-top:.2em}
 .concl{border-left:4px solid var(--acc)}.concl li{margin:.35em 0}.concl li.c-pending{color:var(--mut)}
+.result{font-size:1.1rem;font-weight:600;border-left:4px solid var(--acc);background:var(--card);border-radius:4px;padding:.5em .8em;margin:.6em 0}
 a{color:var(--acc)}footer{margin-top:2em;color:var(--mut);font-size:.85em}
 """
 
@@ -585,7 +597,7 @@ def _page(title, body, sub=""):
     return (f"<!doctype html><html lang=en-GB><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'>"
             f"<title>{html.escape(title)}</title><style>{CSS}</style><body><h1>{html.escape(title)}</h1>"
             f"<p class=lead>{sub}</p>{body}<footer>Made with dsd-measure. Part of the "
-            f"<a href='https://github.com/aclater/dsd-toolbox'>DSD Toolbox</a>.</footer></body></html>")
+            f"<a href='https://github.com/dsd-toolbox/dsd-toolbox'>DSD Toolbox</a>.</footer></body></html>")
 
 
 def device_plots(results, keyset="key"):
@@ -666,11 +678,13 @@ def device_plots(results, keyset="key"):
 
 
 LEGEND = ("Levels: dBFS is relative to PCM full scale. 0 dB SACD is the reference tone level, 50 % modulation, "
-          "-6.02 dBFS; noise in dBFS is referred to the rms of a full-scale sine (AES17, ASR). Distortion and noise figures "
+          "-6.02 dBFS; noise in dBFS is referred to the rms of a full-scale sine, as in AES17. Distortion and noise figures "
           "are in dB below the 1 kHz tone unless they say dBFS. Bandwidth "
           "20 Hz to 20 kHz, unweighted unless marked A-weighted. SINAD is THD+N turned positive. Because the tone is "
-          "6 dB below full scale, a noise-limited device would read about 6 dB better at full scale; compare reports "
-          "made at the same level.")
+          "6 dB below full scale, a noise-limited device would read about 6 dB higher at full scale; compare reports "
+          "made at the same level. These are not AES17 measurements: only the 20 kHz band edge and the dBFS convention follow it; "
+          "the tone (1 kHz, not 997 Hz), the weighting (A, not CCIR-RMS), the notch, the level and the dither differ "
+          "(docs/methodology-limits.md).")
 
 
 def _hero(M):
@@ -802,9 +816,10 @@ def write_device_report(outdir, name, result, meta):
     det = "".join(_card(s, t, d) for kind, _, s, t, d in plots if kind == "detail")
     nr = "".join(f"<li><b>{html.escape(k)}</b>: {html.escape(v)}</li>" for k, v in result["not_run"].items())
     mm = [meta["measured"]] if meta.get("measured") else []
-    from .conclusions import device_conclusions
+    from .conclusions import device_conclusions, device_headline
     concl = device_conclusions(M, meta.get("device"))
-    body = (f"{_conclusions_html(concl)}{_measured_html(mm) if mm else ''}<div class=hero>{_hero(M)}</div><p class=legend>{html.escape(LEGEND)}</p>"
+    headline = device_headline(M, meta.get("device"), name)
+    body = (f"<p class=result>{html.escape(headline)}</p>{_conclusions_html(concl)}{_measured_html(mm) if mm else ''}<div class=hero>{_hero(M)}</div><p class=legend>{html.escape(LEGEND)}</p>"
             f"<h2>Summary</h2><div class=card><table>{_table(M)}</table></div>"
             f"{_notes_html(result.get('notes'))}"
             f"<h2>Key plots</h2><div class=grid>{key}</div>"
@@ -819,14 +834,14 @@ def write_device_report(outdir, name, result, meta):
     (out / "index.html").write_text(_page(f"{name}: measurement report", body, sub))
     for _kind, key_, svg, *_ in plots:
         (out / "plots" / f"{key_}.svg").write_text(svg)
-    (out / "results.json").write_text(json.dumps({"conclusions": concl, "metrics": M, "not_run": result["not_run"], "notes": result["notes"]}, indent=1, default=str))
+    (out / "results.json").write_text(json.dumps({"headline": headline, "conclusions": concl, "device_versions": meta.get("device_versions"), "metrics": M, "not_run": result["not_run"], "notes": result["notes"]}, indent=1, default=str))
     (out / "provenance.json").write_text(json.dumps(meta, indent=1, default=str))
     with open(out / "results.csv", "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["metric", "value"])
         for k, v in flatten(M):
             w.writerow([k, v])
-    md = [f"# {name}: measurement report", "", sub, ""] + _conclusions_md(concl) + (_measured_md(mm) if mm else []) + [f"> {LEGEND}", "", "| Metric | Value |", "|---|---|"]
+    md = [f"# {name}: measurement report", "", sub, "", f"**{headline}**", ""] + _conclusions_md(concl) + (_measured_md(mm) if mm else []) + [f"> {LEGEND}", "", "| Metric | Value |", "|---|---|"]
     md += [f"| {a} | {b} |" for a, b in summary_pairs(M)]
     md += _notes_md(result.get("notes"))
     md += ["", "Plots: see `plots/`. Raw numbers: `results.csv`, `results.json`.", ""]
@@ -834,8 +849,10 @@ def write_device_report(outdir, name, result, meta):
         if take:
             md.append(f"- **{key_}**: {take}")
     (out / "index.md").write_text("\n".join(md) + "\n")
+    return headline
 
 
+_HEADLINE_SECTION = "Headline"
 _FILTER_LABELS = ("Filter type", "Ringing before", "-0.1 dB", "Stopband", "Group delay", "Worst alias image")
 
 
@@ -850,6 +867,8 @@ def write_comparison(outdir, results, meta):
     (out / "plots").mkdir(parents=True, exist_ok=True)
     names = [n for n, _ in results]
     rows_by = {n: {x["label"]: x for x in summary_rows(r["metrics"])} for n, r in results}
+    from .conclusions import format_limit
+    fmt_limited = {n: bool(format_limit(r["metrics"])) for n, r in results}
     labels, secs = [], {}
     for n in names:
         for k, x in rows_by[n].items():
@@ -861,17 +880,16 @@ def write_comparison(outdir, results, meta):
         if secs[k] != sec:
             sec = secs[k]
             trs.append(f"<tr class=sec><td colspan={len(names) + 1}>{html.escape(sec)}</td></tr>")
-        nums = [rows_by[n][k]["num"] for n in names if k in rows_by[n] and rows_by[n][k]["num"] is not None]
-        better = next((rows_by[n][k]["better"] for n in names if k in rows_by[n]), None)
-        best = (max(nums) if better == "higher" else min(nums)) if nums and better and len(nums) > 1 else None
         cells = []
         for n in names:
             x = rows_by[n].get(k)
             if not x:
                 cells.append(f"<td class=v>{html.escape(_absent(klass[n], k))}</td>")
                 continue
-            cls = "v best" if best is not None and x["num"] == best else "v"
+            cls = "v"  # no figure is marked: no repeatability interval has been measured, so no difference is called an improvement
             tag = ' <span class=fl-tag>floor</span>' if x["flag"] else ""
+            if secs[k] == _HEADLINE_SECTION and fmt_limited.get(n):
+                tag += ' <span class=fl-tag>format</span>'
             cells.append(f"<td class='{cls}'>{html.escape(x['value'])}{tag}</td>")
         trs.append(f"<tr><td>{html.escape(k)}</td>{''.join(cells)}</tr>")
     head = "".join(f"<th class=v>{html.escape(n)}</th>" for n in names)
@@ -879,11 +897,17 @@ def write_comparison(outdir, results, meta):
     cards = "".join(_card(s, "", d) for kind, _, s, t, d in plots if kind == "key")
     det = "".join(_card(s, "", d) for kind, _, s, t, d in plots if kind == "detail")
     mm = meta.get("measured") or []
-    from .conclusions import comparison_conclusions
+    from .conclusions import comparison_conclusions, comparison_headline
     devs = [m.get("device") for m in mm] if len(mm) == len(results) else [None] * len(results)
-    concl = comparison_conclusions([((d or {}).get("name") or n, r["metrics"], d) for (n, r), d in zip(results, devs, strict=True)])
-    (out / "results.json").write_text(json.dumps({"devices": names, "conclusions": concl}, indent=1, default=str))
-    body = (f"{_conclusions_html(concl)}{_measured_html(mm) if mm else ''}<p class=legend>{html.escape(LEGEND)} Bold marks the better figure in a row; 'floor' marks a figure within 6 dB of that "
+    entries = [((d or {}).get("name") or n, r["metrics"], d) for (n, r), d in zip(results, devs, strict=True)]
+    concl = comparison_conclusions(entries)
+    headline = comparison_headline(entries, concl)
+    from .conclusions import condition_text, like_for_like
+    same, _ = like_for_like([(n, r["metrics"]) for n, r in results])
+    (out / "results.json").write_text(json.dumps(
+        {"devices": names, "headline": headline, "like_for_like": same,
+         "conditions": {n: condition_text(r["metrics"]) for n, r in results}, "conclusions": concl}, indent=1, default=str))
+    body = (f"<p class=result>{html.escape(headline)}</p>{_conclusions_html(concl)}{_measured_html(mm) if mm else ''}<p class=legend>{html.escape(LEGEND)} No cell is marked: no repeatability interval has been measured yet, so no difference is called an improvement. 'floor' marks a figure within 6 dB of that "
             f"device's reference floor, so it may be limited by the measurement.</p>"
             f"<h2>Summary</h2><div class=card><table><tr><th>Metric</th>{head}</tr>{''.join(trs)}</table></div>"
             f"<h2>Overlays</h2><div class=grid>{cards}</div>"
@@ -900,8 +924,9 @@ def write_comparison(outdir, results, meta):
         for n, r in results:
             for k, v in flatten(r["metrics"]):
                 w.writerow([n, k, v])
-    md = ["# Comparison report", ""] + _conclusions_md(concl) + (_measured_md(mm) if mm else []) + [f"> {LEGEND}", "", "| Metric | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
+    md = ["# Comparison report", "", f"**{headline}**", ""] + _conclusions_md(concl) + (_measured_md(mm) if mm else []) + [f"> {LEGEND}", "", "| Metric | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
     for k in labels:
         md.append(f"| {k} | " + " | ".join((rows_by[n][k]["value"] + (" (floor)" if rows_by[n][k]["flag"] else "")) if k in rows_by[n] else _absent(klass[n], k) for n in names) + " |")
     md += _notes_md([f"{n}: {t}" for n, r in results for t in r.get("notes", [])])
     (out / "index.md").write_text("\n".join(md) + "\n")
+    return headline

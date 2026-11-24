@@ -96,10 +96,10 @@ frequency_response.ripple_pp_db,3.961051051604159e-06
 frequency_response.minus_0p1_db_hz,21000.0
 frequency_response.minus_1p0_db_hz,21500.0
 frequency_response.minus_3p0_db_hz,
-frequency_response.at_hz.20,2.0210782913920866e-07
+frequency_response.at_hz.20,2.0210782736285182e-07
 frequency_response.at_hz.1000,0.0
 frequency_response.at_hz.10000,-2.488357438323874e-06
-frequency_response.at_hz.15000,-1.7289770846775e-06
+frequency_response.at_hz.15000,-1.7289770841699692e-06
 frequency_response.at_hz.20000,-2.4250194332609e-06
 frequency_response.method,stepped coherent tones
 frequency_response.tones,34
@@ -220,7 +220,7 @@ alias_tones.note,image level relative to the input tone; includes the device noi
 overload_recovery.burst_level_dbfs,-2.922386997509154
 overload_recovery.burst_ms,50.0
 overload_recovery.recovery_ms,7.5963718820861725
-overload_recovery.residual_peak_over_baseline_db,122.32047213161349
+overload_recovery.residual_peak_over_baseline_db,122.32047213161346
 overload_recovery.method,"1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms (5 ms windows, the recovery is read to the end of the last window that is out)"
 overload_recovery.design,"order 8, max gain 1.3"
 overload_recovery.design_floor.order,8
@@ -232,3 +232,8 @@ overload_recovery.design_floor.thdn_db,-129.16
 overload_recovery.design_floor.thd_db,-139.5
 overload_recovery.design_floor.sinad_db,129.16
 overload_recovery.design_floor.lobe_noise_db,-148.3
+output_format.container,internal
+output_format.kind,float
+output_format.bits,64
+output_format.rate,44100
+output_format.text,64-bit float

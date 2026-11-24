@@ -101,4 +101,4 @@ sacd_extract was checked on a synthetic SACD image with stereo and multichannel 
 - [mansr/sox](https://github.com/mansr/sox)
 - [sacd-ripper](https://github.com/sacd-ripper/sacd-ripper)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

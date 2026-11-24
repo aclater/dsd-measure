@@ -34,7 +34,7 @@ class Options:
     channels: tuple | None = None
     diff_wav: bool = False
     diff_gain_db: float = 0.0  # gain applied to the difference WAV only
-    band_hz: float = 20000.0  # top of the audibility verdict; bands above are ultrasonic
+    band_hz: float = 20000.0  # top of the in-band depth; bands above are ultrasonic
 
 
 def db(x):

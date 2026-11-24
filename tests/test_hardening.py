@@ -211,6 +211,7 @@ def test_run_suite_cleans_up_when_interrupted(tmp_path, monkeypatch):
         raise KeyboardInterrupt
 
     monkeypatch.setattr(run, "measure_device", boom)
+    monkeypatch.setattr(run.preflight, "run", lambda *a, **k: {})  # "cp /dev/null" is no converter; the interrupt is the point
     with pytest.raises(KeyboardInterrupt):
         run.run_suite(suite, tmp_path / "out", "quick", log=lambda *_, **__: None)
     assert not (_our_tmp_dirs() - before)
@@ -222,10 +223,21 @@ def test_run_suite_cleans_up_when_interrupted(tmp_path, monkeypatch):
 
 
 def test_exit_code_is_nonzero_when_tests_error(tmp_path, capsys):
+    # a tool that converts the pre-flight signal and then fails: the report is written, the exit status is 1
+    stub = f"{sys.executable} {Path(__file__).with_name('stubtool.py')} {{input}} {{output}} --fail-after 1 --state {tmp_path / 'n'}"
     out = tmp_path / "r"
-    rc = cli.main(["run", str(_suite(tmp_path, "true")), "-o", str(out), "--only", "polarity"])
+    rc = cli.main(["run", str(_suite(tmp_path, stub)), "-o", str(out), "--only", "polarity"])
     assert rc == cli.EXIT_TESTS_FAILED == 1
     assert "failed" in capsys.readouterr().out
+    assert (out / "d" / "index.html").exists()
+
+
+def test_a_tool_that_writes_nothing_fails_in_the_pre_flight_with_no_report(tmp_path, capsys):
+    out = tmp_path / "r"
+    assert cli.main(["run", str(_suite(tmp_path, "true")), "-o", str(out), "--only", "polarity"]) == cli.EXIT_FATAL
+    err = capsys.readouterr().err
+    assert err.count("dsd-measure: error:") == 1 and "could not convert" in err
+    assert not out.exists()
 
 
 def _suite(tmp_path, command):

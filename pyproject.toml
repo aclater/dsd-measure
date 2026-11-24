@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dsd-measure"
-version = "0.1.1"
-description = "Reproducible audiophile measurement kit for DSD and PCM converters"
+version = "0.1.2"
+description = "Deterministic audiophile measurement kit for DSD and PCM converters"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"

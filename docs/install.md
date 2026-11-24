@@ -8,7 +8,7 @@ dsd-measure is a Python package with a command line tool. It needs Python 3.11 o
 
 ```sh
 sudo dnf install -y gcc git python3-pip pipx
-pipx install git+https://github.com/aclater/dsd-measure
+pipx install git+https://github.com/dsd-toolbox/dsd-measure
 dsd-measure --version
 ```
 
@@ -31,4 +31,4 @@ dsd-measure can measure other converters as black boxes. [Reference tools](refer
 - [User guide](user-guide.md)
 - [Command line options](options.md)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

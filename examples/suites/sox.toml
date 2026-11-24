@@ -1,3 +1,10 @@
+# SoX-DSD as a PCM to DSD modulator, at sdm-8 first, the setting that read the lowest in-band noise in docs/accuracy.md.
+#
+# sdm-8 is the highest-order modulator of the sdm family and read lower noise than clans-8 in the accuracy checks
+# (docs/accuracy.md). SoX-DSD maps PCM full scale to 50 % modulation, so the 0 dB SACD test tone (-6.02 dBFS) enters at
+# 25 % modulation unless the input is raised by 6.0206 dB. Both mappings are measured, and the report of each names
+# the one it used: the second device is the same modulator at matched modulation depth, the third is the clans-8
+# setting of Archimago's 2022 tests. Devices of one class at one DSD rate are like-for-like.
 [suite]
 name = "SoX-DSD modulators"
 profile = "full"
@@ -10,6 +17,15 @@ adapter = "sox-dsd"
 reftool = "tools/reftool.sh"
 class = "B"
 modulator = "sdm-8"
+rates = [5644800]
+
+[[device]]
+name = "SoX-DSD sdm-8, input raised 6.0206 dB"
+adapter = "sox-dsd"
+reftool = "tools/reftool.sh"
+class = "B"
+modulator = "sdm-8"
+input_gain_db = 6.0206
 rates = [5644800]
 
 [[device]]

@@ -13,41 +13,50 @@ listed in one "not concluded" line and never contribute to a verdict.
 import math
 import re
 
+from . import outformat as of
 from .floor import MARGIN_DB, flags, limit_for
 from .levels import REF_DBFS
 
 # ----------------------------------------------------------------------------- thresholds
 
-#: Every number a rule compares against. ``settled`` is False where the research does not agree.
+#: Every number a rule compares against. ``settled`` is False where the research does not agree or the source has not been read by the authors. These are
+#: reference lines taken from the literature: this tool measures, it does not test listening, and a source
+#: marked "cited, not checked" is one whose text the authors have not read (it is not in their library).
 THRESHOLDS = {
-    "hearing_range_db": {
-        "value": 120.0, "unit": "dB below the reference level", "settled": True,
-        "meaning": "Distortion and noise this far down are outside the range between the loudest sound "
-                   "a system plays and the quietest sound a listener can hear.",
-        "sources": [("Fielder 1995, JAES 43(5): over 120 dB is needed only in the most demanding cases",
+    "range_120_db": {
+        "value": 120.0, "unit": "dB below the reference level", "settled": False,
+        "meaning": "A reference line of 120 dB, cited from Fielder 1995 as a dynamic range needed only in the most demanding cases (not checked against the paper). "
+                   "A reference line only: audibility was not tested.",
+        "sources": [("Fielder 1995, JAES 43(5): over 120 dB is needed only in the most demanding cases "
+                     "(cited, not checked against the paper)",
                      "https://aes2.org/publications/elibrary-page/?id=7948")]},
-    "cd_floor_db": {
-        "value": 87.0, "unit": "dB below the reference level", "settled": True,
+    "dither16_db": {
+        "value": 87.0, "unit": "dB below the reference level", "settled": False,
         "meaning": "The noise of a correctly dithered 16-bit channel (-93.3 dBFS) seen from the 0 dB SACD "
-                   "reference level (-6.02 dBFS). Listeners in controlled tests did not tell a 16-bit stage "
-                   "from high-resolution playback at normal volume.",
+                   "reference level (-6.02 dBFS): a calculation, not a listening result. Whether such noise is heard "
+                   "is not settled: Meyer and Moran 2007 report no detection at normal volume, but detection of "
+                   "the loop's noise floor in a brief two-subject test with no input signal at 14 dB of extra gain, and easily above it, and Reiss 2016 finds a small but "
+                   "statistically significant ability to discriminate high-resolution content and discusses the "
+                   "risk of bias in Meyer and Moran.",
         "sources": [("Meyer and Moran 2007, JAES 55(9)", "https://aes2.org/publications/elibrary-page/?id=14195"),
-                    ("Reiss 2016, JAES 64(6), a meta-analysis that finds a small effect",
+                    ("Reiss 2016, JAES 64(6), a meta-analysis that finds a small but statistically significant effect",
                      "https://aes2.org/publications/elibrary-page/?id=18296")]},
     "flat_db": {
-        "value": 0.1, "unit": "dB", "settled": True,
-        "meaning": "A level or response difference this small is treated as none. It is a fifth of the smallest "
-                   "level change listeners detect.",
-        "sources": [("Jesteadt, Wier and Green 1977, JASA 61(1)", "https://doi.org/10.1121/1.381278")]},
+        "value": 0.1, "unit": "dB", "settled": False,
+        "meaning": "A level or response difference this small is treated as none. It is a fifth of the 0.5 dB "
+                   "level step below.",
+        "sources": [("Jesteadt, Wier and Green 1977, JASA 61(1) (cited, not checked against the paper)",
+                     "https://doi.org/10.1121/1.381278")]},
     "level_jnd_db": {
-        "value": 0.5, "unit": "dB", "settled": True,
-        "meaning": "About the smallest level change listeners detect on tones at normal volume (0.5 to 1 dB). "
-                   "A larger difference may be heard as a change in loudness or tone.",
-        "sources": [("Jesteadt, Wier and Green 1977, JASA 61(1)", "https://doi.org/10.1121/1.381278")]},
+        "value": 0.5, "unit": "dB", "settled": False,
+        "meaning": "A level step of 0.5 dB, cited from Jesteadt, Wier and Green as about the smallest level change "
+                   "detected on tones (0.5 to 1 dB). A reference line only.",
+        "sources": [("Jesteadt, Wier and Green 1977, JASA 61(1) (cited, not checked against the paper)",
+                     "https://doi.org/10.1121/1.381278")]},
     "same_db": {
         "value": 1.0, "unit": "dB", "settled": True,
-        "meaning": "Two distortion or noise figures closer than this are treated as the same. Reviews quote "
-                   "these figures to the nearest decibel.",
+        "meaning": "Two distortion or noise figures closer than this are treated as the same. This is a convention, "
+                   "not a measured repeatability: no repeatability interval has been measured yet.",
         "sources": []},
     "floor_margin_db": {
         "value": MARGIN_DB, "unit": "dB", "settled": True,
@@ -55,45 +64,54 @@ THRESHOLDS = {
                    "cannot be ranked against each other.",
         "sources": [("The reference floor", "footprint.md#the-reference-floor")]},
     "group_delay_ms": {
-        "value": 1.0, "unit": "ms", "settled": True,
-        "meaning": "About the smallest group delay difference heard in the midrange, on test pulses.",
-        "sources": [("Blauert and Laws 1978, JASA 63(5)", "https://doi.org/10.1121/1.381841")]},
+        "value": 1.0, "unit": "ms", "settled": False,
+        "meaning": "A group delay difference of 1 ms, cited from Blauert and Laws as about the smallest difference "
+                   "detected in the midrange on test pulses. A reference line only.",
+        "sources": [("Blauert and Laws 1978, JASA 63(5) (cited, not checked against the paper)",
+                     "https://doi.org/10.1121/1.381841")]},
     "pre_ringing": {
         "value": None, "unit": "", "settled": False,
-        "meaning": "No threshold. Whether the ringing of a linear-phase filter before a transient is audible is "
-                   "contested, so the report describes the filter and gives no verdict.",
-        "sources": [("Jackson, Capp and Stuart 2014, AES Convention 137: reports audible filter effects",
+        "meaning": "No threshold. The literature does not agree on a limit for the ringing of a linear-phase filter "
+                   "before a transient, so the report describes the filter and gives no verdict.",
+        "sources": [("Jackson, Capp and Stuart 2014, AES Convention 137: reports effects of filters in listening tests",
                      "https://aes2.org/publications/elibrary-page/?id=17497"),
                     ("Archimago 2015, internet blind test of linear against minimum phase filters: no consistent preference",
                      "https://archimago.blogspot.com/2015/04/internet-blind-test-linear-vs-minimum.html")]},
     "ultrasonic": {
         "value": None, "unit": "", "settled": False,
-        "meaning": "No threshold. Noise above 20 kHz is normal for DSD and is not heard as such; there is no "
-                   "agreed limit for what amplifiers and tweeters tolerate, so the report gives the level only.",
+        "meaning": "No threshold. Noise shaping puts noise above 20 kHz by design and there is no agreed limit for what "
+                   "amplifiers and tweeters tolerate, so the report gives the level only.",
         "sources": [("Archimago 2022, notes on DSD and 1-bit measurements of DACs",
                      "https://archimago.blogspot.com/2022/06/notes-on-dac-dsd-1-bit-pdm-measurements.html")]},
     "distortion_music": {
         "value": None, "unit": "", "settled": False,
-        "meaning": "No threshold. Above the CD floor, whether distortion is heard depends on its kind, the music "
-                   "and the volume; published thresholds vary widely, so the verdict is 'audible risk', not 'audible'.",
-        "sources": [("de Santis and Henin 2007, Aalborg University",
+        "meaning": "No threshold. Above the 16-bit noise level the published thresholds for distortion vary widely "
+                   "with its kind, the music and the volume, so the report gives the level and no verdict.",
+        "sources": [("de Santis and Henin 2007, Aalborg University (cited, not checked)",
                      "https://projekter.aau.dk/projekter/files/9852082/07gr1061_Thesis.pdf")]},
 }
 
 #: Every verdict a conclusion can carry, with its label and one plain meaning.
 VERDICTS = {
-    "transparent": ("Transparent", "Everything measured is beyond the range of human hearing."),
-    "inaudible": ("Inaudible in normal listening", "Quieter than the noise of a CD, but inside the range of hearing "
-                  "under extreme conditions."),
-    "audible-risk": ("Audible risk", "Above the noise of a CD. It may or may not be heard; listen for yourself."),
+    "margin-120": ("At least 120 dB down", "Every figure concluded is at least 120 dB below a reference-level tone."),
+    "margin-87": ("At least 87 dB down", "Every figure concluded is at least 87 dB below a reference-level tone, the "
+                  "noise level of dithered 16-bit on this scale."),
+    "margin-low": ("Under 87 dB down", "A figure is less than 87 dB below a reference-level tone, above the noise "
+                   "level of dithered 16-bit on this scale."),
     "floor": ("Measurement floor", "The tool measuring itself: the best figures any report can show."),
     "at-floor": ("At the reference floor", "The tool, not the device, limits these figures."),
-    "fact": ("Finding", "A measured property with a settled meaning."),
-    "unsettled": ("No consensus", "Measured, but research does not agree on whether it is audible."),
-    "indistinguishable": ("Indistinguishable by measurement", "Every difference is below the floor or the thresholds."),
-    "technical": ("Technical difference", "A measurable difference that is below the audibility thresholds."),
-    "may-matter": ("May matter", "A difference at a level where it may be audible or may affect a comparison."),
+    "fact": ("Finding", "A measured property."),
+    "no-threshold": ("No agreed threshold", "Measured; the literature gives no agreed threshold to compare it with."),
+    "same": ("Same within tolerance", "Every difference is below the floor or the stated tolerance."),
+    "difference-low": ("Difference between low figures", "A measured difference between figures that are both at least "
+                       "87 dB below a reference-level tone."),
+    "notable": ("Notable difference", "A measured difference larger than the stated tolerance, or one where a figure "
+                "is above the 16-bit noise level."),
     "not-comparable": ("Not comparable", "The devices do different jobs."),
+    "not-like-for-like": ("Not like-for-like", "The devices were measured at different output rates or formats, so the "
+                          "figures are listed but not compared."),
+    "format-limited": ("Not judged: output format", "The file format the tool wrote limits the figures, so they describe the "
+                      "format, not the converter."),
     "pending": ("Not concluded", "Measured, but not validated or not used by any rule in this version."),
 }
 
@@ -103,7 +121,7 @@ VERDICTS = {
 VALIDATED = frozenset({"floor", "sinad", "thd", "dr", "gain", "linearity", "fr", "imd", "crosstalk"})
 #: Groups that are valid from ``metrics["analysis_version"]`` 2 on (corrected definitions).
 VALIDATED_FROM_V2 = frozenset({"noise", "ultrasonic", "stopband", "overload"})
-#: Groups not yet covered by an independent check. Set to True to let the rules use them.
+#: Groups not yet covered by a check against known answers. Set to True to let the rules use them.
 UNREVIEWED = frozenset({"filter", "group_delay", "polarity", "stability"})
 UNREVIEWED_VALIDATED = False
 #: Plain names for the "not concluded" line, by top-level metric key.
@@ -208,18 +226,61 @@ def margins(M):
 
 def tier(margin_db):
     """The verdict for a margin below the reference level."""
-    if margin_db >= _t("hearing_range_db"):
-        return "transparent"
-    return "inaudible" if margin_db >= _t("cd_floor_db") else "audible-risk"
+    if margin_db >= _t("range_120_db"):
+        return "margin-120"
+    return "margin-87" if margin_db >= _t("dither16_db") else "margin-low"
 
 
 def is_reference(device):
     return bool(device) and device.get("adapter") == "reference"
 
 
+def format_limit(M):
+    """The output format record when the word length alone may limit this result, else None.
+
+    True for integer output whose measured SINAD lies between 6 dB under the SINAD that rounding with
+    dither allows and 6 dB over the SINAD that plain rounding allows (the two bounds of the word length at
+    that output rate). A device whose own noise is higher shows its own noise, and one whose rounding noise is
+    shaped out of the band is not limited.
+    """
+    fmt = M.get("output_format")
+    if M.get("device_class", "A") != "A" or not of.limits_result(fmt):
+        return None
+    sinad = lookup(M, "tone_0dbsacd.sinad_db")
+    hi, lo = fmt.get("quantisation_sinad_db"), fmt.get("quantisation_sinad_dithered_db")
+    if sinad is None or hi is None or lo is None:
+        return None
+    if sinad > hi + _t("floor_margin_db") or sinad < lo - _t("floor_margin_db"):
+        return None
+    return fmt
+
+
+def format_text(fmt):
+    """``"24-bit integer: 140.7 dB rounded, 135.9 dB with TPDF dither"``: the SINAD the word length allows."""
+    return (f"{fmt['bits']}-bit integer PCM, whose rounding alone limits SINAD to about {fmt['quantisation_sinad_db']:.1f} dB "
+            f"(plain rounding) or {fmt['quantisation_sinad_dithered_db']:.1f} dB (TPDF dither) at {fmt['rate'] / 1000:g} kHz")
+
+
+def _format_conclusion(M, fmt, name=None):
+    hi, lo = fmt["quantisation_sinad_db"], fmt["quantisation_sinad_dithered_db"]
+    ev = [_ev("output_format.bits", "word length of the output file", f"{fmt['bits']} bits"),
+          _ev("output_format.rate", "output rate", f"{fmt['rate'] / 1000:g} kHz"),
+          _ev("output_format.quantisation_sinad_db", f"SINAD that {fmt['bits']}-bit plain rounding allows", f"{hi:.1f} dB"),
+          _ev("output_format.quantisation_sinad_dithered_db", f"SINAD that {fmt['bits']}-bit rounding with TPDF dither allows", f"{lo:.1f} dB"),
+          _ev("tone_0dbsacd.sinad_db", "SINAD measured", f"{M['tone_0dbsacd']['sinad_db']:.1f} dB")]
+    who = f"{name} wrote" if name else "The tool wrote"
+    text = (f"Not judged: {who} {format_text(fmt)} (measured {M['tone_0dbsacd']['sinad_db']:.1f} dB), so these figures cannot "
+            "be told from the file format, and a converter noisier than the format would read about the same. "
+            "Ask the tool for floating-point output and measure again.")
+    return _c("overall", "format-limited", text, ev, ["floor_margin_db"])
+
+
 # ----------------------------------------------------------------------------- device rules
 
 def _overall(M):
+    fmt = format_limit(M)
+    if fmt:
+        return _format_conclusion(M, fmt)
     ms = margins(M)
     if not ms:
         return None
@@ -227,25 +288,22 @@ def _overall(M):
     ev = [_ev(p, lab, _down(v) + " below the reference level" + (", at the reference floor" if f else ""))
           for p, lab, v, f in ms]
     v, w = tier(worst), _down(worst)
-    least = " The device is at least this good: this figure is at the tool's own floor." if at_floor else ""
-    hear, cd = f"{_t('hearing_range_db'):.0f} dB", f"{_t('cd_floor_db'):.0f} dB"
+    least = " This figure is at the tool's own floor, so the tool cannot show more." if at_floor else ""
+    rng, cd = f"{_t('range_120_db'):.0f} dB", f"{_t('dither16_db'):.0f} dB"
     what = "distortion, noise and images" if any(p.startswith("filter_summary.") for p, *_ in ms) else "distortion and noise"
-    if v == "transparent":
-        text = (f"Transparent: in every test concluded here, {what} stay at least {w} below a "
-                f"reference-level tone (the weakest is {label}). That is beyond the roughly {hear} range of "
-                f"human hearing, so none of it would be audible.{least}")
-        th = ["hearing_range_db"]
-    elif v == "inaudible":
-        text = (f"Inaudible in normal listening: {what} stay at least {w} below a reference-level "
-                f"tone (the weakest is {label}). That is quieter than the noise of a CD ({cd} on this scale), "
-                f"which listeners in controlled tests have not told from high-resolution playback at normal "
-                f"volume, but short of the {hear} range of hearing.{least}")
-        th = ["cd_floor_db", "hearing_range_db"]
+    if v == "margin-120":
+        text = (f"In every test concluded here, {what} stay at least {w} below a reference-level tone (the weakest is "
+                f"{label}), above the {rng} reference line (docs/conclusions.md gives its source and status). This is a measurement, not a listening test.{least}")
+        th = ["range_120_db"]
+    elif v == "margin-87":
+        text = (f"In every test concluded here, {what} stay at least {w} below a reference-level tone (the weakest is "
+                f"{label}). That is below the noise level of dithered 16-bit ({cd} on this scale) and short of {rng}. "
+                f"This is a measurement, not a listening test.{least}")
+        th = ["dither16_db", "range_120_db"]
     else:
-        text = (f"Audible risk: {label} is only {w} below a reference-level tone, above the noise of a CD "
-                f"({cd} on this scale). It may be audible, depending on the music and the volume. There is no "
-                f"single agreed threshold, so listen for yourself.")
-        th = ["cd_floor_db", "distortion_music"]
+        text = (f"{label[:1].upper() + label[1:]} is {w} below a reference-level tone, less than the {cd} of dithered 16-bit noise on "
+                "this scale. This is a measurement, not a listening test, and there is no single agreed threshold.")
+        th = ["dither16_db", "distortion_music"]
     return _c("overall", v, text, ev, th)
 
 
@@ -263,7 +321,7 @@ def _floor(M):
     text = (f"This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD "
             f"{ch['sinad_db']:.1f} dB and dynamic range {ch['dr_a_db']:.1f} dB (A-weighted) at {rate}. A DSD to PCM "
             f"converter within {m:.0f} dB of these figures (SINAD above {ch['sinad_db'] - m:.1f} dB) cannot be "
-            f"ranked by this tool: it is at least that good.")
+            f"ranked by this tool.")
     ev.append(_ev("reference_floor.chain.sinad_db", "SINAD above which a converter cannot be ranked",
                   f"{ch['sinad_db'] - m:.1f} dB"))
     return _c("floor", "floor", text, ev, ["floor_margin_db"])
@@ -280,15 +338,15 @@ def _response(M):
         ev.append(_ev("frequency_response.at_hz.20000", "response at 20 kHz against 1 kHz", _small(a20)))
         tail = f" and is {'down' if a20 < 0 else 'up'} by {_small(a20)} at 20 kHz"
     if r <= _t("flat_db"):
-        return _c("response", "fact", f"Flat response: the level varies by {_small(r)} from 20 Hz to 20 kHz{tail}, "
-                  "too little to change the tone.", ev, ["flat_db"])
+        return _c("response", "fact", f"Flat response: the level varies by {_small(r)} from 20 Hz to 20 kHz (read at the tones measured){tail}.",
+                  ev, ["flat_db"])
     if r <= _t("level_jnd_db"):
         return _c("response", "fact", f"Nearly flat response: the level varies by {_small(r)} from 20 Hz to 20 kHz{tail}. "
-                  f"That is under the {_t('level_jnd_db'):.1f} dB step listeners detect and unlikely to be heard.",
+                  f"That is under the {_t('level_jnd_db'):.1f} dB level step used as a reference line here.",
                   ev, ["flat_db", "level_jnd_db"])
-    return _c("response", "may-matter", f"Uneven response: the level varies by {_small(r)} from 20 Hz to 20 kHz{tail}. "
-              f"That is more than the {_t('level_jnd_db'):.1f} dB step listeners detect, so it may be heard as a "
-              "change in tone.", ev, ["level_jnd_db"])
+    return _c("response", "notable", f"Uneven response: the level varies by {_small(r)} from 20 Hz to 20 kHz{tail}. "
+              f"That is more than the {_t('level_jnd_db'):.1f} dB level step used as a reference line here.",
+              ev, ["level_jnd_db"])
 
 
 def _level(M):
@@ -299,9 +357,9 @@ def _level(M):
         if abs(g) <= _t("flat_db"):
             parts.append(f"unity gain within {_within(g)}")
         else:
-            parts.append(f"the output is {_small(g)} {'louder' if g > 0 else 'quieter'} than unity gain, so match "
-                         "levels before comparing it with another device by ear")
-            verdict = "may-matter"
+            parts.append(f"the output is {_small(g)} {'higher' if g > 0 else 'lower'} than unity gain, so match "
+                         "levels before any listening comparison with another device")
+            verdict = "notable"
     ct = M.get("crosstalk")
     if ct and "1000" in ct:
         d = ct["1000"]["gain_diff_db"]
@@ -310,7 +368,7 @@ def _level(M):
             parts.append(f"channels matched within {_within(d)}")
         else:
             parts.append(f"the channels differ by {_small(d)}")
-            verdict = "may-matter" if abs(d) > _t("level_jnd_db") else verdict
+            verdict = "notable" if abs(d) > _t("level_jnd_db") else verdict
     lo = lookup(M, "linearity.lowest_level_within_0p5_db")
     if lo is not None:
         ev.append(_ev("linearity.lowest_level_within_0p5_db", "lowest level reproduced within 0.5 dB", f"{lo:.0f} dBFS"))
@@ -346,7 +404,7 @@ def _limits(M):
     n = len(names)
     text = (f"At the reference floor in {n} figure{'s' if n > 1 else ''} ({_join(names)}): "
             f"{'they are' if n > 1 else 'it is'} within {f['margin_db']:.0f} dB of the tool's own limit, so "
-            f"{'they show' if n > 1 else 'it shows'} the tool's limit, not the device's. The device is at least this good.")
+            f"{'they show' if n > 1 else 'it shows'} the tool's limit, not the device's. The tool cannot show more.")
     ev.append(_ev("reference_floor.margin_db", "margin", f"{f['margin_db']:.0f} dB"))
     ev.append(_ev("reference_floor.margin_db", "figures within the margin", str(n)))
     return _c("limits", "at-floor", text, ev, ["floor_margin_db"])
@@ -384,9 +442,9 @@ def _filter(M):
     where = f", near its {_khz(f3)} cut-off" if f3 else ""
     if kind == "linear phase":
         text = (f"{kind.capitalize()} filter{flat}. It rings for {pre:.2f} ms before and {post:.2f} ms after a "
-                f"transient{where}.{rej} Whether ringing before a transient is audible is contested: there is no "
-                "consensus, so listen for yourself.")
-        return _c("filter", "unsettled", text, ev, ["pre_ringing"])
+                f"transient{where}.{rej} The literature does not agree on a limit for this ringing, so no "
+                "verdict is given.")
+        return _c("filter", "no-threshold", text, ev, ["pre_ringing"])
     gd = M.get("group_delay_us")
     late = ""
     th = ["pre_ringing"]
@@ -394,12 +452,12 @@ def _filter(M):
         d = abs(gd["at_20k"] - gd["at_1k"]) / 1000
         ev.append(_ev("group_delay_us.at_20k", "delay of 20 kHz against 1 kHz", f"{d:.2f} ms"))
         late = (f" It delays 20 kHz by {d:.2f} ms against 1 kHz, "
-                f"{'below' if d < _t('group_delay_ms') else 'above'} the roughly {_t('group_delay_ms'):.0f} ms that is audible.")
+                f"{'below' if d < _t('group_delay_ms') else 'above'} the {_t('group_delay_ms'):.0f} ms reference line (docs/conclusions.md).")
         th.append("group_delay_ms")
     text = (f"{kind.capitalize()} filter{flat}. It rings for {pre:.2f} ms before and {post:.2f} ms after a "
-            f"transient{where}.{late}{rej} Whether listeners prefer this to a linear-phase filter is contested: "
-            "there is no consensus, so listen for yourself.")
-    return _c("filter", "unsettled", text, ev, th)
+            f"transient{where}.{late}{rej} The literature does not agree on a limit for this ringing, so no "
+            "verdict is given.")
+    return _c("filter", "no-threshold", text, ev, th)
 
 
 def ultrasonic_level(M):
@@ -434,10 +492,9 @@ def _ultrasonic(M):
     val = f"{lvl:.0f} dBFS"
     ev = [_ev(p, f"noise from {b_lo / 1000:g} to {b_hi / 1000:g} kHz", f"{v:.0f} dBFS") for b_lo, b_hi, v, p in bands]
     ev.append(_ev(paths[0], f"sum from {lo / 1000:g} to {hi / 1000:g} kHz", val))
-    text = (f"Ultrasonic noise: {val} between {lo / 1000:g} and {hi / 1000:g} kHz. Noise up there is normal for DSD "
-            "and is not heard as such. There is no agreed limit; it can matter for amplifiers and tweeters that "
-            "are sensitive to ultrasonics.")
-    return _c("ultrasonic", "unsettled", text, ev, ["ultrasonic"])
+    text = (f"Ultrasonic noise: {val} between {lo / 1000:g} and {hi / 1000:g} kHz. Noise shaping puts noise there by design. "
+            "There is no agreed limit, so no verdict is given.")
+    return _c("ultrasonic", "no-threshold", text, ev, ["ultrasonic"])
 
 
 def _stability(M):
@@ -450,8 +507,8 @@ def _stability(M):
     ev = [_ev(f"stability.levels.{k}.saturated", f"saturated at {k}", "yes" if v["saturated"] else "no") for k, v in s.items()]
     ev.append(_ev("stability.hold_s", "length of each hold", f"{hold:.0f} s"))
     if bad:
-        return _c("stability", "may-matter", f"Unstable: the modulator saturated at {_join(bad)} during a {hold:.0f} s "
-                  "hold. Loud passages may distort.", ev)
+        return _c("stability", "notable", f"Unstable: the modulator saturated at {_join(bad)} during a {hold:.0f} s "
+                  "hold.", ev)
     k0 = max(s, key=lambda k: abs(s[k]["thdn_drift_db"]))
     ev.append(_ev(f"stability.levels.{k0}.thdn_drift_db", "largest drift of THD+N during a hold", _small(drift)))
     text = (f"Stable: the modulator did not saturate in {hold:.0f} s holds at {_join(list(s))}, and its "
@@ -471,7 +528,7 @@ def _stopband(M):
         ev.append(_ev("filter_summary.stopband_tested_hz", "tones tested", f"{rng[0] / 1000:.1f} to {rng[1] / 1000:.1f} kHz"))
     which = f"tones from {rng[0] / 1000:.1f} to {rng[1] / 1000:.1f} kHz" if rng else "the tones tested"
     text = (f"Image rejection: {which} come back as images at least {-sb:.0f} dB below the tone. The figure "
-            "includes the device's own noise, so it is an upper bound on the images and the filter is at least this good.")
+            "includes the device's own noise, so it is an upper bound on the images.")
     return _c("stopband", "fact", text, ev)
 
 
@@ -545,6 +602,50 @@ def device_conclusions(M, device=None):
 
 _RANK = {"same": 0, "technical": 1, "material": 2}
 
+#: The tolerance sentence every comparison carries until a repeatability interval is measured.
+NO_INTERVAL = "No repeatability interval has been measured yet, so a difference is reported, not ranked."
+
+
+def conditions(M):
+    """What a figure was measured under: the DSD rate, and for a converter the output rate and format.
+
+    Two devices that differ here are not like-for-like: the output rate sets the noise bandwidth and the
+    floor, and the word length can set a floor of its own.
+    """
+    c = {"class": M.get("device_class", "A"), "dsd_rate": M.get("dsd_rate")}
+    fmt = M.get("output_format")
+    if c["class"] == "A" and fmt:
+        # every floating-point format is one format here (its rounding is far below the reference floor); integers differ by width
+        c.update(out_rate=fmt.get("rate"), kind=fmt.get("kind"), bits=fmt.get("bits") if fmt.get("kind") == "int" else None)
+    return c
+
+
+def _rate_text(r):
+    return f"{r / 1000:g} kHz" if r else "an unknown rate"
+
+
+def condition_text(M):
+    """The conditions of one device as a short phrase: ``DSD64 in, 32-bit float out at 352.8 kHz``."""
+    c = conditions(M)
+    base = f"DSD{int(c['dsd_rate']) // 44100}" if c.get("dsd_rate") else "DSD"
+    if "out_rate" in c:
+        word = f"{c['bits']}-bit integer" if c["kind"] == "int" else "floating-point"
+        return f"{base} in, {word} out at {_rate_text(c['out_rate'])}"
+    return f"{base} out"
+
+
+def like_for_like(entries):
+    """``(True, "")`` when every device of a class was measured under the same conditions, else ``(False, reason)``.
+
+    ``entries`` is a list of ``(name, metrics)``. Only devices of the same class are compared.
+    """
+    for k in sorted({conditions(M)["class"] for _, M in entries}):
+        group = [(n, M) for n, M in entries if conditions(M)["class"] == k]
+        base = conditions(group[0][1])
+        if any(conditions(M) != base for _, M in group[1:]):
+            return False, _join([f"{n}: {condition_text(M)}" for n, M in group])
+    return True, ""
+
 
 def _pair_margins(a, b):
     """Compare the overall-verdict figures of two devices: [(class, path, label, margin_a, margin_b)]."""
@@ -557,7 +658,7 @@ def _pair_margins(a, b):
         (lab, va, fa), (_, vb, fb) = ma[p], mb[p]
         if (fa and fb) or abs(va - vb) < _t("same_db"):
             cls = "same"
-        elif min(va, vb) >= _t("cd_floor_db"):
+        elif min(va, vb) >= _t("dither16_db"):
             cls = "technical"
         else:
             cls = "material"
@@ -575,24 +676,23 @@ def _cmp_distortion(na, a, nb, b):
     worst = max(rows, key=lambda r: (_RANK[r[0]], abs(r[3] - r[4])))
     cls, _, lab, va, vb = worst
     if cls == "same":
-        return cls, _c("cmp-distortion", "indistinguishable",
+        return cls, _c("cmp-distortion", "same",
                        f"Distortion and noise: no difference that can be ranked. Every figure is either at the reference "
-                       f"floor for both or within {_t('same_db'):.0f} dB.", ev, ["same_db", "floor_margin_db"])
+                       f"floor for both or within {_t('same_db'):.0f} dB (a convention).", ev, ["same_db", "floor_margin_db"])
     (lo_n, lo), (hi_n, hi) = sorted(((na, va), (nb, vb)), key=lambda x: x[1])
     d = f"{math.floor(hi - lo + 1e-9):.0f} dB"
     ev.append(_ev(worst[1], f"difference in {lab}", d))
     if cls == "technical":
-        both = min(lo, hi) >= _t("hearing_range_db")
-        why = (f"both are beyond the {_t('hearing_range_db'):.0f} dB range of hearing" if both else
-               f"both are quieter than the noise of a CD ({_t('cd_floor_db'):.0f} dB on this scale)")
-        text = (f"Distortion and noise: {hi_n} is {d} better than {lo_n} in {lab} ({_down(hi)} against {_down(lo)} below a "
-                f"reference-level tone), but {why}. The difference is technical, not audible"
-                f"{'' if both else ' in normal listening'}.")
-        return cls, _c("cmp-distortion", "technical", text, ev, ["hearing_range_db" if both else "cd_floor_db", "same_db"])
-    text = (f"Distortion and noise: {lo_n} is only {_down(lo)} below a reference-level tone in {lab}, above the noise "
-            f"of a CD ({_t('cd_floor_db'):.0f} dB on this scale), where it may be audible; {hi_n} is at {_down(hi)}. "
-            "This difference may matter.")
-    return cls, _c("cmp-distortion", "may-matter", text, ev, ["cd_floor_db", "distortion_music"])
+        both = min(lo, hi) >= _t("range_120_db")
+        why = (f"both are at least {_t('range_120_db'):.0f} dB below it" if both else
+               f"both are below the {_t('dither16_db'):.0f} dB noise level of dithered 16-bit on this scale")
+        text = (f"Distortion and noise: in {lab}, {hi_n} reads {_down(hi)} and {lo_n} {_down(lo)} below a "
+                f"reference-level tone, a difference of {d}; {why}. {NO_INTERVAL}")
+        return cls, _c("cmp-distortion", "difference-low", text, ev, ["range_120_db" if both else "dither16_db", "same_db"])
+    text = (f"Distortion and noise: {lo_n} is {_down(lo)} below a reference-level tone in {lab}, less than the "
+            f"{_t('dither16_db'):.0f} dB noise level of dithered 16-bit on this scale; {hi_n} is at {_down(hi)}. "
+            f"{NO_INTERVAL}")
+    return cls, _c("cmp-distortion", "notable", text, ev, ["dither16_db", "distortion_music", "same_db"])
 
 
 def _cmp_response(na, a, nb, b):
@@ -610,15 +710,14 @@ def _cmp_response(na, a, nb, b):
           _ev(p, f"response at {f} against 1 kHz", f"{fb['at_hz'][k]:+.2f} dB", nb),
           _ev(p, "largest difference in response, 20 Hz to 20 kHz", _within(d) if d <= _t("flat_db") else _small(d))]
     if d <= _t("flat_db"):
-        return "same", _c("cmp-response", "indistinguishable", f"Frequency response: the same within {_within(d)} from "
+        return "same", _c("cmp-response", "same", f"Frequency response: the same within {_within(d)} from "
                           "20 Hz to 20 kHz.", ev, ["flat_db"])
     if d <= _t("level_jnd_db"):
-        return "technical", _c("cmp-response", "technical", f"Frequency response: they differ by up to {_small(d)} (at {f}), "
-                               f"under the {_t('level_jnd_db'):.1f} dB step listeners detect. Unlikely to be heard.", ev,
+        return "technical", _c("cmp-response", "difference-low", f"Frequency response: they differ by up to {_small(d)} (at {f}), "
+                               f"under the {_t('level_jnd_db'):.1f} dB level step used as a reference line here.", ev,
                                ["flat_db", "level_jnd_db"])
-    return "material", _c("cmp-response", "may-matter", f"Frequency response: they differ by up to {_small(d)} (at {f}), more "
-                          f"than the {_t('level_jnd_db'):.1f} dB step listeners detect. This may be heard as a difference "
-                          "in tone.", ev, ["level_jnd_db"])
+    return "material", _c("cmp-response", "notable", f"Frequency response: they differ by up to {_small(d)} (at {f}), more "
+                          f"than the {_t('level_jnd_db'):.1f} dB level step used as a reference line here.", ev, ["level_jnd_db"])
 
 
 def _cmp_level(na, a, nb, b):
@@ -630,11 +729,10 @@ def _cmp_level(na, a, nb, b):
           _ev("gain_error_db", "gain error at 0 dB SACD", f"{gb:+.2f} dB", nb),
           _ev("gain_error_db", "difference in output level", _within(d) if d <= _t("flat_db") else _small(d))]
     if d <= _t("flat_db"):
-        return "same", _c("cmp-level", "indistinguishable", f"Level: the same within {_within(d)}, so they can be compared "
-                          "by ear without matching levels.", ev, ["flat_db"])
+        return "same", _c("cmp-level", "same", f"Level: the same within {_within(d)}.", ev, ["flat_db"])
     loud = na if ga > gb else nb
-    return "material", _c("cmp-level", "may-matter", f"Level: {loud} plays {_small(d)} louder. Match the levels before "
-                          "comparing by ear, or the level difference is what you will hear.", ev, ["flat_db", "level_jnd_db"])
+    return "material", _c("cmp-level", "notable", f"Level: {loud} reads {_small(d)} higher in output level. Match the "
+                          "levels before any listening comparison.", ev, ["flat_db", "level_jnd_db"])
 
 
 def _cmp_filter(na, a, nb, b):
@@ -647,9 +745,9 @@ def _cmp_filter(na, a, nb, b):
     if ia["filter_type"] == ib["filter_type"] and abs(ia["pre_ringing_ms"] - ib["pre_ringing_ms"]) < 0.05:
         return "same", None
     text = (f"Filters: {na} is {ia['filter_type']} and rings {ia['pre_ringing_ms']:.2f} ms before a transient; {nb} is "
-            f"{ib['filter_type']} and rings {ib['pre_ringing_ms']:.2f} ms. Whether that is audible is contested: there "
-            "is no consensus, so listen for yourself.")
-    return "unsettled", _c("cmp-filter", "unsettled", text, ev, ["pre_ringing"])
+            f"{ib['filter_type']} and rings {ib['pre_ringing_ms']:.2f} ms. The literature does not agree on a limit for this "
+            "ringing, so no verdict is given.")
+    return "unsettled", _c("cmp-filter", "no-threshold", text, ev, ["pre_ringing"])
 
 
 def _cmp_ultrasonic(na, a, nb, b):
@@ -662,32 +760,58 @@ def _cmp_ultrasonic(na, a, nb, b):
     ev = [_ev(ua[3][0], f"noise, {band}", f"{ua[0]:.0f} dBFS", na), _ev(ub[3][0], f"noise, {band}", f"{ub[0]:.0f} dBFS", nb)]
     (lo_n, lo), (hi_n, hi) = sorted(((na, ua[0]), (nb, ub[0])), key=lambda x: x[1])
     text = (f"Ultrasonic noise: {hi_n} passes {hi:.0f} dBFS and {lo_n} {lo:.0f} dBFS between {band.replace(' to ', ' and ')}. "
-            "It is not heard as such and there is no agreed limit; the lower figure is kinder to amplifiers and "
-            "tweeters that are sensitive to ultrasonics.")
-    return "unsettled", _c("cmp-ultrasonic", "unsettled", text, ev, ["ultrasonic"])
+            "There is no agreed limit, so no verdict is given.")
+    return "unsettled", _c("cmp-ultrasonic", "no-threshold", text, ev, ["ultrasonic"])
+
+
+def _format_head(limited):
+    ev = [e for n, f in limited for e in (_ev("output_format.bits", "word length of the output file", f"{f['bits']} bits", n),
+                                          _ev("output_format.rate", "output rate", f"{f['rate'] / 1000:g} kHz", n),
+                                          _ev("output_format.quantisation_sinad_db", f"SINAD that {f['bits']}-bit plain rounding allows", f"{f['quantisation_sinad_db']:.1f} dB", n),
+                                          _ev("output_format.quantisation_sinad_dithered_db", f"SINAD that {f['bits']}-bit rounding with TPDF dither allows", f"{f['quantisation_sinad_dithered_db']:.1f} dB", n))]
+    who = _join([f"{n} wrote {format_text(f)}" for n, f in limited])
+    return _c("cmp-format", "format-limited", f"Distortion and noise were not compared: {who}. "
+              "Ask the tool for floating-point output and measure again.", ev)
 
 
 def _pair(na, a, nb, b, suffix=""):
-    found = [fn(na, a, nb, b) for fn in (_cmp_distortion, _cmp_response, _cmp_level, _cmp_filter, _cmp_ultrasonic)]
-    out = [c for _, c in found if c]
-    classes = [cls for cls, c in found if c]
-    if not out:
-        return []
-    ev = [e for c in out for e in c["evidence"]]
-    names = f"{na} and {nb}"
-    where = [c["text"].split(":")[0].lower() for (cls, c) in found if c and cls == "material"]
-    if "material" in classes:
-        head = _c("cmp-overall", "may-matter", f"{names} differ where it may matter: in {_join(where)}. See below. "
-                  "This names the difference; it is not a ranking.", ev)
-    elif "technical" in classes:
-        head = _c("cmp-overall", "technical", f"{names} measure differently, but no difference reaches the audibility "
-                  "thresholds used here. On the tests concluded here, a difference in sound is not expected.", ev)
+    same_conditions, _ = like_for_like([(na, a), (nb, b)])
+    limited = [(n, format_limit(M)) for n, M in ((na, a), (nb, b)) if format_limit(M)]
+    if not same_conditions:  # a different output rate or format: the distortion and noise figures would compare settings
+        found = [fn(na, a, nb, b) for fn in (_cmp_response, _cmp_level, _cmp_filter)]
+        ev = [_ev("output_format.rate", "output rate and format", condition_text(M), n) for n, M in ((na, a), (nb, b))]
+        head = _c("cmp-conditions", "not-like-for-like",
+                  f"Not like-for-like: {na} was measured as {condition_text(a)} and {nb} as {condition_text(b)}. The output rate "
+                  "sets the noise bandwidth and the floor, and the word length can set a floor of its own, so distortion and "
+                  "noise were not compared. Measure both at the same output rate and format.", ev)
+        out = [head] + [c for _, c in found if c]
+        if limited:
+            out.insert(1, _format_head(limited))
+    elif limited:  # a word length that caps the figures: the distortion rows would compare file formats
+        found = [fn(na, a, nb, b) for fn in (_cmp_response, _cmp_level, _cmp_filter, _cmp_ultrasonic)]
+        out = [_format_head(limited)] + [c for _, c in found if c]
     else:
-        head = _c("cmp-overall", "indistinguishable", f"{names} are indistinguishable by measurement on the tests "
-                  "concluded here: every difference is below the reference floor or the thresholds.", ev)
-    if "unsettled" in classes:
-        head["text"] += " One difference has no agreed verdict (see below)."
-    out = [head] + out
+        found = [fn(na, a, nb, b) for fn in (_cmp_distortion, _cmp_response, _cmp_level, _cmp_filter, _cmp_ultrasonic)]
+        out = [c for _, c in found if c]
+        classes = [cls for cls, c in found if c]
+        if not out:
+            return []
+        ev = [e for c in out for e in c["evidence"]]
+        names = f"{na} and {nb}"
+        where = [c["text"].split(":")[0].lower() for (cls, c) in found if c and cls == "material"]
+        if "material" in classes:
+            head = _c("cmp-overall", "notable", f"{names} differ by more than the tolerance used here in {_join(where)}. See below. "
+                      f"This names the difference; it is not a ranking. {NO_INTERVAL}", ev)
+        elif "technical" in classes:
+            head = _c("cmp-overall", "difference-low", f"{names} measure differently on the tests concluded here, but no difference "
+                      f"reaches the thresholds used here. This describes the measurements and ranks nothing. {NO_INTERVAL}", ev)
+        else:
+            head = _c("cmp-overall", "same", f"{names} measure the same in the audio band on the tests concluded here: every "
+                      f"difference is below the reference floor or the {_t('same_db'):.0f} dB tolerance, which is a convention "
+                      "and not a measured repeatability.", ev, ["same_db"])
+        if "unsettled" in classes:
+            head["text"] += " One difference has no agreed threshold (see below)."
+        out = [head] + out
     for c in out:
         c["id"] += suffix
     return out
@@ -708,7 +832,7 @@ def comparison_conclusions(entries):
             ev = [_ev("tone_0dbsacd.sinad_db", "SINAD", f"{v:.1f} dB", n) for n, v in s]
             ev.append(_ev("tone_0dbsacd.sinad_db", "spread of SINAD", _small(d)))
             agree = d < _t("same_db")
-            out.append(_c("floor-agreement", "fact" if agree else "may-matter",
+            out.append(_c("floor-agreement", "fact" if agree else "notable",
                           f"The parts of the chain {'agree' if agree else 'do not agree'}: SINAD is "
                           f"{_join([f'{v:.1f} dB for {n}' for n, v in s])}, a spread of {_small(d)}."
                           + ("" if agree else " They should read the same; treat this run with care."), ev, ["same_db"]))
@@ -745,9 +869,79 @@ def comparison_conclusions(entries):
 
 SCOPE = ("Conclusions cover the synthetic test signals and the software path measured here. They are not a listening "
          "test and say nothing about a DAC, an amplifier or a recording.")
-DOC_URL = "https://github.com/aclater/dsd-measure/blob/main/docs/conclusions.md"
+DOC_URL = "https://github.com/dsd-toolbox/dsd-measure/blob/main/docs/conclusions.md"
 
 
 def numbers(text):
     """The numbers in a sentence, as strings (used by the tests to check that each one is backed by evidence)."""
-    return re.findall(r"(?<![\w.])-?\d+(?:\.\d+)?", text)
+    return re.findall(r"(?<![\w.])-?\d+(?:\.\d+)?(?!\d|\.\d|-bit)", text)
+
+
+# ----------------------------------------------------------------------------- the one-sentence result
+
+#: Measured but not concluded, named in the headline because converters often differ most there.
+_HEADLINE_PENDING = ("filter and ringing", "ultrasonic noise")
+
+
+def _not_judged(Ms):
+    """" Filters and ultrasonic noise are not judged in this version." when that is so for any of ``Ms``."""
+    names = []
+    for M in Ms:
+        p = _pending(M)
+        names += [e["label"] for e in (p["evidence"] if p else []) if e["label"] in _HEADLINE_PENDING]
+    names = [n for n in _HEADLINE_PENDING if n in names]
+    return f" Not judged in this version: {_join(names)}." if names else ""
+
+
+def device_headline(M, device=None, name=None):
+    """One sentence that starts "Result:" for a single device's report."""
+    who = name or (device or {}).get("name") or "this device"
+    if is_reference(device):
+        f = M.get("reference_floor")
+        sinad = f"SINAD {f['chain']['sinad_db']:.1f} dB, " if f else ""
+        return (f"Result: this is the measurement floor of the built-in reference chain ({sinad}the highest figure the tool can show), "
+                "not a result for a product.")
+    fmt = format_limit(M)
+    if fmt:
+        return (f"Result: not judged. {who} wrote {format_text(fmt)}, "
+                "so the figures describe the file format, not the converter; ask the tool for floating-point output and measure again.")
+    ms = margins(M)
+    if not ms:
+        return f"Result: {who} was measured, but no figure here is validated for a verdict; see the table."
+    path, label, worst, at_floor = min(ms, key=lambda m: m[2])
+    v, w = tier(worst), _down(worst)
+    least = ", at the tool's own floor, so the tool cannot show more" if at_floor else ""
+    cd, rng = f"{_t('dither16_db'):.0f} dB", f"{_t('range_120_db'):.0f} dB"
+    where = {"margin-120": f"every concluded figure is at least {rng} down",
+             "margin-87": f"every concluded figure is at least {cd} down, the noise level of dithered 16-bit on this scale",
+             "margin-low": f"less than {cd} down, the noise level of dithered 16-bit on this scale"}[v]
+    head = (f"Result: {who} measures {w} below a reference-level tone in its weakest figure in the audio band, {label}{least}; "
+            f"{where}.")
+    return head + _not_judged([M])
+
+
+def comparison_headline(entries, conclusions):
+    """One sentence that starts "Result:" for a comparison; ``entries`` as for ``comparison_conclusions``."""
+    names = [n for n, _, _ in entries]
+    if entries and all(is_reference(d) for _, _, d in entries):
+        return ("Result: every device here is the built-in reference chain, so this is the measurement floor of the tool, "
+                "not a result for a product.")
+    heads = [c for c in conclusions if c["id"].startswith(("cmp-overall", "cmp-format", "cmp-conditions"))]
+    if not heads:
+        return f"Result: {_join(names)} were measured side by side; see the table."
+    unlike = [c for c in heads if c["verdict"] == "not-like-for-like"]
+    if unlike:
+        return ("Result: not like-for-like. " + unlike[0]["text"].split(": ", 1)[1].split(" Measure both")[0]
+                + " Figures are listed but not compared.")
+    fmt = [c for c in heads if c["verdict"] == "format-limited"]
+    if fmt:
+        return ("Result: not compared in distortion and noise. " + fmt[0]["text"].split(": ", 1)[1])
+    rank = {"same": 0, "difference-low": 1, "notable": 2}
+    worst = max(heads, key=lambda c: rank[c["verdict"]])
+    tail = _not_judged([M for _, M, _ in entries]).replace("Not judged in this version", "Not compared in this version")
+    if worst["verdict"] == "same":
+        return f"Result: in the audio band, {_join(names)} measure the same within the tolerance used here.{tail}"
+    if worst["verdict"] == "difference-low":
+        return (f"Result: {_join(names)} measure differently, but no difference reaches the thresholds used here; "
+                f"nothing is ranked.{tail}")
+    return "Result: " + worst["text"].split(" See below.")[0].rstrip(".") + "; nothing is ranked." + tail

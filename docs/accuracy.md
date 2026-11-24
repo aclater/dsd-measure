@@ -40,10 +40,10 @@ Not covered by this validation: the peak-level (+3.1 dB SACD) SINAD of a class A
 
 ## Method
 
-Four independent checks, from the strictest to the broadest.
+Four separate checks, all made by the authors, from the strictest to the broadest.
 
 1. **Known answers.** Each analyser is run on a signal built so that its answer is a formula, not a measurement: a sine with a 3rd harmonic at exactly -100 dB and white noise of known power, noise shaped as 1/f or 6 and 12 dB per octave built bin by bin, a polynomial nonlinearity with analytic IMD products, a Butterworth filter with analytic magnitude and group delay, a three-tap echo with an analytic ripple, a 2nd-order system with an analytic overshoot, blocks of noise just inside and just outside the band edges, 16 and 24-bit TPDF-dithered silence, and float32 storage. The tolerance is stated per row (the tightest is 0.002 dB for levels, 0.1 dB for distortion and noise down to -160 dB; noise that is a random sample is checked to the scatter of one record, see [limits](#known-limits)).
-2. **A second analyser.** `tests/refanalyser.py` is a deliberately separate implementation in plain numpy. It shares no code with `dsd_measure.analyse` and uses different methods: a least-squares sine fit in the time domain (IEEE 1057) for levels, harmonics and intermodulation products; the fit residual, band-limited with a Kaiser window and an exact rectangular band, for THD+N; a second THD+N from a time-domain IIR notch cascade run forwards and backwards (the AES17 method); A-weighting from the IEC 61672-1 poles and zeros with the standard's own constants; Welch noise with a Hann window; group delay as the slope of the phase. The two must agree within the stated tolerance on every synthetic signal and on the reference chain's real output.
+2. **A second analyser.** `tests/refanalyser.py` is a deliberately separate implementation in plain numpy. It shares no code with `dsd_measure.analyse` and uses different methods: a least-squares sine fit in the time domain (IEEE 1057) for levels, harmonics and intermodulation products; the fit residual, band-limited with a Kaiser window and an exact rectangular band, for THD+N; a second THD+N from a time-domain IIR notch cascade run forwards and backwards (a notch that is not the AES17 one: the standard's notch has a Q of 1.2 to 3, see [methodology limits](methodology-limits.md#what-follows-aes17)); A-weighting from the IEC 61672-1 poles and zeros with the standard's own constants; Welch noise with a Hann window; group delay as the slope of the phase. The two must agree within the stated tolerance on every synthetic signal and on the reference chain's real output.
 3. **Other tools** run on the same files: SoX 14.4.2 (resampling, FIR band-limit and band-reject, `stats`) and ffmpeg 7.1 (`astats`, and its DSD decoder), each from a pinned container. REW cannot be used, see [other tools](#other-tools).
 4. **Published results.** The SoX-DSD test conditions of Archimago's 2021-10 and 2022-06 posts are run with the pinned SoX-DSD, and the figures he states in text are compared with ours.
 
@@ -109,7 +109,7 @@ Things this table does not say in one line:
 
 ## The reference chain, read by three methods
 
-The reference chain's floor (DSD64, 1 kHz at 0 dB SACD) is the number everything else is judged against, so it was read independently, on the real output of the reference modulator and decoder (352.8 kHz float64, with the delta-sigma noise up to 141 kHz in the record):
+The reference chain's floor (DSD64, 1 kHz at 0 dB SACD) is the number everything else is judged against, so it was read by three methods, on the real output of the reference modulator and decoder (352.8 kHz float64, with the delta-sigma noise up to 141 kHz in the record):
 
 | Case | THD+N main | THD+N sine fit | THD+N notch | THD+N SoX | THD main | THD harmonic fit | A-weighted main | A-weighted fit |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -205,8 +205,8 @@ Against his stated figures:
 | Statement in the posts | Here |
 |---|---|
 | CLANS-8 at DSD64 reads about -116 dB THD+N through an ideal decode (2022-06) | 115.1 dB SINAD at -2.9 dBFS in with `-t 32 -n 32`, 119.5 dB at -0.1 dBFS with SoX's own trellis settings |
-| SDM-8 has lower noise than CLANS-8 (2022-06; "above 5th order SDM is sometimes better", 2021-10) | SDM-8 140.8 dB against CLANS-8 119.5 dB at the same input: 21 dB better, at every level run; at -60 dBFS 82.2 against 62.9 dB |
-| Higher orders give better noise and distortion below 20 kHz (2021-10) | SDM 4, 6, 8: 106.2, 128.0, 140.8 dB. CLANS 4, 6, 8: 104.6, 121.1, 119.5 dB: CLANS-8 is not better than CLANS-6 here |
+| SDM-8 has lower noise than CLANS-8 (2022-06; "above 5th order SDM is sometimes better", 2021-10) | SDM-8 140.8 dB against CLANS-8 119.5 dB at the same input: 21 dB higher, at every level run; at -60 dBFS 82.2 against 62.9 dB |
+| Higher orders give better noise and distortion below 20 kHz (2021-10) | SDM 4, 6, 8: 106.2, 128.0, 140.8 dB. CLANS 4, 6, 8: 104.6, 121.1, 119.5 dB: CLANS-8 does not read higher than CLANS-6 here |
 | Order 8 gives about 140 dB and order 5 about 120 dB in band (2022-06) | SDM-8 140.8 dB; the 5th order lies between the measured 4th and 6th (106 to 128 dB) |
 | DSD64 ultrasonic noise is highest, then DSD128, then DSD256 (2021-10) | 40-96 kHz integrated, CLANS at -2.9 dBFS: -35.4, -55.1, -85.4 dBFS for DSD64, 128, 256 |
 | DSD128 pushes the noise an octave higher, peaking around 120 kHz (2021-10) | SDM-8 DSD128: highest third octave at 143 kHz (his figure is through a DAC's filter) |
@@ -219,8 +219,8 @@ His DAC figures (THD+N around -110 dB, multitone range 112 to 120 dB, a 6 dB lev
 
 Anyone comparing with other published figures needs these.
 
-- **SINAD** here is the 1 kHz tone over everything else in 20 Hz to 20 kHz, unweighted (the ASR convention), at the level in the label (0 dB SACD, -6.02 dBFS, unless it says otherwise). It is THD+N with the sign flipped. When the floor is noise, SINAD falls one dB for each dB the tone is lower, so the same device reads 6.02 dB higher at 0 dBFS than at -6.02 dBFS and 54 dB lower at -60 dBFS; a figure without its level is not comparable. When the floor is distortion that scales with the level the figure changes less.
-- **Noise dBFS** is referred to the rms of a full-scale sine (AES17, ASR, RMAA), so a noise whose mean square is 1e-10 reads -97.0 dBFS. Before 0.1.1 the toolkit quoted the mean square (3.01 dB lower).
+- **SINAD** here is the 1 kHz tone over everything else in 20 Hz to 20 kHz, unweighted, 20 Hz to 20 kHz (not comparable with an analogue full-scale reading), at the level in the label (0 dB SACD, -6.02 dBFS, unless it says otherwise). It is THD+N with the sign flipped. When the floor is noise, SINAD falls one dB for each dB the tone is lower, so the same device reads 6.02 dB higher at 0 dBFS than at -6.02 dBFS and 54 dB lower at -60 dBFS; a figure without its level is not comparable. When the floor is distortion that scales with the level the figure changes less.
+- **Noise dBFS** is referred to the rms of a full-scale sine (the AES17 convention, also used by ASR and RMAA), so a noise whose mean square is 1e-10 reads -97.0 dBFS. Before 0.1.1 the toolkit quoted the mean square (3.01 dB lower).
 - **Dynamic range** is the -60 dB method referred to 0 dB SACD (-6.02 dBFS): a device reads 6.02 dB higher against digital full scale, which is what some published tables use.
 - **THD** covers harmonics 2 to 9 below 20 kHz (the 20 kHz band edge decides how many). **THD+N bandwidth** is 20 Hz to 20 kHz; the notch leaves out +-13.5 Hz round the tone.
 - **IMD CCIF** is referred to the power sum of the two tones; the IEC 60268-3 convention refers to the sum of the amplitudes and reads 3.01 dB lower (`imd_db_iec`). **IMD SMPTE** is the root-sum-square of the sidebands re the 7 kHz tone; the arithmetic-sum convention reads up to 6 dB higher with four sidebands (`imd_db_amplitude_sum`). Both include the noise in the 21-bin lobes.
@@ -230,7 +230,7 @@ Anyone comparing with other published figures needs these.
 ## Known limits
 
 - **Non-coherent tones.** The window's far sidelobes spread a tone's energy over the whole spectrum at about -160 dB (-161.6 dB at half a bin off, -171.8 dB at 0.1 bin) of the tone. A figure within 3 dB of that is limited by the window; the measurements use coherent tones wherever the output rate allows (44.1 kHz family), and a device that writes 48 kHz family rates is off the coherent grid.
-- **Near the carrier.** Energy within +-13.5 Hz of the tone is not counted (the notch). A converter with a skirt there reads better than a method that counts it: the reference chain has -133 dBFS in that range, 24 dB above its THD+N floor.
+- **Near the carrier.** Energy within +-13.5 Hz of the tone is not counted (the notch). A converter with a skirt there reads a higher SINAD than under a method that counts it: the reference chain has -133 dBFS in that range, 24 dB above its THD+N floor.
 - **THD below the noise.** THD counts the noise inside each harmonic's 21-bin lobe; a THD figure more than about 15 dB below THD+N is the noise in those lobes, not a harmonic. With noise equal to the harmonic a single record's THD is uncertain by about 0.3 dB for any method.
 - **Statistics.** One 2^18-point record gives THD+N to +-0.07 dB (1 sigma) for noise-only floors; noise over 20 Hz to 20 kHz with 8 averages to +-0.02 dB (2^18) or +-0.013 dB (2^20); noise density at 1 kHz only to +-0.3 dB (a few hundred bins). Multitone residuals are single-bin statistics.
 - **Band edges.** The 20 Hz edge is smeared by the window by about +-5 Hz: a noise block closer than 5 Hz to the edge is partly counted.
@@ -249,14 +249,14 @@ Analyser faults found and fixed (each with a regression test):
 - **THD below about 27 Hz.** The second-harmonic lobe overlapped the fundamental's, so the fundamental's skirt was counted as distortion: a 20 Hz tone with a -80 dB harmonic read -61 dB THD. THD+N was not affected, and the 20 Hz figure is not in a published report; fixed in `analyse.tone_metrics`.
 - **WAV float files** lacked the extended fmt chunk strict readers expect (SoX warned); fixed.
 
-Measurement faults from the independent review of 0.1.0, fixed in 0.1.1 (each with a regression test in `tests/test_review_regressions.py` and `tests/test_batch_011.py`; the example reference-chain report is regenerated):
+Measurement faults from the separate internal review of 0.1.0, fixed in 0.1.1 (each with a regression test in `tests/test_review_regressions.py` and `tests/test_batch_011.py`; the example reference-chain report is regenerated):
 
 | Finding | Before | After |
 |---|---|---|
 | Class B multitone used a rectangular window on a record full of ultrasonic noise (B1) | every modulator read 104 dB; the decoder column of the same chain 136 dB | class B decoded to 44.1 kHz first, and every class A record decimated to 44.1 kHz before the window: the reference decoder reads 150.7 dB at 44.1, 88.2, 176.4 and 352.8 kHz (it read 138, 109 and 106 dB at the last three, N1) |
 | Stopband taken from the noise of the impulse measurement (B2) | -81 dB for a filter that is -156 dB deep | from the alias tones, at most the stated level, with the tones named: tones start at the output rate minus 20 kHz (they started 2 kHz above Nyquist, so at 88.2 kHz the row read -9 dB from the filter's transition band and at 44.1 kHz -133 dB for a stopband of -155 dB or deeper, N2); the row says "upper bound", "or deeper" and the range |
 | Overload recovery's analysis filter had a fixed tap count (B4) | +-46 ms at 44.1 kHz: 47.5 ms against 10 ms for the same chain | sized in seconds: 7.6 ms and 10.0 ms |
-| The noise headline was the stimulus dither, 3.01 dB off the AES17 convention (B5) | -151.6 dBFS(A) for a chain below -160 | 32-bit dither and the sine-rms reference |
+| The noise headline was the stimulus dither, 3.01 dB off the dBFS-re-sine convention of AES17 (B5) | -151.6 dBFS(A) for a chain below -160 | 32-bit dither and the sine-rms reference |
 | "Ultrasonic peak" was the largest single bin at the band edge (B6) | -61 dBFS at 280 kHz, a bin power of unstated width | densities at 50, 100 and 200 kHz, band levels, the highest third octave, edge flagged |
 | Multitone at 48 kHz-family rates was not a whole period (B7) | 13 dB "range" for an ideal signal, silently | "not run: output rate is not on the 44.1 kHz grid" |
 | Spectrum plots showed a tone 7.2 dB low (S1) | -13.2 dBFS for a -6.02 dBFS tone | the tone at its level, bin width in the caption |
@@ -288,7 +288,7 @@ tools/reftool.sh build         # the pinned SoX and ffmpeg containers (rootless 
 scripts/validate.sh all --out validation   # everything on this page, about 20 minutes
 ```
 
-`validate.sh` writes `validation/validation.md` (the tables above) and `validation.json`; with no containers it skips the SoX, ffmpeg and published-condition parts and says so. The independent analyser is `tests/refanalyser.py`; the cases are in `tests/accuracy_cases.py`.
+`validate.sh` writes `validation/validation.md` (the tables above) and `validation.json`; with no containers it skips the SoX, ffmpeg and published-condition parts and says so. The separately written analyser is `tests/refanalyser.py`; the cases are in `tests/accuracy_cases.py`.
 
 ## See also
 
@@ -296,4 +296,4 @@ scripts/validate.sh all --out validation   # everything on this page, about 20 m
 - [Design](design.md)
 - [Reference tools](reference-tools.md)
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

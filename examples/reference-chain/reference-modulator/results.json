@@ -1,10 +1,11 @@
 {
+ "headline": "Result: this is the measurement floor of the built-in reference chain (SINAD 147.0 dB, the highest figure the tool can show), not a result for a product.",
  "conclusions": [
   {
    "id": "floor",
    "verdict": "floor",
    "label": "Measurement floor",
-   "text": "This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool: it is at least that good.",
+   "text": "This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool.",
    "metrics": [
     "reference_floor.chain.dr_a_db",
     "reference_floor.chain.sinad_db",
@@ -46,7 +47,7 @@
    "id": "response",
    "verdict": "fact",
    "label": "Finding",
-   "text": "Flat response: the level varies by less than 0.01 dB from 20 Hz to 20 kHz and is down by less than 0.01 dB at 20 kHz, too little to change the tone.",
+   "text": "Flat response: the level varies by less than 0.01 dB from 20 Hz to 20 kHz (read at the tones measured) and is down by less than 0.01 dB at 20 kHz.",
    "metrics": [
     "frequency_response.at_hz.20000",
     "frequency_response.ripple_pp_db"
@@ -69,9 +70,9 @@
   },
   {
    "id": "ultrasonic",
-   "verdict": "unsettled",
-   "label": "No consensus",
-   "text": "Ultrasonic noise: -35 dBFS between 20 and 96 kHz. Noise up there is normal for DSD and is not heard as such. There is no agreed limit; it can matter for amplifiers and tweeters that are sensitive to ultrasonics.",
+   "verdict": "no-threshold",
+   "label": "No agreed threshold",
+   "text": "Ultrasonic noise: -35 dBFS between 20 and 96 kHz. Noise shaping puts noise there by design. There is no agreed limit, so no verdict is given.",
    "metrics": [
     "ultrasonic.integrated_dbfs.20000-40000",
     "ultrasonic.integrated_dbfs.40000-96000"
@@ -234,6 +235,12 @@
    "thresholds": []
   }
  ],
+ "device_versions": {
+  "adapter": "reference",
+  "program": "dsd-measure built-in reference chain",
+  "version": "0.1.2",
+  "reference_chain": "2"
+ },
  "metrics": {
   "analysis_version": 2,
   "device_class": "B",
@@ -354,7 +361,7 @@
    "minus_1p0_db_hz": null,
    "minus_3p0_db_hz": null,
    "at_hz": {
-    "20": 1.7729616885731048e-07,
+    "20": 1.7729616708095364e-07,
     "1000": 0.0,
     "10000": -2.2692796388668057e-06,
     "15000": -1.5658759201033133e-06,
@@ -702,7 +709,7 @@
     "pre_ringing_ms": 1.5192743764172336,
     "post_ringing_ms": 1.4058956916099774,
     "pre_energy_fraction": 0.036874047673333736,
-    "symmetry": 0.9991188795510796,
+    "symmetry": 0.99911887955108,
     "floor_used_db": -60.0,
     "filter_type": "linear phase",
     "output_rate": 88200,

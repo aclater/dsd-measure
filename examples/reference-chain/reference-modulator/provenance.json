@@ -15,9 +15,9 @@
  "in_rate": 88200,
  "reference_chain": "2",
  "versions": {
-  "dsd_measure": "0.1.1",
+  "dsd_measure": "0.1.2",
   "reference_chain": "2",
-  "python": "3.14.10",
+  "python": "3.15.2",
   "numpy": "2.5.5",
   "scipy": "1.18.1",
   "matplotlib": "3.11.2"
@@ -243,21 +243,30 @@
  "command": "dsd-measure run examples/suites/ref.toml --profile full -o examples/reference-chain",
  "timing_s": {
   "reference_floor": 0.0,
-  "levels": 103.6,
-  "thdn_freq": 17.1,
-  "frequency_response": 61.0,
-  "impulse": 8.5,
-  "noise": 45.8,
-  "imd": 8.0,
-  "multitone": 30.0,
-  "tone_15k": 4.0,
-  "jtest": 26.3,
-  "polarity": 0.4,
-  "stability": 186.5,
-  "crosstalk": 39.8,
-  "imd_sweep": 51.9,
-  "overload": 2.5,
-  "rate_table": 225.6
+  "levels": 47.7,
+  "thdn_freq": 7.7,
+  "frequency_response": 27.6,
+  "impulse": 3.7,
+  "noise": 20.5,
+  "imd": 3.7,
+  "multitone": 13.6,
+  "tone_15k": 1.8,
+  "jtest": 12.3,
+  "polarity": 0.2,
+  "stability": 90.8,
+  "crosstalk": 17.5,
+  "imd_sweep": 23.4,
+  "overload": 1.1,
+  "rate_table": 97.5
+ },
+ "preflight": {
+  "checked": "built-in"
+ },
+ "device_versions": {
+  "adapter": "reference",
+  "program": "dsd-measure built-in reference chain",
+  "version": "0.1.2",
+  "reference_chain": "2"
  },
  "profile_settings": {
   "seg_s": 2.5,
@@ -293,7 +302,7 @@
   "gain_db": 0.0,
   "profile": "full",
   "date": "2026-11-24",
-  "generator": "dsd-measure 0.1.1, reference chain 2",
+  "generator": "dsd-measure 0.1.2, reference chain 2",
   "source_signal_sha256": {
    "tone_1k_0dbsacd.wav": "80d70bfdee8c9386f2f48ce778765c4f59433f62148bac1bef04447acb05fc5a",
    "tone_1k_peak.wav": "6428a12a2f4efaf6e9796e0d97f6589ded909024b3c4f69a4cf22a0ecfe85f64",
@@ -349,12 +358,18 @@
   },
   "suite": "reference chain",
   "versions": {
-   "dsd_measure": "0.1.1",
+   "dsd_measure": "0.1.2",
    "reference_chain": "2",
-   "python": "3.14.10",
+   "python": "3.15.2",
    "numpy": "2.5.5",
    "scipy": "1.18.1",
    "matplotlib": "3.11.2"
+  },
+  "device_versions": {
+   "adapter": "reference",
+   "program": "dsd-measure built-in reference chain",
+   "version": "0.1.2",
+   "reference_chain": "2"
   }
  }
 }

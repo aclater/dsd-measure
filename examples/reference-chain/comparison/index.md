@@ -1,27 +1,28 @@
 # Comparison report
 
+**Result: every device here is the built-in reference chain, so this is the measurement floor of the tool, not a result for a product.**
+
 ## Conclusions
 
-- Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool: it is at least that good.
+- Every device here is the built-in reference chain. This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool.
 - The parts of the chain agree: SINAD is 146.7 dB for reference decoder and 146.7 dB for reference modulator, a spread of 0.01 dB.
 - Not compared in this version: filter and ringing, polarity, multitone, J-Test, peak-level SINAD and modulator stability. These figures are not validated yet or not used by any rule, and converters often differ most in their filters and ultrasonic noise, so this comparison is not the whole picture.
 
-Conclusions cover the synthetic test signals and the software path measured here. They are not a listening test and say nothing about a DAC, an amplifier or a recording. [How the conclusions are drawn](https://github.com/aclater/dsd-measure/blob/main/docs/conclusions.md).
+Conclusions cover the synthetic test signals and the software path measured here. They are not a listening test and say nothing about a DAC, an amplifier or a recording. [How the conclusions are drawn](https://github.com/dsd-toolbox/dsd-measure/blob/main/docs/conclusions.md).
 
 ## What was measured
 
 - **Devices:** reference decoder; reference modulator. Every device was fed the identical signals.
 - **Source signals:** Synthetic and deterministic test signals made by the toolkit (tones, two-tone pairs, multitone, J-Test, impulses; no music), encoded to DSD by the built-in reference modulator.
-- **Reference chain:** reference modulator and decoder at DSD64: THD+N -147.0 dB, dynamic range (A) 152 dB. A device figure within 6 dB of it is marked as limited by the measurement.
-- **Profile and date:** full, 2026-11-24, dsd-measure 0.1.1, reference chain 2.
+- **Reference chain:** reference modulator and decoder at DSD64: THD+N -147.0 dB, dynamic range (A) 151.8 dB. A device figure within 6 dB of it is marked as limited by the measurement.
+- **Profile and date:** full, 2026-11-24, dsd-measure 0.1.2, reference chain 2.
 
-> Levels: dBFS is relative to PCM full scale. 0 dB SACD is the reference tone level, 50 % modulation, -6.02 dBFS; noise in dBFS is referred to the rms of a full-scale sine (AES17, ASR). Distortion and noise figures are in dB below the 1 kHz tone unless they say dBFS. Bandwidth 20 Hz to 20 kHz, unweighted unless marked A-weighted. SINAD is THD+N turned positive. Because the tone is 6 dB below full scale, a noise-limited device would read about 6 dB better at full scale; compare reports made at the same level.
+> Levels: dBFS is relative to PCM full scale. 0 dB SACD is the reference tone level, 50 % modulation, -6.02 dBFS; noise in dBFS is referred to the rms of a full-scale sine, as in AES17. Distortion and noise figures are in dB below the 1 kHz tone unless they say dBFS. Bandwidth 20 Hz to 20 kHz, unweighted unless marked A-weighted. SINAD is THD+N turned positive. Because the tone is 6 dB below full scale, a noise-limited device would read about 6 dB higher at full scale; compare reports made at the same level. These are not AES17 measurements: only the 20 kHz band edge and the dBFS convention follow it; the tone (1 kHz, not 997 Hz), the weighting (A, not CCIR-RMS), the notch, the level and the dither differ (docs/methodology-limits.md).
 
 | Metric | reference-decoder | reference-modulator |
 |---|---|---|
-| SINAD, 1 kHz at 0 dB SACD (-6.02 dBFS) | 146.7 dB (floor) | 146.7 dB |
-| THD+N, 1 kHz | -146.7 dB (under 0.0001 %) (floor) | -146.7 dB (under 0.0001 %) |
-| THD, 1 kHz | -163.5 dB (under 0.0001 %) (floor) | -163.5 dB (under 0.0001 %) |
+| SINAD, 1 kHz at 0 dB SACD (-6.02 dBFS) | 146.7 dB (THD+N -146.7 dB, under 0.0001 %) (floor) | 146.7 dB (THD+N -146.7 dB, under 0.0001 %) |
+| THD, 1 kHz (harmonics only) | -163.5 dB (under 0.0001 %) (floor) | -163.5 dB (under 0.0001 %) |
 | Dynamic range, A-weighted | 150.5 dB (floor) | 150.5 dB |
 | Noise 20 Hz-20 kHz, A-weighted | -162.4 dBFS (floor) | -162.5 dBFS |
 | SINAD at the peak level (+3.1 dB SACD, -2.9 dBFS) | 129.2 dB (reference modulator order 8, max gain 1.3: floor 129.2 dB) (floor) | 129.2 dB |
@@ -43,14 +44,15 @@ Conclusions cover the synthetic test signals and the software path measured here
 | Gain error at 0 dB SACD | +0.000 dB | +0.000 dB |
 | Polarity | normal | normal |
 | DC offset | -211 dBFS | -168 dBFS |
-| Reference floor (reference modulator + decoder, DSD64) | THD+N -147.0 dB, DR(A) 152 dB | not run |
+| Output format | 64-bit float, 44.1 kHz | not run |
+| Reference floor (reference modulator + decoder, DSD64) | THD+N -147.0 dB, DR(A) 151.8 dB | not run |
 | Ultrasonic density at 50 / 100 / 200 kHz | not run | -88 / -81 / -72 dBFS/Hz |
 | Ultrasonic noise, highest 1/3 octave | not run | -70 dBFS/Hz at 226 kHz (band edge) |
 | Integrated 20-40 / 40-96 kHz | not run | -79 / -35 dBFS |
 | Stable at +3.1 dB SACD peak | not run | yes |
 | DSD128 (1 kHz, 0 dB SACD) | not run | SINAD 176 dB, DR(A) 176 dB, ultrasonic -92 dBFS/Hz at 100 kHz |
 | DSD256 (1 kHz, 0 dB SACD) | not run | SINAD 178 dB, DR(A) 177 dB, ultrasonic -141 dBFS/Hz at 100 kHz |
-| Reference floor (reference decoder alone, DSD64) | not run | THD+N -280.9 dB, DR(A) 342 dB |
+| Reference floor (reference decoder alone, DSD64) | not run | THD+N -280.9 dB, DR(A) 342.1 dB |
 
 ## Notes
 

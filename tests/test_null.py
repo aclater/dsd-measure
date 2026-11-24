@@ -5,6 +5,8 @@ a 0.1 dB gain, a fractional delay, an inverted polarity) is recovered accurately
 decoder against itself at different rates behaves as documented.
 """
 
+import re
+
 import numpy as np
 import pytest
 
@@ -194,18 +196,19 @@ def test_bands_are_third_octaves_and_stop_below_the_analysis_limit():
 
 def test_verdict_words_do_not_call_a_shallow_null_audible():  # N11
     from dsd_measure.nulltest.verdict import TIERS, verdict
-    assert not any("potentially audible" in t or "different sounds" in t or "likely audible" in t for _, _, t in TIERS)
+    assert not any(re.search(r"audib|inaudib|hearing|potentially|likely", t) for _, _, t in TIERS if "heard" not in t)
+    assert not any("audib" in t for _, _, t in TIERS)
     ch = {"channel": "L", "null_depth_db": 27.0, "polarity_inverted": False, "gain_db": -0.10, "bands": []}
     v = verdict([ch])
-    assert "27 dB" in v["headline"] and "cannot say whether that is audible" in v["headline"]
+    assert "27 dB" in v["headline"] and "depth band 20 to 40 dB" in v["headline"]
     assert "fitted gain" in v["details"][0]
     ident = verdict([{**ch, "null_depth_db": 400.0}])
     assert "level matching (device B is 0.10 dB louder" in ident["headline"]  # a copy 0.1 dB louder is not plain "identical"
 
 
 def test_tiers():
-    assert tier(400)[0] == "identical" and tier(110)[0] == "far-below" and tier(45)[0] == "borderline"
-    assert tier(5)[0] == "audible"
+    assert tier(400)[0] == "identical" and tier(110)[0] == "d100" and tier(45)[0] == "d40"
+    assert tier(5)[0] == "d0"
 
 
 # ---- (c) the reference decoder at different rates, and the real end-to-end path
@@ -240,7 +243,7 @@ def test_reference_at_two_rates_matches_below_20k_and_differs_above(dsd_source, 
     assert any(b["low_hz"] == 20000.0 and b["ultrasonic"] for b in c["bands"])
     # above 20 kHz the 176.4 kHz decoder rolls off while the 352.8 kHz one does not: documented difference
     assert min(b["depth_db"] for b in c["bands"] if b["ultrasonic"]) < 40
-    assert run_["pairs"][0]["verdict"]["tier"] == "far-below"
+    assert run_["pairs"][0]["verdict"]["tier"] == "d100"
 
 
 def test_reference_against_itself_and_through_a_command(dsd_source, tmp_path):

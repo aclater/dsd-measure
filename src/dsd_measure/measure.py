@@ -14,6 +14,7 @@ from scipy import signal
 
 from . import analyse as an
 from . import decode as dec
+from . import outformat as of
 from . import signals as sg
 from .levels import PEAK_DBFS, REF_DBFS
 
@@ -159,16 +160,30 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
     M["device_class"] = adapter.klass
     M["dsd_rate"] = adapter.dsd_rate
 
+    prog = {"i": 0, "total": 0, "est_done": 0.0, "act_done": 0.0, "est": {}}
+
+    def _left(name):
+        """"about 1:10 left" from the planned times of the tests still to come, scaled by how the
+        tests so far compare with their plan; empty for the last test and for under 10 s."""
+        later = prog["order"][prog["i"]:]
+        est = sum(prog["est"].get(n, 0.0) for n in later)
+        # scale by how the finished tests compare with their plan, once enough of the plan has run to say
+        scale = min(max(prog["act_done"] / prog["est_done"], 0.5), 3.0) if prog["est_done"] >= 15 else 1.0
+        left = est * scale
+        return f", about {int(left) // 60}:{int(left) % 60:02d} left" if later and left >= 10 else ""
+
     def step(name, fn):
         if only and name not in only:
             return
         from .plan import TESTS, applies, label
+        prog["i"] += 1
+        tag = f"[{prog['i']:>{len(str(prog['total']))}}/{prog['total']}] "
         if name in TESTS and not applies(name, adapter.klass):
             res["not_run"][name] = f"class {TESTS[name]['klass']} only"
-            log(f"-> {adapter.name}: {name} ({label(name)}) ... skipped: {res['not_run'][name]}")
+            log(f"{tag}-> {adapter.name}: {name} ({label(name)}) ... skipped: {res['not_run'][name]}")
             return
         what = label(name) if name in TESTS else ""
-        log(f"-> {adapter.name}: {name}" + (f" ({what})" if what else "") + " ... ", end="")
+        log(f"{tag}-> {adapter.name}: {name}" + (f" ({what})" if what else "") + " ... ", end="")
         t0 = time.time()
         try:
             fn()
@@ -181,10 +196,12 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
             res["not_run"][name] = f"failed: {type(e).__name__}: {e}"
             res["errors"].append(name)
         res["timing_s"][name] = round(time.time() - t0, 1)
+        prog["est_done"] += prog["est"].get(name, 0.0)
+        prog["act_done"] += res["timing_s"][name]
         if name in res["not_run"]:
             log(f"skipped: {res['not_run'][name]}")
         else:
-            log(f"done in {res['timing_s'][name]:g} s")
+            log(f"done in {res['timing_s'][name]:g} s{_left(name)}")
 
     f_tone = sg.coherent_freq(1000, REF_FS, REF_NFFT)
 
@@ -657,6 +674,8 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
         out_rate = pfs
         if out_rate >= 352800:
             res["not_run"]["alias_tones"] = "output rate of 352.8 kHz or more: no test tone above its Nyquist frequency can be made"
+            M["stopband_status"] = {"measurable": False, "output_rate": float(out_rate),
+                                    "reason": f"at {out_rate / 1000:g} kHz output no test tone above the output's Nyquist frequency fits in the 352.8 kHz test signal"}
             return
         fin = 88200 if out_rate <= 44100 else 352800
         nyq = out_rate / 2
@@ -674,6 +693,7 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
         if not tones:
             res["not_run"]["alias_tones"] = (f"output rate {out_rate / 1000:g} kHz: the tones would start at {lo / 1000:g} kHz, "
                                              "above what the 352.8 kHz test signal can carry")
+            M["stopband_status"] = {"measurable": False, "output_rate": float(out_rate), "reason": res["not_run"]["alias_tones"]}
             return
         rows = []
         ref_rms = REF_DBFS - 3.0103
@@ -784,12 +804,21 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
             adapter.dsd_rate = base_rate
         M["rates"] = out
 
-    for name, fn in (("reference_floor", floor), ("levels", levels), ("thdn_freq", thdn_freq), ("frequency_response", fr), ("impulse", impulse), ("noise", noise),
-                     ("imd", imd), ("multitone", multitone), ("tone_15k", tone15), ("jtest", jtest),
-                     ("polarity", polarity), ("stability", stability), ("crosstalk", crosstalk),
-                     ("imd_sweep", imd_sweep), ("alias_tones", alias_tones), ("overload", overload),
-                     ("rate_table", rate_table)):
+    steps = (("reference_floor", floor), ("levels", levels), ("thdn_freq", thdn_freq), ("frequency_response", fr), ("impulse", impulse), ("noise", noise),
+             ("imd", imd), ("multitone", multitone), ("tone_15k", tone15), ("jtest", jtest),
+             ("polarity", polarity), ("stability", stability), ("crosstalk", crosstalk),
+             ("imd_sweep", imd_sweep), ("alias_tones", alias_tones), ("overload", overload),
+             ("rate_table", rate_table))
+    from .plan import SECONDS
+    prog["order"] = [n for n, _ in steps if not only or n in only]
+    prog["total"] = len(prog["order"])
+    prog["est"] = SECONDS.get(profile, {}).get(adapter.klass, {})
+    for name, fn in steps:
         step(name, fn)
+    fmt = getattr(adapter, "output_format", lambda: None)() if A else None
+    if fmt:
+        # the tone as the tool wrote it: measured gain error, undone by the gain the adapter applied afterwards
+        M["output_format"] = of.summary(fmt, float(M.get("gain_error_db", 0.0)) - float(getattr(adapter, "gain_db", 0.0)))
     res["reference_chain_ntf"] = ch.ntf
     if not A:
         # S5: for a modulator these figures are the reference decoder's, not the device's. Keep them

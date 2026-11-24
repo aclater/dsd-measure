@@ -22,7 +22,9 @@ import numpy as np
 from . import decode as _decode
 from . import encode as _encode
 from .dsf import read_dsf, write_dff, write_dsf
+from .errors import MissingTool, UserError
 from .levels import PEAK_PCT
+from .outformat import audio_format
 from .wavio import read_wav, write_wav
 
 
@@ -32,6 +34,41 @@ def sha256_file(path):
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def program_identity(command, version_command=None, timeout=20):
+    """Who a program is, for the provenance: ``{"program", "path", "sha256", "version"}``.
+
+    ``command`` is the program (or a command line whose first word is the program). The path is resolved the way a run
+    resolves it and the file at that path is hashed; the version is the first line the program prints for
+    ``--version`` (then ``-version``), or for ``version_command`` when one is given. A field that cannot be found is None:
+    a missing version is recorded, never guessed.
+    """
+    try:
+        words = shlex.split(str(command))
+    except ValueError:
+        words = str(command).split()
+    exe = words[0] if words else ""
+    rec = {"program": exe, "path": None, "sha256": None, "version": None}
+    found = shutil.which(exe) if exe and "/" not in exe else (exe if exe and os.path.isfile(exe) else None)
+    if found:
+        real = os.path.realpath(found)
+        rec["path"] = real
+        try:
+            rec["sha256"] = sha256_file(real)
+        except OSError:
+            pass
+    tries = [shlex.split(version_command)] if version_command else ([[found or exe, "--version"], [found or exe, "-version"]] if exe else [])
+    for cmd in tries:
+        try:
+            r = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, timeout=timeout, text=True, errors="replace")
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        line = next((ln.strip() for ln in (r.stdout + "\n" + r.stderr).splitlines() if ln.strip()), "")
+        if r.returncode == 0 and line:
+            rec["version"] = line[:200]
+            break
+    return rec
 
 
 def sha256_array(a):
@@ -44,8 +81,8 @@ def run_checked(cmd, shell=False, timeout=3600):
     On a timeout, an error or Ctrl-C the whole group is killed, so a shell's children do not
     outlive the run.
     """
-    p = subprocess.Popen(cmd, shell=shell, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
-                         start_new_session=True)
+    p = subprocess.Popen(cmd, shell=shell, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.PIPE, start_new_session=True)
     try:
         _, err = p.communicate(timeout=timeout)
     except BaseException as e:  # TimeoutExpired, KeyboardInterrupt, anything else
@@ -138,7 +175,19 @@ class Adapter:
         raise NotImplementedError
 
     def tool_versions(self):
-        return {}
+        """Who the device is: its version and, for a program, the SHA-256 of its executable (recorded in the provenance).
+
+        A version the user declares with ``version = "..."`` in the suite file is kept beside what was found.
+        """
+        d = {"adapter": self.kind}
+        if self.opts.get("version"):
+            d["declared_version"] = str(self.opts["version"])
+        return d
+
+    def output_format(self):
+        """The narrowest PCM output format recorded in the provenance log (None if no file was read)."""
+        from .outformat import narrowest
+        return narrowest(e.get("output_format") for e in self.log)
 
     def close(self):
         """Remove any temporary files; safe to call more than once."""
@@ -166,6 +215,14 @@ class Reference(Adapter):
                        "decoder": _decode.total_taps_report(self.dsd_rate, self.out_rate),
                        "modulator": "order 8 down to 5 by the stability guard (see design)"}
         return d
+
+    def output_format(self):
+        return {"container": "internal", "kind": "float", "bits": 64, "rate": self.out_rate, "channels": 1}
+
+    def tool_versions(self):
+        from . import REFERENCE_CHAIN_VERSION, __version__
+        return {**super().tool_versions(), "program": "dsd-measure built-in reference chain", "version": __version__,
+                "reference_chain": REFERENCE_CHAIN_VERSION}
 
     def dsd_to_pcm(self, bits, rate):
         g = 10 ** (self.gain_db / 20)
@@ -210,7 +267,7 @@ class Recorder(Reference):
     def _name(self, ext, data_hash):
         tag = self.current or "call"
         for e in self.entries:
-            if e["tag"] == tag and e["sha256"] == data_hash:
+            if e["tag"] == tag and e["samples_sha256"] == data_hash:
                 return None  # the same stimulus again (a second analysis of one run)
         n = sum(1 for e in self.entries if e["tag"] == tag)
         return tag if n == 0 else f"{tag}_{n + 1}"
@@ -220,7 +277,8 @@ class Recorder(Reference):
         name = self._name("dsf", h)
         if name:
             write_dsf(self.dir / f"{name}.dsf", bits, rate)
-            self.entries.append({"tag": self.current or "call", "file": f"{name}.dsf", "sha256": h, "rate": int(rate),
+            self.entries.append({"tag": self.current or "call", "file": f"{name}.dsf", "sha256": sha256_file(self.dir / f"{name}.dsf"),
+                                 "samples_sha256": h, "rate": int(rate),
                                  "channels": 1 if np.ndim(bits) == 1 else len(bits),
                                  "seconds": round(np.shape(bits)[-1] / rate, 3), "feeds": "DSD, to a class A device"})
         return super().dsd_to_pcm(bits, rate)
@@ -230,7 +288,8 @@ class Recorder(Reference):
         name = self._name("wav", h)
         if name:
             write_wav(self.dir / f"{name}.wav", np.asarray(x, dtype=np.float64), fs, "pcm32")
-            self.entries.append({"tag": self.current or "call", "file": f"{name}.wav", "sha256": h, "rate": int(fs),
+            self.entries.append({"tag": self.current or "call", "file": f"{name}.wav", "sha256": sha256_file(self.dir / f"{name}.wav"),
+                                 "samples_sha256": h, "rate": int(fs),
                                  "channels": 1 if np.ndim(x) == 1 else len(x),
                                  "seconds": round(np.shape(x)[-1] / fs, 3), "feeds": "PCM, to a class B device"})
         return super().pcm_to_dsd(x, fs)
@@ -251,8 +310,12 @@ class Cli(Adapter):
     kind = "cli"
 
     def __init__(self, name, command, klass="A", output_ext=None, input_ext="dsf", workdir=None,
-                 timeout=3600, shell=False, **opts):
+                 timeout=3600, shell=False, input_ext_fallback=None, version_command=None, **opts):
         super().__init__(name, **opts)
+        #: a command that prints the tool's version, for a command that starts a wrapper script (``--version`` would not reach the tool)
+        self.version_command = version_command
+        #: another file type to try in the pre-flight when the tool cannot read ``input_ext`` (see ``preflight``)
+        self.input_ext_fallback = input_ext_fallback
         self.shell = bool(shell)
         self.input_ext = input_ext
         self.command = command
@@ -266,7 +329,12 @@ class Cli(Adapter):
         d = super().describe()
         d["command"] = self.command
         d["shell"] = self.shell
+        if self.klass == "A":
+            d["input_ext"] = self.input_ext
         return d
+
+    def tool_versions(self):
+        return {**super().tool_versions(), **program_identity(self.command, self.version_command)}
 
     def close(self):
         self._work.close()
@@ -288,13 +356,14 @@ class Cli(Adapter):
         i, o = d / f"in{n}.{self.input_ext}", d / f"out{n}.{self.output_ext}"
         (write_dff if self.input_ext == "dff" else write_dsf)(i, bits, rate)
         self._run(i, o)
+        fmt = audio_format(o)  # what the tool wrote, before any conversion
         if o.suffix == ".flac":
             w = d / f"out{n}.wav"
             run_checked(["ffmpeg", "-v", "error", "-y", "-i", str(o), "-c:a", "pcm_f32le", str(w)],
                         timeout=self.timeout)
             o = w
         y, fs = read_wav(o)
-        self.log.append({"input_sha256": sha256_file(i), "output_sha256": sha256_file(o), "rate": fs})
+        self.log.append({"input_sha256": sha256_file(i), "output_sha256": sha256_file(o), "rate": fs, "output_format": fmt})
         self._work.discard(i, o, d / f"out{n}.wav")
         return _pick(y, bits) * 10 ** (self.gain_db / 20), fs
 
@@ -318,7 +387,9 @@ class ReftoolSox(Adapter):
     """SoX-DSD run as a black box through the pinned container wrapper (``tools/reftool.sh``).
 
     Class A: DSD to 32-bit float PCM at ``out_rate``. Class B: PCM to DSD with the ``sdm`` or
-    ``clans`` modulator.
+    ``clans`` modulator. The default modulator is ``sdm-8``, the highest order of the ``sdm`` family, which read lower noise than
+    ``clans-8`` in our checks (docs/accuracy.md: 140.8 dB against 119.5 dB on the same input) and in Archimago's 2022 notes it
+    is described as the lower-noise filter; ``clans-8`` and the per-rate ``auto`` choice are still available by name.
 
     Level convention. SoX-DSD maps PCM full scale (0 dBFS) to 50 % modulation, which is 0 dB SACD
     in this toolkit, so a -6.02 dBFS test tone reaches the modulator at 25 % and SoX writes its
@@ -340,7 +411,7 @@ class ReftoolSox(Adapter):
     kind = "sox-dsd"
     TRELLIS = {"32x32": ["-t", "32", "-n", "32"], "default": []}
 
-    def __init__(self, name, reftool, klass="A", out_rate=352800, modulator="clans-8", workdir=None,
+    def __init__(self, name, reftool, klass="A", out_rate=352800, modulator="sdm-8", workdir=None,
                  gain_db=None, input_gain_db=0.0, trellis="32x32", timeout=3600, **opts):
         input_gain_db = float(input_gain_db) if klass == "B" else 0.0  # input gain is a class B option
         if gain_db is None:
@@ -357,7 +428,29 @@ class ReftoolSox(Adapter):
     def describe(self):
         d = super().describe()
         d["detail"] = {"reftool": "container wrapper", "modulator": self.modulator, "out_rate": self.out_rate,
-                       "input_gain_db": self.input_gain_db, "trellis": self.trellis}
+                       "input_gain_db": self.input_gain_db, "trellis": self.trellis,
+                       "level_mapping": self.level_mapping()}
+        return d
+
+    def level_mapping(self):
+        """What the modulator's input level is, in words (class B only): the test tone enters at 25 % or 50 % modulation."""
+        if self.klass != "B":
+            return "not applicable (class A)"
+        pct = 25.0 * 10 ** (self.input_gain_db / 20)
+        return (f"the 0 dB SACD test tone (-6.02 dBFS) enters the modulator at {pct:.0f} % modulation "
+                f"(SoX-DSD maps PCM full scale to 50 %; input gain {self.input_gain_db:g} dB); the output is raised by {self.gain_db:g} dB")
+
+    def tool_versions(self):
+        import json
+        d = {**super().tool_versions(), "program": "SoX-DSD in the pinned container", "wrapper": program_identity(self.reftool, version_command="true")}
+        try:
+            r = subprocess.run([self.reftool, "versions"], stdin=subprocess.DEVNULL, capture_output=True, timeout=300, text=True)
+            info = json.loads(r.stdout)["sox-dsd"] if r.returncode == 0 else None
+        except (OSError, subprocess.TimeoutExpired, ValueError, KeyError):
+            info = None
+        d.update(info or {"version": None})
+        if self.klass == "B":
+            d.update(modulator=self.modulator, level_mapping=self.level_mapping())
         return d
 
     def close(self):
@@ -379,7 +472,8 @@ class ReftoolSox(Adapter):
         self._call(["/out/x.dsf", "-e", "floating-point", "-b", "32", "/out/x.wav", "rate", "-v", str(self.out_rate)])
         y, fs = read_wav(self._out / "x.wav")
         self.log.append({"input_sha256": sha256_file(self._out / "x.dsf"),
-                         "output_sha256": sha256_file(self._out / "x.wav"), "rate": fs})
+                         "output_sha256": sha256_file(self._out / "x.wav"), "rate": fs,
+                         "output_format": audio_format(self._out / "x.wav")})
         return _pick(y, bits) * 10 ** (self.gain_db / 20), fs
 
     def pcm_to_dsd(self, x, fs):
@@ -412,12 +506,16 @@ class Import(Adapter):
         self.klass = klass
         self.current = None  # set by the runner before each call
 
+    def tool_versions(self):
+        return {**super().tool_versions(), "program": "produced elsewhere", "directory": str(self.dir),
+                "version": None, "note": "dsd-measure cannot know the tool or version behind these files; each file's SHA-256 is in the provenance"}
+
     def dsd_to_pcm(self, bits, rate):
         p = self.dir / f"{self.current}.wav"
         if not p.exists():
             raise FileNotFoundError(p)
         y, fs = read_wav(p)
-        self.log.append({"output_sha256": sha256_file(p), "rate": fs})
+        self.log.append({"output_sha256": sha256_file(p), "rate": fs, "output_format": audio_format(p)})
         return _pick(y, bits) * 10 ** (self.gain_db / 20), fs
 
     def pcm_to_dsd(self, x, fs):
@@ -431,10 +529,41 @@ class Import(Adapter):
 
 #: Command presets for tools run as black boxes. Edit paths through the suite file.
 PRESETS = {
-    "dsd2pcm": "dsd2pcm {input} -o {output}",
+    # float output on purpose: ffmpeg writes 16-bit WAV by default, which would measure the file format, not the decoder
+    "ffmpeg": "ffmpeg -v error -y -i {input} -c:a pcm_f32le {output}",
+    "dsd2pcm": "dsd2pcm {input} {output}",
     "sox-dsd": "sox {input} -b 32 -e floating-point {output} rate -v 352800",
     "sacd_extract": "sacd_extract -i {input} -p -o {output}",
 }
+
+
+def with_args(command, args):
+    """Put extra arguments right after the program name: ``dsd2pcm --filter pysacd {input} {output}``."""
+    args = (args or "").strip()
+    if not args:
+        return command
+    command = command.lstrip()
+    if command[:1] in ("'", '"') and command.find(command[0], 1) > 0:  # a quoted program path may hold spaces
+        end = command.find(command[0], 1) + 1
+        head, rest = command[:end], command[end:].lstrip()
+    else:
+        head, _, rest = command.partition(" ")
+    return f"{head} {args} {rest}".rstrip()
+
+
+#: Extra options a preset passes to its adapter. A distribution ffmpeg may read DSD from DFF files but not DSF files.
+PRESET_OPTS = {"ffmpeg": {"input_ext_fallback": "dff"}}
+
+
+def unknown_name_message(name):
+    """What to tell a user who typed a tool name that is not a preset."""
+    names = ", ".join(sorted(PRESETS))
+    msg = f"unknown converter {name!r}. Built-in presets: reference, {names}."
+    if Path(name).suffix.lower() in (".dsf", ".dff"):
+        return (f"{name!r} is a DSD file, not a converter. To compare decoders on this file: "
+                f"dsd-measure null {name} ffmpeg")
+    return msg + (f" To measure any other tool, give its command: dsd-measure quick {name} --command "
+                  f"\"{name} {{input}} {{output}}\" ({{input}} is a DSF file, {{output}} the WAV the tool writes).")
 
 
 def write_signal_set(outdir, klass="A", profile="quick", in_rate=88200, dsd_rate=2822400, rates=(), only=None, log=None):
@@ -472,10 +601,13 @@ def make_adapter(spec):
     if kind == "sox-dsd" and "reftool" in spec:
         return ReftoolSox(name, klass=klass, **spec)
     if kind in PRESETS:
-        cmd = spec.pop("command", PRESETS[kind])
+        cmd = with_args(spec.pop("command", PRESETS[kind]), spec.pop("args", ""))
+        if "input_ext" not in spec:
+            spec = {**PRESET_OPTS.get(kind, {}), **spec}
         if shutil.which(cmd.split()[0]) is None and "/" not in cmd.split()[0]:
-            raise FileNotFoundError(f"adapter {kind}: {cmd.split()[0]} not found on PATH (set command = ...)")
+            raise MissingTool(f"{cmd.split()[0]} is not on PATH (needed by {name!r}). Install it, or set command = ... to its full path")
         return Cli(name, cmd, klass=klass, **spec)
     if kind == "import":
         return Import(name, klass=klass, **spec)
-    raise ValueError(f"unknown adapter {kind}")
+    raise UserError(f"unknown adapter {kind!r} (adapters: reference, cli, import, sox-dsd, and the presets "
+                    f"{', '.join(sorted(PRESETS))}; a [[device]] with adapter = \"cli\" takes any command)")

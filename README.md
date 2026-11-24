@@ -1,10 +1,14 @@
-<img src="https://raw.githubusercontent.com/aclater/dsd-measure/main/docs/assets/icon-256.png" alt="" width="96">
+<img src="https://raw.githubusercontent.com/dsd-toolbox/dsd-measure/main/docs/assets/icon-256.png" alt="" width="96">
 
 # dsd-measure
 
-[![Licence](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue)](#licence-and-credits)
+[![CI](https://github.com/dsd-toolbox/dsd-measure/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/dsd-toolbox/dsd-measure/actions/workflows/ci.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/dsd-toolbox/dsd-measure/badge)](https://scorecard.dev/viewer/?uri=github.com/dsd-toolbox/dsd-measure)
+[![Release](https://img.shields.io/github/v/release/dsd-toolbox/dsd-measure)](https://github.com/dsd-toolbox/dsd-measure/releases/latest)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
+[![Licence: MIT OR Apache-2.0](https://img.shields.io/badge/licence-MIT%20OR%20Apache--2.0-blue)](#licence-and-credits)
 
-A reproducible measurement kit for DSD to PCM converters and PCM to DSD modulators, for audiophiles who read [Archimago](https://archimago.blogspot.com/), [ASR](https://www.audiosciencereview.com/) and [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) measurements. One command runs the tests reviewers publish and writes a report that opens with its conclusions in plain sentences, each backed by a figure and a [published threshold](docs/conclusions.md), then a one-screen summary and a few key plots with the raw numbers beside them. Its own measurement floor is about -147 dB at DSD64 and is shown in every report, so a good device is not hidden by the tool.
+A deterministic measurement kit for DSD to PCM converters and PCM to DSD modulators, for audiophiles who read [Archimago](https://archimago.blogspot.com/), [ASR](https://www.audiosciencereview.com/) and [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) measurements. One command runs the kinds of test reviewers publish, on files and writes a report that opens with its conclusions in plain sentences, each backed by a figure and a stated [reference line](docs/conclusions.md) with its source and status, then a one-screen summary and a few key plots with the raw numbers beside them. Its own measurement floor is about -147 dB at DSD64 and is shown in every report, so a reader can see where the tool, not the device, sets a figure. The kit measures: it makes no statement about hearing, it is not an AES17 instrument, and it has not been validated by anyone outside the authors; [what it can and cannot claim](docs/methodology-limits.md) is listed.
 
 ## Platforms
 
@@ -19,27 +23,28 @@ Tested on Fedora 43 in a container with Python 3.14.
 ## Quick start
 
 ```sh
-sudo dnf install -y gcc git python3-pip pipx
-pipx install git+https://github.com/aclater/dsd-measure
-dsd-measure init
-dsd-measure run suite.toml
-xdg-open report/comparison/index.html
+sudo dnf install -y gcc git python3-pip pipx ffmpeg-free
+pipx install git+https://github.com/dsd-toolbox/dsd-measure
+dsd-measure quick ffmpeg
+xdg-open report/ffmpeg/index.html
 ```
 
-This measures the built-in reference decoder (DSD to PCM) and reference modulator (PCM to DSD) and takes a few minutes. A finished [example report](examples/README.md) of the reference chain is included. To measure your own converter, add a `[[device]]` table to `suite.toml` or run `dsd-measure quick dsd2pcm`; see [How it works](#how-it-works) and the [user guide](docs/user-guide.md). Add `--plan` to any `run` or `quick` command to see what it would do first.
+This measures ffmpeg, as a DSD to PCM decoder, with the tool's synthetic test signals, and takes about a minute and a half. The report opens with one sentence that starts "Result:" and says what ffmpeg's weakest figure in the audio band measures, or that it was not judged; the same sentence ends the terminal output. Replace `ffmpeg` with `dsd2pcm` or `sox-dsd` for those tools, or use `--command` for any other (see [Measure a decoder you have installed](docs/user-guide.md#measure-a-decoder-you-have-installed)). To compare two decoders on your own music instead, run `dsd-measure null track.dsf ffmpeg`.
+
+To check the tool itself, `dsd-measure init` writes a suite file and `dsd-measure run suite.toml` measures the built-in reference decoder and modulator; that report says plainly that it shows the measurement floor, not a result for a product. A finished [example report](examples/README.md) of it is included. Add `--plan` to any `run` or `quick` command to see what it would do first.
 
 ## How it works
 
 dsd-measure measures a **device under test**: your converter, a DSD to PCM decoder (class A) or a PCM to DSD modulator (class B). It can be a command-line tool, a plug-in, or a recording of a hardware DAC.
 
-The **source data is synthetic**. The toolkit generates deterministic test signals itself (tones, two-tone pairs, a 32-tone multitone, J-Test, impulses and silence; no music), so anyone gets the same signals bit for bit. `dsd-measure signals --list` describes each one in a sentence.
+The **source data is synthetic**. The toolkit generates deterministic test signals itself (tones, two-tone pairs, a 32-tone multitone, J-Test, impulses and silence; no music), so a run regenerates the same signals on the same package versions (equality across platforms is not verified). `dsd-measure signals --list` describes each one in a sentence.
 
 - **Class A, DSD to PCM:** the signals are encoded to DSD by the built-in reference modulator and fed to your decoder as DSF or DFF files. The PCM it returns is analysed.
 - **Class B, PCM to DSD:** the signals are fed to your modulator as PCM (WAV). The DSD it returns is turned back into PCM by the built-in reference decoder, then analysed.
 
 **Compare** means that every `[[device]]` in one suite file is measured with the identical signals and shown side by side in a comparison report. The built-in reference chain is always the floor: the least distortion and noise the tool itself can see, so a result close to it is flagged as limited by the measurement, not by the device.
 
-Before anything runs, `dsd-measure run suite.toml --plan` prints each device with its exact command line, the signals, the DSD rates, the profile, an estimated time and where the report goes. While it runs you get one line per test, and every report opens with a "What was measured" block. See the [user guide](docs/user-guide.md#what-a-run-does).
+Before anything runs, `dsd-measure run suite.toml --plan` prints each device with its exact command line, the signals, the DSD rates, the profile, an estimated time and where the report goes. Before measuring, a pre-flight check converts one short signal with each device and stops with the tool's own error if that fails. While it runs you get one numbered line per test with the time left, and the last line is the one-sentence `Result:`. Every report opens with that sentence and a "What was measured" block. See the [user guide](docs/user-guide.md#what-a-run-does).
 
 ### Example: compare two decoders
 
@@ -53,10 +58,8 @@ out = "report"
 
 [[device]]
 name = "ffmpeg"
-adapter = "cli"
+adapter = "ffmpeg"
 class = "A"
-input_ext = "dff"
-command = "ffmpeg -v error -y -i {input} -c:a pcm_f32le {output}"
 
 [[device]]
 name = "reference decoder"
@@ -71,19 +74,20 @@ dsd-measure run compare.toml
 xdg-open report/comparison/index.html
 ```
 
-`input_ext = "dff"` hands ffmpeg a DFF file, because the distribution build of ffmpeg decodes DSD from DFF but not from DSF. `--plan` lists both devices, the exact ffmpeg command line, the signals and the time it will take. The run writes:
+The `ffmpeg` adapter is a preset for `ffmpeg -v error -y -i {input} -c:a pcm_f32le {output}`. It asks for 32-bit float output on purpose: ffmpeg writes 16-bit WAV by default, and a 16-bit file cannot read above about 92 dB at a 44.1 kHz output rate and 101 dB at 352.8 kHz, so the report would describe the file format, not ffmpeg (dsd-measure detects that and says so). Some builds of ffmpeg read DSD from DFF files but not from DSF files; the pre-flight then gives ffmpeg DFF files. `--plan` lists both devices, the exact ffmpeg command line, the signals and the time it will take. The run writes:
 
 - `report/ffmpeg/` and `report/reference-decoder/`: one report per device, each starting with its conclusions and what was measured.
-- `report/comparison/`: the two side by side. It opens by saying whether they can be told apart by measurement and where they differ, then one row per measurement, the better figure in bold, and the reference floor marked.
+- `report/comparison/`: the two side by side. It opens by saying whether they measure the same in the audio band and where they differ, notes when they were measured at different output rates or formats ("not like-for-like"), then gives one row per measurement with the reference floor marked. No cell is marked as better, because no repeatability interval has been measured yet.
 - A summary at the end of the run with SINAD, dynamic range and the floor flag for each device.
 
-To measure a different tool, change the `command`: `{input}` is the DSF file the tool reads and `{output}` the WAV it must write.
+To measure a different tool, use `adapter = "cli"` and give its `command`: `{input}` is the DSF file the tool reads and `{output}` the WAV it must write; ask the tool for float or 32-bit output.
 
 ## Documentation
 
 - [User guide](docs/user-guide.md): measuring a converter, reading the report, troubleshooting.
 - [Command line options](docs/options.md) and [suite file](docs/options.md#suite-file).
 - [Conclusions](docs/conclusions.md): the rules behind each report's conclusions, with the thresholds and their sources.
+- [Methodology limits](docs/methodology-limits.md): what dsd-measure can and cannot claim today.
 - [Null test](docs/user-guide.md#compare-decoders-on-your-own-music): do two decoders differ on your own DSD file?
 - [Measurement footprint](docs/footprint.md): what is measured, why, and exactly how.
 - [Design](docs/design.md): the reference modulator and decoder, and the decisions behind them.
@@ -92,8 +96,12 @@ To measure a different tool, change the `command`: `{input}` is the DSF file the
 - [Example reports](examples/README.md): the reference chain, plus ready-made suites for decoders and SoX-DSD.
 - [Changelog](CHANGELOG.md) and [contributing](CONTRIBUTING.md).
 
+## How to cite
+
+See [CITATION.cff](CITATION.cff); GitHub's "Cite this repository" button reads it, and each release is archived with a DOI on Zenodo.
+
 ## Licence and credits
 
-MIT OR Apache-2.0, at your option: see [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE). The measurement set follows public practice by [Archimago](https://archimago.blogspot.com/), [Audio Science Review](https://www.audiosciencereview.com/), [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) (John Atkinson), [RMAA](http://audio.rightmark.org/) and AES17, listed in the [footprint](docs/footprint.md#sources-and-credit).
+MIT OR Apache-2.0, at your option: see [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE). The measurement set follows public practice by [Archimago](https://archimago.blogspot.com/), [Audio Science Review](https://www.audiosciencereview.com/), [Stereophile](https://www.stereophile.com/content/measurements-maps-precision) (John Atkinson), [RMAA](http://audio.rightmark.org/) and the conventions of AES17 (only the 20 kHz band edge and the dBFS reference; see [methodology limits](docs/methodology-limits.md#what-follows-aes17)), listed in the [footprint](docs/footprint.md#sources-and-credit).
 
-Part of the [DSD Toolbox](https://github.com/aclater/dsd-toolbox).
+Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

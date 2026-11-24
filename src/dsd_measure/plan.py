@@ -51,7 +51,7 @@ TESTS = {
         detail=lambda p, r: (f"1 kHz tones, {p['seg_s']} s each, from 0 dB SACD ({REF_DBFS:.2f} dBFS) down to -120 dB SACD in "
                              f"{p['step_db']:g} dB steps, plus one at +3.1 dB SACD ({PEAK_DBFS:.2f} dBFS)"),
         what="A 1 kHz sine wave at 0 dB SACD (half of full modulation), then the same tone ever quieter, plus one at the loudest level SACD allows.",
-        why="It gives the headline SINAD, THD+N, dynamic range and linearity figures that reviewers quote."),
+        why="It gives the headline SINAD, THD+N, dynamic range and linearity figures."),
     "thdn_freq": _t(
         klass="AB", sig="tones 20 Hz to 20 kHz", level="0 dB SACD",
         detail=lambda p, r: f"tones at 20 Hz, 100 Hz, 1, 5, 10, 15 and 20 kHz, {p['seg_s']} s each, 0 dB SACD",
@@ -61,7 +61,7 @@ TESTS = {
         klass="AB", sig="third-octave tones to 40 kHz", level="0 dB SACD",
         detail=lambda p, r: (f"tones at third-octave steps from 20 Hz to 20 kHz (every {p['fr_every']}"
                              f"{'nd' if p['fr_every'] == 2 else 'st'} one) and at 20.5 to 40 kHz where the rate allows, {p['seg_s']} s each, 0 dB SACD"),
-        what="A series of single tones from the lowest bass to beyond the audible band.",
+        what="A series of single tones from the lowest bass to beyond 20 kHz.",
         why="It shows how flat the response is and where the converter's filter starts to roll off."),
     "impulse": _t(
         klass="AB", sig="impulses and a step", level="0 dB SACD",
@@ -72,17 +72,17 @@ TESTS = {
         klass="AB", sig="32-bit-level dithered silence", level="below -160 dBFS",
         detail=lambda p, r: f"{p['noise_s']:g} s of 32-bit-level dithered silence, plus (class A) the DSD idle pattern and (class B) zero input",
         what="Silence, with only a trace of dither (32-bit level, far below what a 24-bit recording carries, so the device's own noise is what is measured).",
-        why="It shows the noise floor in the audible band and, for a modulator, the shaped noise above 20 kHz."),
+        why="It shows the noise floor in the 20 Hz to 20 kHz band and, for a modulator, the shaped noise above 20 kHz."),
     "imd": _t(
         klass="AB", sig="two-tone pairs (SMPTE, CCIF)", level="0 dB SACD",
         detail=lambda p, r: f"60 Hz + 7 kHz (4:1, SMPTE) and 19 kHz + 20 kHz (CCIF), {p['imd_s']:g} s each, 0 dB SACD",
         what="Two tones played together.",
-        why="Distortion that only appears when two sounds meet (intermodulation) is more audible than plain harmonic distortion."),
+        why="Distortion that only appears when two tones meet (intermodulation) is not seen by a single-tone test."),
     "multitone": _t(
         klass="AB", sig="32-tone multitone", level="0 dB SACD overall",
         detail=lambda p, r: f"32 tones from 17.6 Hz to 21.4 kHz, {p['mt_periods']} periods, 13.3 dB crest factor",
         what="32 tones at once, spread over the audio band, loud like dense music.",
-        why="The gaps between the tones show how clean the device stays under a complex load."),
+        why="The gaps between the tones show the residual with 32 tones at once."),
     "tone_15k": _t(
         klass="AB", sig="15 kHz tone", level="-12 dBFS",
         detail=lambda p, r: f"15 kHz tone, {p['tone_s']:g} s, -12 dBFS",
@@ -92,7 +92,7 @@ TESTS = {
         klass="AB", sig="J-Test (44.1 kHz)", level="-3 dBFS",
         detail=lambda p, r: f"J-Test at 44.1 kHz, {p['jtest_s']:g} s",
         what="A tone at a quarter of the sample rate with a tiny low-frequency square wave underneath.",
-        why="It reveals jitter and data-dependent timing errors as sidebands around the tone."),
+        why="At file level it shows data-dependent arithmetic errors as sidebands around the tone; it is not a clock test."),
     "polarity": _t(
         klass="AB", sig="asymmetric pulse", level="small",
         detail=lambda p, r: "one asymmetric pulse, 8192 samples",
@@ -118,7 +118,7 @@ TESTS = {
         klass="A", sig="tones above the output Nyquist", level="0 dB SACD",
         detail=lambda p, r: "tones 2 to 10 kHz above half the device's output rate (skipped at 352.8 kHz or more), 0 dB SACD",
         what="Tones too high for the device's output rate to carry.",
-        why="A good filter removes them; a poor one lets them fold back into the audible band as false tones."),
+        why="A filter with a deep stopband removes them; otherwise they fold back into the 20 Hz to 20 kHz band as false tones."),
     "overload": _t(
         klass="AB", sig="quiet tone with a loud burst", level="-60 dB SACD, burst at the peak",
         detail=lambda p, r: "1 kHz at -60 dB SACD with a 50 ms burst at the peak level (class B: digital full scale)",
@@ -282,7 +282,7 @@ def plan_text(suite_path, out=None, profile=None, only=None, source=None):
         L += [f"Device {n}: {a.name}",
               f"  class {a.klass}: {fa['kind']}",
               f"  adapter: {a.kind}" + (f", gain applied to its output: {a.gain_db:+g} dB" if a.gain_db else ", no gain applied"),
-              f"  command (example, 1 kHz tone): {fa['command']}",
+              f"  command (example for the 1 kHz tone; the file names are made up here, the run makes its own): {fa['command']}",
               f"  fed with: {fed}",
               f"  returns: {ret}"]
         if warn:
@@ -311,6 +311,15 @@ def plan_text(suite_path, out=None, profile=None, only=None, source=None):
     return "\n".join(L)
 
 
+def _out_word(adapter):
+    """The output word length line: what the device wrote, when a file has been read."""
+    from .outformat import name_of
+    fmt = getattr(adapter, "output_format", lambda: None)()
+    if not fmt or fmt["container"] == "internal":
+        return "as written by the device, read and analysed in 64-bit float"
+    return f"{name_of(fmt)} as written by the device ({fmt['container'].upper()}), read and analysed in 64-bit float"
+
+
 def measured(adapter, profile, in_rate, floor, suite_name=None):
     """The data behind the report's "What was measured" block."""
     fa = device_facts(adapter)
@@ -323,7 +332,7 @@ def measured(adapter, profile, in_rate, floor, suite_name=None):
     return {"device": fa, "fed_with": fed, "returns": ret, "in_rate_hz": in_rate,
             "in_word": "32-bit integer WAV" if adapter.klass == "B" else "1-bit DSD",
             "out_rate_hz": out_rate,
-            "out_word": "as written by the device, read and analysed in 64-bit float" if adapter.klass == "A"
+            "out_word": _out_word(adapter) if adapter.klass == "A"
             else "1-bit DSD, decoded to PCM by the reference decoder and analysed in 64-bit float",
             "gain_db": adapter.gain_db, "profile": profile,
             "date": datetime.date.today().isoformat(),
@@ -338,7 +347,7 @@ def _floor_text(m):
         return "not measured in this run"
     lim = f["chain"] if m["device"]["class"] == "A" else f["decoder_alone"]
     who = "reference modulator and decoder" if m["device"]["class"] == "A" else "reference decoder alone"
-    return (f"{who} at {rate_name(f['dsd_rate'])}: THD+N {lim['thdn_db']:.1f} dB, dynamic range (A) {lim['dr_a_db']:.0f} dB. "
+    return (f"{who} at {rate_name(f['dsd_rate'])}: THD+N {lim['thdn_db']:.1f} dB, dynamic range (A) {lim['dr_a_db']:.1f} dB. "
             f"A device figure within {f['margin_db']:.0f} dB of it is marked as limited by the measurement.")
 
 
@@ -350,9 +359,13 @@ def measured_summary(m):
         io = f"in: DSD {d['dsd_rate']} Hz, 1 bit; out: PCM at {out_rate}"
     else:
         io = f"in: PCM {m['in_rate_hz']} Hz, 32-bit integer WAV; out: DSD at {out_rate}, 1 bit"
+    files = ""
+    if d.get("command_template"):
+        files = (" ({input} is the DSD file made for each test signal, {output} the WAV the tool writes)" if d["class"] == "A"
+                 else " ({input} is the WAV made for each test signal, {output} the DSF the tool writes)")
     gain = f"gain applied to its output: {m['gain_db']:+g} dB" if m["gain_db"] else "no gain applied"
     return [
-        ("Device", f"{d['name']}: class {d['class']}, {d['kind']}, adapter {d['adapter']}. Run as: {d['command']}. {io}; {gain}."),
+        ("Device", f"{d['name']}: class {d['class']}, {d['kind']}, adapter {d['adapter']}. Run as: {d.get('command_template') or d['command']}{files}. {io}; {gain}."),
         ("Source signals", "Synthetic and deterministic test signals made by the toolkit (tones, two-tone pairs, multitone, J-Test, impulses; "
                            + ("no music), encoded to DSD by the built-in reference modulator." if d["class"] == "A"
                               else "no music), fed to the device as PCM.")),
@@ -365,10 +378,13 @@ def measured_details(m):
     d = m["device"]
     rows = [("Fed with", m["fed_with"]), ("Returns", m["returns"]), ("Output word length", m["out_word"]),
             ("Suite", m.get("suite") or "")]
+    dv = m.get("device_versions") or {}
+    rows += [("Device version", dv.get("version") or dv.get("declared_version") or "not found: " + (dv.get("note") or "the program did not print one")),
+             ("Device executable SHA-256", dv.get("sha256") or "not recorded")]
     rows += [("Tool versions", ", ".join(f"{k} {v}" for k, v in (m.get("versions") or {}).items()))]
     rows += [(f"SHA-256 {k}", v) for k, v in m["source_signal_sha256"].items()]
     rows += [("Hash note", f"Hashes are of five reference signals (32-bit WAV at {m['in_rate_hz']} Hz) made by the signal generator: a "
-                           "fingerprint of the generator. Every run regenerates the same signals bit for bit; 'dsd-measure "
+                           "fingerprint of the generator. Every run regenerates the same signals bit for bit on the same package versions; 'dsd-measure "
                            "signals DIR' lists the files a run feeds a device, with their hashes, in signals.json.")]
     if d.get("command_template"):
         rows.insert(0, ("Command template", d["command_template"]))
