@@ -5,9 +5,8 @@ abstract: "A deterministic measurement kit for DSD to PCM converters and PCM to 
 type: software
 authors:
   - alias: "aclater"
-license:
-  - Apache-2.0
-  - MIT
+# dual-licensed MIT OR Apache-2.0; see LICENSE-MIT and LICENSE-APACHE
+license: Apache-2.0
 repository-code: "https://github.com/dsd-toolbox/dsd-measure"
 url: "https://github.com/dsd-toolbox/dsd-measure"
 version: "0.1.2"

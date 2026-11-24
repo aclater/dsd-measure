@@ -342,3 +342,10 @@ def test_citation_file_matches_the_release():
     assert f'version: "{version}"' in cff and "cff-version: 1.2.0" in cff
     assert "repository-code: \"https://github.com/dsd-toolbox/dsd-measure\"" in cff and "Apache-2.0" in cff
     assert "CITATION.cff" in (ROOT / "README.md").read_text()
+
+
+def test_citation_license_is_one_spdx_string():
+    lines = [ln for ln in (ROOT / "CITATION.cff").read_text().splitlines() if ln.startswith("license:")]
+    assert lines == ["license: Apache-2.0"]  # Zenodo rejects a list or an expression
+    readme = (ROOT / "README.md").read_text()
+    assert "MIT OR Apache-2.0" in readme and "LICENSE-MIT" in readme and "LICENSE-APACHE" in readme
