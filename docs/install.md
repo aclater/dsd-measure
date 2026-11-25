@@ -10,7 +10,7 @@ dsd-measure is a Python package with a command line tool. It needs Python 3.11 o
 ```sh
 sudo dnf install -y gcc git python3-pip pipx
 # facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
-pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.3
 # /facts
 dsd-measure --version
 ```
@@ -42,7 +42,7 @@ Close the Terminal window and open a new one. Step 3 installs dsd-measure, runs 
 <!-- docs-run: skip="macOS commands; run on macOS by the release test plan (docs/release-test-plan.md), not in the Linux container" -->
 ```sh
 # facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
-pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.3
 # /facts
 dsd-measure --version
 dsd-measure quick ffmpeg
@@ -74,7 +74,7 @@ Close the Ubuntu window and open Ubuntu again. Step 3, install dsd-measure, run 
 <!-- docs-run: skip="WSL commands; run in Ubuntu by the release test plan (docs/release-test-plan.md), not in the Fedora container" -->
 ```sh
 # facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
-pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.3
 # /facts
 dsd-measure --version
 dsd-measure quick ffmpeg

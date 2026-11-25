@@ -30,7 +30,7 @@ Pick your system. All three run the same check at the end: `dsd-measure quick ff
 ```sh
 sudo dnf install -y gcc git python3-pip pipx ffmpeg-free
 # facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
-pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.3
 # /facts
 dsd-measure quick ffmpeg
 xdg-open report/ffmpeg/index.html
@@ -63,7 +63,7 @@ Close the Terminal window and open a new one, so that `pipx` programs are found.
 <!-- docs-run: skip="macOS commands; run on macOS by the release test plan (docs/release-test-plan.md), not in the Linux container" -->
 ```sh
 # facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
-pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.3
 # /facts
 dsd-measure quick ffmpeg
 open report/ffmpeg/index.html
@@ -94,7 +94,7 @@ Close the Ubuntu window and open Ubuntu again from the Start menu. Step 3:
 <!-- docs-run: skip="WSL commands; run in Ubuntu by the release test plan (docs/release-test-plan.md), not in the Fedora container" -->
 ```sh
 # facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
-pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.3
 # /facts
 dsd-measure quick ffmpeg
 cd report/ffmpeg
