@@ -33,6 +33,14 @@ A faster run, the release gate as a step for GitHub Actions, and fixes to the nu
 - `dsd-measure gate` separates the figures in its FAIL line with semicolons (the figure names hold commas).
 - The build needs setuptools 77 or newer (licence files in the package metadata, PEP 639).
 
+### Measurement changes
+
+Compare figures only between runs of the same dsd-measure version; 0.1.2 and 0.1.3 measure the same things but not with the same bits.
+
+- Cause: the faster interpolator (see Changed) gives the reference modulator a different bitstream for the same signal. The null-test source of pysacd's quality suite (seed 20261124, 20 s) hashes to `5defb027...` on 0.1.3 and `128f6ecb...` on 0.1.2; 0.1.3 with the direct-form interpolator (`encode.INTERPOLATOR = "direct"`) reproduces `128f6ecb...`, and the hash is the same with NumPy 2.5.2 and 2.5.5 (SciPy 1.18.1), so it follows the code, not the library versions tried.
+- Figures that read the modulator's noise move as a new draw. The alias image of a filter that rejects more than the modulator's noise at the image frequency (about -150 dB or deeper) has a spread of 1.3 to 2.3 dB (standard deviation of the worst of six images over 12 draws); two draws differ by up to 3 dB, as pysacd's 0.6.0 figure did (2.6 to 3.0 dB). The same test with a filter that leaks (about -127 dB) has a spread of 0.07 to 0.09 dB, so its figure moves by 0.0 to 0.2 dB. Both interpolators give the same distribution; neither reads higher or lower.
+- What to compare: a 0.1.2 alias figure with a 0.1.3 one only to the spreads above. For a release comparison run both releases of the device under test with the same dsd-measure version.
+
 ### Fixed
 
 - `null` aligned over the full band, so uncorrelated ultrasonic noise (two DSD outputs, or PCM that still holds DSD noise) or a level difference could give a wrong delay, inverted polarity and a depth near 0 dB ([#4](https://github.com/dsd-toolbox/dsd-measure/issues/4)). Delay, polarity and gain are now found in the null band with a normalised, band-limited correlation.
