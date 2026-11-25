@@ -36,6 +36,6 @@ jobs:
       - name: Build this commit
         run: cargo build --release --locked
       - name: Measure both and compare
-        uses: dsd-toolbox/dsd-measure/.github/actions/gate@0000000000000000000000000000000000000000 # the commit of the latest dsd-measure release, see "Pin the action"
+        uses: dsd-toolbox/dsd-measure/.github/actions/gate@8010bbab950091cabffb20fb25e8a6a744569a6d # the commit of the latest dsd-measure release, see "Pin the action"
         with:
           suite: ci/gate.toml
