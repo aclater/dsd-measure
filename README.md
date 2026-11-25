@@ -58,7 +58,7 @@ brew install ffmpeg pipx
 pipx ensurepath
 ```
 
-Close the Terminal window and open a new one, so that `pipx` programs are found. Then install dsd-measure, run the check (two to five minutes) and open the report:
+Close the Terminal window and open a new one, so that `pipx` programs are found. Then install dsd-measure, run the check (under a minute) and open the report:
 
 <!-- docs-run: skip="macOS commands; run on macOS by the release test plan (docs/release-test-plan.md), not in the Linux container" -->
 ```sh
@@ -103,7 +103,7 @@ explorer.exe .
 
 The last line opens the report folder in Windows File Explorer; double-click `index.html` there.
 
-This measures ffmpeg, as a DSD to PCM decoder, with the tool's synthetic test signals, and takes two to five minutes. The report opens with one sentence that starts "Result:" and says what ffmpeg's weakest figure in the audio band measures, or that it was not judged; the same sentence ends the terminal output. Replace `ffmpeg` with `dsd2pcm` or `sox-dsd` for those tools, or use `--command` for any other (see [Measure a decoder you have installed](docs/user-guide.md#measure-a-decoder-you-have-installed)). To compare two decoders on your own music instead, run `dsd-measure null track.dsf ffmpeg`.
+This measures ffmpeg, as a DSD to PCM decoder, with the tool's synthetic test signals, and takes about a minute on Linux and on macOS. The report opens with one sentence that starts "Result:" and says what ffmpeg's weakest figure in the audio band measures, or that it was not judged; the same sentence ends the terminal output. Replace `ffmpeg` with `dsd2pcm` or `sox-dsd` for those tools, or use `--command` for any other (see [Measure a decoder you have installed](docs/user-guide.md#measure-a-decoder-you-have-installed)). To compare two decoders on your own music instead, run `dsd-measure null track.dsf ffmpeg`.
 
 To check the tool itself, `dsd-measure init` writes a suite file and `dsd-measure run suite.toml` measures the built-in reference decoder and modulator; that report says plainly that it shows the measurement floor, not a result for a product. A finished [example report](examples/README.md) of it is included. Add `--plan` to any `run` or `quick` command to see what it would do first.
 
