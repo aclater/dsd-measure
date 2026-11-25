@@ -15,12 +15,16 @@ A deterministic measurement kit for DSD to PCM converters and PCM to DSD modulat
 | System | How | Guide |
 |---|---|---|
 | Linux (x86-64, aarch64) | `pipx` from this repository; needs a C compiler for the reference modulator | [Install](docs/install.md) |
-| macOS | the same, with the Xcode command line tools | [Install](docs/install.md) |
-| Windows | use WSL | [Install](docs/install.md) |
+| macOS (Apple Silicon) | Homebrew, then `pipx`; steps in the guide | [Install](docs/install.md) |
+| Windows 11 | WSL with Ubuntu, then the Linux steps; steps in the guide | [Install](docs/install.md) |
 
-Tested on Fedora 43 in a container with Python 3.14.
+Tested on: Fedora 43 in a container; macOS 27.2 in a VM on Apple hardware (Apple Silicon); Windows 11 with WSL2 and Ubuntu 26.04 in a VM. Every Quick start command was run as written except these: on macOS the Homebrew installer (Homebrew was already in the VM) and `open` (the VM has no desktop session to open a browser in); on Windows `wsl --install -d Ubuntu` with its restart (the test installed WSL and Ubuntu in a headless VM instead).
 
 ## Quick start
+
+Pick your system. All three run the same check at the end: `dsd-measure quick ffmpeg` measures ffmpeg as a DSD to PCM decoder and writes a report.
+
+### Linux (Fedora)
 
 <!-- docs-run: packages=sudo group=quick-start drop="^xdg-open" expect="Result:" timeout=3000 -->
 ```sh
@@ -32,7 +36,74 @@ dsd-measure quick ffmpeg
 xdg-open report/ffmpeg/index.html
 ```
 
-This measures ffmpeg, as a DSD to PCM decoder, with the tool's synthetic test signals, and takes about a minute and a half. The report opens with one sentence that starts "Result:" and says what ffmpeg's weakest figure in the audio band measures, or that it was not judged; the same sentence ends the terminal output. Replace `ffmpeg` with `dsd2pcm` or `sox-dsd` for those tools, or use `--command` for any other (see [Measure a decoder you have installed](docs/user-guide.md#measure-a-decoder-you-have-installed)). To compare two decoders on your own music instead, run `dsd-measure null track.dsf ffmpeg`.
+On Debian or Ubuntu use `sudo apt install -y build-essential git python3-pip pipx ffmpeg` instead of the first line.
+
+### macOS (Apple Silicon)
+
+Open the Terminal app (press Command and Space, type Terminal, press Return) and run these steps in order. The first one installs [Homebrew](https://brew.sh), the package manager the next steps use; it asks for your Mac password and may take several minutes.
+
+<!-- docs-run: skip="macOS commands; run on macOS by the release test plan (docs/release-test-plan.md), not in the Linux container" -->
+```sh
+curl -fsSL -o install-homebrew.sh https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+/bin/bash install-homebrew.sh
+```
+
+When it finishes, tell Terminal where Homebrew is, then install ffmpeg and pipx:
+
+<!-- docs-run: skip="macOS commands; run on macOS by the release test plan (docs/release-test-plan.md), not in the Linux container" -->
+```sh
+/opt/homebrew/bin/brew shellenv >> ~/.zprofile
+source ~/.zprofile
+brew install ffmpeg pipx
+pipx ensurepath
+```
+
+Close the Terminal window and open a new one, so that `pipx` programs are found. Then install dsd-measure, run the check (two to five minutes) and open the report:
+
+<!-- docs-run: skip="macOS commands; run on macOS by the release test plan (docs/release-test-plan.md), not in the Linux container" -->
+```sh
+# facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+# /facts
+dsd-measure quick ffmpeg
+open report/ffmpeg/index.html
+```
+
+If macOS asks to install the command line developer tools during the first step, click Install and let it finish; Homebrew needs them, and so does dsd-measure's C compiler.
+
+### Windows 11 (through WSL)
+
+dsd-measure does not run natively on Windows yet. It runs inside WSL, the Linux that Windows can install for itself. Step 1: open the Start menu, type PowerShell, right-click Windows PowerShell, choose Run as administrator, and run:
+
+<!-- docs-run: skip="Windows PowerShell command, run on Windows by the release test plan (docs/release-test-plan.md), not in the Linux container" -->
+```powershell
+wsl --install -d Ubuntu
+```
+
+Restart Windows when it asks. (This first step was not tested as written; the steps after it were, in WSL2 on Windows 11.) After the restart an Ubuntu window opens by itself (or open Ubuntu from the Start menu); it asks you to choose a user name and a password for Linux. Step 2: in that Ubuntu window run:
+
+<!-- docs-run: skip="WSL commands; the Ubuntu packages and pipx steps are run on Ubuntu by the release test plan (docs/release-test-plan.md), not in the Fedora container" -->
+```sh
+sudo apt update
+sudo apt install -y build-essential git python3-pip pipx ffmpeg
+pipx ensurepath
+```
+
+Close the Ubuntu window and open Ubuntu again from the Start menu. Step 3:
+
+<!-- docs-run: skip="WSL commands; run in Ubuntu by the release test plan (docs/release-test-plan.md), not in the Fedora container" -->
+```sh
+# facts:install kind=pipx-git repo=dsd-toolbox/dsd-measure
+pipx install git+https://github.com/dsd-toolbox/dsd-measure@v0.1.2
+# /facts
+dsd-measure quick ffmpeg
+cd report/ffmpeg
+explorer.exe .
+```
+
+The last line opens the report folder in Windows File Explorer; double-click `index.html` there.
+
+This measures ffmpeg, as a DSD to PCM decoder, with the tool's synthetic test signals, and takes two to five minutes. The report opens with one sentence that starts "Result:" and says what ffmpeg's weakest figure in the audio band measures, or that it was not judged; the same sentence ends the terminal output. Replace `ffmpeg` with `dsd2pcm` or `sox-dsd` for those tools, or use `--command` for any other (see [Measure a decoder you have installed](docs/user-guide.md#measure-a-decoder-you-have-installed)). To compare two decoders on your own music instead, run `dsd-measure null track.dsf ffmpeg`.
 
 To check the tool itself, `dsd-measure init` writes a suite file and `dsd-measure run suite.toml` measures the built-in reference decoder and modulator; that report says plainly that it shows the measurement floor, not a result for a product. A finished [example report](examples/README.md) of it is included. Add `--plan` to any `run` or `quick` command to see what it would do first.
 

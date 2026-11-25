@@ -4,8 +4,9 @@ title: "dsd-measure"
 abstract: "A deterministic measurement kit for DSD to PCM converters and PCM to DSD modulators."
 type: software
 authors:
-  - alias: "aclater"
-# dual-licensed MIT OR Apache-2.0; see LICENSE-MIT and LICENSE-APACHE
+  - name: "The dsd-measure authors"
+# Dual-licensed MIT OR Apache-2.0 (see LICENSE-MIT and LICENSE-APACHE). CFF takes one SPDX identifier here, so
+# this names Apache-2.0; the reader may choose either licence.
 license: Apache-2.0
 repository-code: "https://github.com/dsd-toolbox/dsd-measure"
 url: "https://github.com/dsd-toolbox/dsd-measure"
