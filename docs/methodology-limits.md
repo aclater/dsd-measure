@@ -30,6 +30,16 @@ What dsd-measure can and cannot claim today, in plain words. A hostile methodolo
 - **Repeatability.** Every figure is one deterministic run: one dither seed, tone phase and record. Estimator scatter is documented in [accuracy](accuracy.md); the variance of the stimulus is not measured.
 - **Near the tone.** Energy within 13.5 Hz of the tone is not counted (the notch), which hides skirt noise close to the carrier.
 
+## Null test passbands
+
+The null test estimates where each device is cut from its own spectrum against the other's, because both decode the same music. It is an estimate, not a measurement of a filter:
+
+- It detects a device that is 20 dB or more below the other, relative to the ratio in 200 Hz to 8 kHz, over at least two twelfth-octave bands in a row. A smaller difference, or a narrower one, is not seen.
+- It looks only from 2 kHz up. A cut below 2 kHz is not reported as a passband.
+- The cut it gives is the lower edge of the first band of the departure, so it is good to about one band (6 %). A device that is cut at a lower frequency than the other is seen directly; the other's bandwidth is read from where the departure ends, which is also where the music or the other device's own noise ends.
+- It needs energy to compare: a band counts only where the stronger device is within 70 dB of its own level in the mid band. Music that stops below the cut leaves nothing to see, and the cut is then not found.
+- A cut at or above 20 kHz does not change the null band; it is recorded and said to be information.
+
 ## Output format
 
 A converter that writes integer PCM adds rounding noise whatever its decoder does. The report records every output's word length, kind and rate, and states the SINAD that its word length allows both for plain rounding and for TPDF dither (24-bit at 44.1 kHz: 140.7 and 135.9 dB, against a reference floor of 147 dB). A figure between 6 dB under the dithered bound and 6 dB over the plain bound is marked "not judged: output format" and is not ranked. Whether a file was dithered is not detected, which is why both bounds are given. A FLAC output is converted to 32-bit float through ffmpeg before analysis: exact for 24-bit and below, lossy for 32-bit integer FLAC.

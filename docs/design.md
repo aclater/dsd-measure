@@ -17,6 +17,9 @@ How dsd-measure is built and why. The measurements themselves are defined in the
 | `report` | HTML, Markdown, SVG, CSV and JSON |
 | `plan` | The test catalogue: what each test uses and why, `--plan`, `signals --list` and the report's "What was measured" data |
 | `run`, `cli` | The suite file, the run log and the command line |
+| `stimcache` | The per-user cache of encoded test signals: key, integrity check, size limit |
+| `parallel` | The tests of a suite in worker processes, joined into the result of a serial run |
+| `gate` | The release gate: two results compared figure by figure against the repeatability |
 | `dsdstream` | DSF and DFF read in ranges, and converted bit-exactly, without loading the file |
 | `nulltest` | The real-music null test: `tracks` (ranged readers, resampler), `devices`, `align`, `analyse`, `verdict`, `report`, `run` |
 
@@ -33,6 +36,14 @@ How dsd-measure is built and why. The measurements themselves are defined in the
 **The reference decoder is long and linear-phase.** A chain of Kaiser-windowed FIR stages with 160 dB stopband, flat to 20 kHz, written from public DSP principles. It is the "perfect DAC": its own response is known, so what remains is the modulator under test. Every report shows its own floor, measured with an ideal sine and with loud out-of-band tones (see the [reference floor](footprint.md#the-reference-floor)).
 
 **The C core.** The modulator's loop is a data-dependent recurrence, so it cannot be vectorised in NumPy. It is a 30-line C file built on first use; a slow Python fallback exists for completeness.
+
+**The interpolator runs in the frequency domain.** The filters in front of the reference modulator are long (2047 taps, then 255 per stage) and the direct-form polyphase filter was 79 % of a run. Each stage is now one FFT overlap-add convolution per polyphase branch (`scipy.signal.oaconvolve`), about six times faster on one core (the 2047-tap first stage 24 times), with the same taps. Why not shorter filters: stages only as long as their image rejection needs were measured too and moved the signal by 2e-8 (-155 dB), which is a different reference; the FFT form moves it by rounding only (-287 dB). Why SciPy's own routine: a hand-written overlap-save was no faster. The modulator is chaotic, so the bitstream differs and the equivalence is shown statistically ([repeatability](accuracy.md#repeatability)).
+
+**Encoded signals are cached, results are not.** The modulator's output is a pure function of its input and the software, so it is stored once per user, named by a hash of every input, and checked by hash on each read. Why not cache the figures: the analysis is what a release of dsd-measure changes, and a figure that is always computed cannot be stale. Why a hash of the encoder's source in the name: a change to the encoder between releases then cannot read old entries.
+
+**Parallel by test, in processes.** Every test of every device has its own stimuli and device calls, so the tests are the unit of parallel work; each runs in a worker process with its own adapter and work folder, and the pieces are joined in run order. The device delay, which three tests share, is measured once and handed to them. Why processes: the work is NumPy, SciPy and external tools, and worker processes need no locking. Why not threads inside the FFT: the transforms are short blocks, and threading them gained little where worker processes give about 4 times on a 14-core laptop CPU ([performance](performance.md)). A run with any number of jobs writes the `results.json` of a serial run; a test holds that.
+
+**What was measured and not adopted.** The modulator core runs at the latency of its feedback sum (18 ns per sample on an i9-13900H P-core); other compiler flags and a rewrite with the state in registers stayed within 9 % and byte-identical, so the core is unchanged, and a faster sum would need another order of additions, which is another bitstream. A C decimation kernel for the decoder was byte-identical to SciPy's and 1.1 times faster, not worth a second compiled file. An FFT interpolator in 64-bit float on a consumer GPU (RTX 4070 Ti) was about 4 times faster than one laptop P-core. That is no more than the worker processes give on a multi-core machine, nothing on a cached run, and a second set of rounding (so a second set of bitstreams); 32-bit float on the GPU has an error of -130 dB, above the reference floor. There is no GPU path.
 
 **The impulse is measured on all alignments.** A decimating filter's output samples depend on where the impulse falls relative to the output grid; one alignment can hide all ringing. Class A impulses are run at eight sub-sample offsets and the output samples interleaved into one response at 352.8 kHz resolution. Every point is a real output sample; nothing is interpolated.
 

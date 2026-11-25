@@ -109,12 +109,12 @@ def test_sox_adapter_levels_and_trellis(tmp_path):
     a = _FakeSox("s", "unused", klass="B", workdir=tmp_path)
     assert a.gain_db == pytest.approx(6.0206) and a.input_gain_db == 0.0
     a.pcm_to_dsd(x, 88200)
-    assert a.args[-4:] == ["-t", "32", "-n", "32"]
+    assert "-t" not in a.args and a.args[-2:] == ["-f", "sdm-8"]  # SoX's own trellis is the default
     assert np.max(np.abs(a.wav)) == pytest.approx(np.max(np.abs(x)), abs=1e-6)
-    b = _FakeSox("s", "unused", klass="B", workdir=tmp_path, input_gain_db=6.0206, trellis="default")
+    b = _FakeSox("s", "unused", klass="B", workdir=tmp_path, input_gain_db=6.0206, trellis="32x32")
     assert b.gain_db == pytest.approx(0.0, abs=1e-9)  # unity overall: 6.02 in, SoX -6.02, 0 out
     b.pcm_to_dsd(x, 88200)
-    assert "-t" not in b.args and b.args[-2:] == ["-f", "sdm-8"]
+    assert b.args[-6:] == ["-f", "sdm-8", "-t", "32", "-n", "32"]
     assert np.max(np.abs(b.wav)) == pytest.approx(1.0, abs=1e-3)  # the modulator now sees 0 dB SACD
     assert b.log[-1]["clipped_at_full_scale"] is False
     b.pcm_to_dsd(sg.sine(1000.0, -2.9, 88200, 4096), 88200)  # the +3.1 dB SACD peak cannot be reached

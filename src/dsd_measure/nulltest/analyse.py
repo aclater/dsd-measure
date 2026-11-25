@@ -13,12 +13,14 @@ import numpy as np
 from scipy import signal
 
 from ..dsdstream import DsdFile
-from .align import FRAC_HALF, estimate_delay, shifted
+from .align import FRAC_HALF, estimate_delay, estimate_passbands, shifted
 from .tracks import ResampledTrack
 
 BLOCK = 1 << 21
 FLOOR_DB = -400.0  # reported when a level is exactly zero
 IDENTICAL_DEPTH_DB = 300.0  # beyond this the difference is floating-point rounding
+BAND_LO_HZ = 20.0  # bottom of the alignment band
+MIN_CORRELATION = 0.5  # below this (in band, after alignment) the alignment cannot be trusted
 
 
 @dataclass
@@ -34,7 +36,7 @@ class Options:
     channels: tuple | None = None
     diff_wav: bool = False
     diff_gain_db: float = 0.0  # gain applied to the difference WAV only
-    band_hz: float = 20000.0  # top of the in-band depth; bands above are ultrasonic
+    band_hz: float = 20000.0  # top of the null band; bands above it are ultrasonic (lower when a device is cut below it)
 
 
 def db(x):
@@ -133,23 +135,35 @@ def compare(track_a, track_b, opts, diff_wav_path=None, log=lambda *_: None):
     if opts.duration is not None:
         n1 = min(n1, int(round((opts.start + opts.duration) * fc)))
     fmax = 0.45 * fc
-    bands = []
-    for c, lo, hi in third_octave_bands(fmax):
-        if lo < opts.band_hz < hi:
-            # the band that holds the top of the verdict is cut at exactly 20 kHz: the part below counts
-            # towards the verdict, the part above is ultrasonic
-            bands += [(float(np.sqrt(lo * opts.band_hz)), lo, opts.band_hz), (float(np.sqrt(opts.band_hz * hi)), opts.band_hz, hi)]
-        else:
-            bands.append((c, lo, hi))
     nfft = max(1 << 15, 1 << int(round(log2(0.75 * fc))))
     hop = nfft // 2
     block = ceil(BLOCK / hop) * hop
 
-    # 1. delay and polarity per channel
+    # 1. the common passband, then delay and polarity per channel in that band
+    cuts = [estimate_passbands(track_a, track_b, c, n0, n1, fc) for c in chans]
+    cut_a = min((x[0] for x in cuts if x[0]), default=None)
+    cut_b = min((x[1] for x in cuts if x[1]), default=None)
+    like_for_like = cut_a is None and cut_b is None
+    band_hi = min([opts.band_hz, fmax] + [x for x in (cut_a, cut_b) if x])
+    affected = band_hi < min(opts.band_hz, fmax)  # a cut at or above the null band's top leaves the null band as it is
+    if not like_for_like:
+        seen = (f"device A passes to about {(cut_a or fmax) / 1000:.1f} kHz, device B to about {(cut_b or fmax) / 1000:.1f} kHz")
+        if affected:
+            log(f"  WARNING: not like-for-like in band: {seen}; aligning and nulling {BAND_LO_HZ:g} Hz to {band_hi / 1000:g} kHz")
+        else:
+            log(f"  note: the passbands differ ({seen}); the null band, {BAND_LO_HZ:g} Hz to {band_hi / 1000:g} kHz, is not affected")
+    bands = []
+    for c, lo, hi in third_octave_bands(fmax):
+        if lo < band_hi < hi:
+            # the band that holds the top of the verdict is cut at exactly 20 kHz: the part below counts
+            # towards the verdict, the part above is ultrasonic
+            bands += [(float(np.sqrt(lo * band_hi)), lo, band_hi), (float(np.sqrt(band_hi * hi)), band_hi, hi)]
+        else:
+            bands.append((c, lo, hi))
     states = []
     for c in chans:
         log(f"  channel {c}: estimating delay")
-        est = estimate_delay(track_a, track_b, c, n0, n1, fc, opts.max_delay)
+        est = estimate_delay(track_a, track_b, c, n0, n1, fc, opts.max_delay, band=(BAND_LO_HZ, band_hi))
         states.append(_Channel(c, est, nfft))
     d_max, d_min = max(s.al["delay_samples"] for s in states), min(s.al["delay_samples"] for s in states)
     # keep every read inside both tracks
@@ -168,7 +182,7 @@ def compare(track_a, track_b, opts, diff_wav_path=None, log=lambda *_: None):
 
     # 2. pass one: gain and correlation, in the audio band only (devices may differ above it)
     log(f"  pass 1 of 2: gain and correlation ({total / fc:.1f} s at {fc} Hz)")
-    gain_hi = min(opts.band_hz, fmax)
+    gain_hi = band_hi
     win = signal.windows.hann(nfft, sym=False)
     sel = np.arange(nfft // 2 + 1) * fc / nfft <= gain_hi
     for s, e in blocks():
@@ -242,6 +256,8 @@ def compare(track_a, track_b, opts, diff_wav_path=None, log=lambda *_: None):
             ra, rd = db(sa / na), db(sd / nd)
             secs.append({"t_s": k, "music_dbfs": ra, "diff_dbfs": rd, "depth_db": ra - rd})
         music, diff = db(st.energy_a / st.n), db(st.dd / st.n)
+        audio_music = db(sum(10 ** (b["music_dbfs"] / 10) for b in brows if not b["ultrasonic"]))
+        audio_diff = db(sum(10 ** (b["diff_dbfs"] / 10) for b in brows if not b["ultrasonic"]))
         out_ch.append({
             "channel": st.ch,
             "delay_samples": st.al["delay_samples"], "delay_us": st.al["delay_samples"] / fc * 1e6,
@@ -251,15 +267,26 @@ def compare(track_a, track_b, opts, diff_wav_path=None, log=lambda *_: None):
             "gain": st.gain, "gain_db": 20 * np.log10(abs(st.gain)) if st.gain else FLOOR_DB,
             "correlation": abs(st.corr_raw),
             "one_minus_correlation": float(1 - abs(st.corr_raw)),
-            "music_rms_audio_dbfs": db(sum(10 ** (b["music_dbfs"] / 10) for b in brows if not b["ultrasonic"])),
-            "diff_rms_audio_dbfs": db(sum(10 ** (b["diff_dbfs"] / 10) for b in brows if not b["ultrasonic"])),
+            "music_rms_audio_dbfs": audio_music, "diff_rms_audio_dbfs": audio_diff,
             "music_rms_dbfs": music, "music_peak_dbfs": db(st.peak_a ** 2),
             "diff_rms_dbfs": diff, "diff_peak_dbfs": db(st.peak_d ** 2),
-            "null_depth_db": music - diff,
+            "alignment_peak_correlation": st.al["peak_correlation"],
+            "null_band_hz": [BAND_LO_HZ, band_hi],
+            "null_depth_fullband_db": music - diff,
+            "null_depth_db": audio_music - audio_diff,
             "identical": bool(st.dd <= 1e-30 * st.energy_a),
             "bands": brows, "seconds": secs,
         })
-    return {"common_rate": fc, "resampled": resampled, "samples": total, "seconds": total / fc,
+    low = min(min(st.al["peak_correlation"], abs(st.corr_raw)) for st in states)
+    reason = (f"the in-band correlation of the two outputs after alignment is {low:.2f}, below {MIN_CORRELATION:g}: "
+              "the delay, polarity and level found cannot be relied on" if low < MIN_CORRELATION else None)
+    if reason:
+        log(f"  WARNING: alignment not trustworthy: {reason}")
+    trust = {"untrustworthy": reason is not None, "reason": reason, "min_correlation": float(low),
+             "min_correlation_limit": MIN_CORRELATION, "not_like_for_like": not like_for_like,
+             "bandwidth_hz": {"A": cut_a or fmax, "B": cut_b or fmax},
+             "cut_seen": {"A": cut_a is not None, "B": cut_b is not None}, "null_band_affected": bool(not like_for_like and affected)}
+    return {"common_rate": fc, "resampled": resampled, "trust": trust, "null_band_hz": [BAND_LO_HZ, band_hi], "samples": total, "seconds": total / fc,
             "range_s": [n0 / fc, n1 / fc], "analysis_band_hz": fmax, "nfft": nfft,
             "bin_hz": fc / nfft, "channels": out_ch}
 

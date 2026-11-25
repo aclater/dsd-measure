@@ -42,6 +42,15 @@ Add --plan to quick, null or run to see what would happen first. More: dsd-measu
 """
 
 
+def _speed_options(p):
+    p.add_argument("-j", "--jobs", type=int, metavar="N",
+                   help="worker processes (default: all cores up to 4, then half of them, at most 16, fewer when memory is short; "
+                        "1 runs the tests one after the other). "
+                        "The results do not depend on it")
+    p.add_argument("--no-cache", action="store_true",
+                   help="do not read or write the cache of encoded test signals (the results are the same, the run is slower)")
+
+
 def _main(argv=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if not argv:
@@ -57,10 +66,13 @@ def _main(argv=None):
     r = sub.add_parser("run", help="run a suite file (TOML) and write a report")
     r.add_argument("suite")
     r.add_argument("-o", "--out")
-    r.add_argument("--profile", choices=["quick", "full"])
+    r.add_argument("--profile", choices=["gate", "quick", "full"],
+                   help="gate: the few tests a release check needs; quick: every test, short signals; full: the footprint's durations")
     r.add_argument("--only", nargs="*", help="run only these tests (see docs/options.md)")
     r.add_argument("--plan", action="store_true", help="print what would be measured, against what and with which signals, then exit")
     r.add_argument("-v", "--verbose", action="store_true", help="show device details while running")
+
+    _speed_options(r)
 
     q = sub.add_parser("quick", help="measure one converter with the quick profile")
     q.add_argument("converter", help="'reference', a tool preset (ffmpeg, dsd2pcm, sox-dsd, sacd_extract) or any name with --command")
@@ -68,9 +80,26 @@ def _main(argv=None):
     q.add_argument("--args", help="extra arguments for a preset, put after the program name (for example --args '--filter pysacd'; write --args=--dither when the value starts with a dash)")
     q.add_argument("--class", dest="klass", choices=["A", "B"], default="A", help="A: DSD to PCM, B: PCM to DSD")
     q.add_argument("-o", "--out", default="report")
-    q.add_argument("--profile", choices=["quick", "full"], default="quick")
+    q.add_argument("--profile", choices=["gate", "quick", "full"], default="quick")
     q.add_argument("--plan", action="store_true", help="print what would be measured, then exit")
     q.add_argument("-v", "--verbose", action="store_true", help="show device details while running")
+
+    _speed_options(q)
+
+    c = sub.add_parser("cache", help="show or empty the cache of encoded test signals",
+                       description="Encoded test signals are kept per user and reused by later runs; see the user guide, Speed.")
+    c.add_argument("--clear", action="store_true", help="delete every cached test signal")
+    c.add_argument("--key", action="store_true",
+                   help="print the name a CI system should save and restore the cache folder under, then exit")
+
+    g = sub.add_parser("gate", help="release gate: fail when a new result is worse than an old one beyond repeatability",
+                       description="Compares two device report folders made with the same suite and profile (for example the "
+                                   "previous release and the candidate). Judges the measured figures, not the bytes of the output. "
+                                   "Exit status 0: no figure is worse; 1: at least one is worse or no longer measured.")
+    g.add_argument("old", help="device report folder (or results.json) of the previous version")
+    g.add_argument("new", help="device report folder (or results.json) of the new version")
+    g.add_argument("--scale", type=float, default=1.0, help="multiply every repeatability by this (default 1)")
+    g.add_argument("--json", dest="json_out", help="also write the comparison to this file")
 
     n = sub.add_parser("null", help="real-music null test: how much does a decoder differ from the reference on your DSD file?",
                        description="Example: dsd-measure null track.dsf ffmpeg compares ffmpeg with the built-in reference decoder on track.dsf.")
@@ -112,7 +141,8 @@ def _main(argv=None):
 
     if a.cmd == "run":
         from .run import run_suite
-        _, failed = run_suite(a.suite, a.out, a.profile, a.only, plan=a.plan, verbose=a.verbose)
+        _, failed = run_suite(a.suite, a.out, a.profile, a.only, plan=a.plan, verbose=a.verbose, jobs=a.jobs,
+                              cache=False if a.no_cache else None)
         return EXIT_TESTS_FAILED if failed else EXIT_OK
     elif a.cmd == "quick":
         from .adapters import PRESETS, unknown_name_message
@@ -138,7 +168,8 @@ def _main(argv=None):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "suite.toml"
             p.write_text("\n".join(spec) + "\n")
-            _, failed = run_suite(p, a.out, a.profile, plan=a.plan, verbose=a.verbose, source=f"dsd-measure quick {a.converter}")
+            _, failed = run_suite(p, a.out, a.profile, plan=a.plan, verbose=a.verbose, source=f"dsd-measure quick {a.converter}",
+                                  jobs=a.jobs, cache=False if a.no_cache else None)
         return EXIT_TESTS_FAILED if failed else EXIT_OK
     elif a.cmd == "null":
         from .nulltest.run import load_suite, options_from, run_null
@@ -161,7 +192,9 @@ def _main(argv=None):
         if not source or len(devs) < 2:
             raise UserError("null needs a DSD file and a decoder to compare, for example: dsd-measure null track.dsf ffmpeg "
                             "(the built-in reference decoder is the baseline); see dsd-measure null --help")
-        run_null(source, devs, options_from(cfg), a.out or cfg.get("out", "null-report"), sdev, a.keep_work)
+        res = run_null(source, devs, options_from(cfg), a.out or cfg.get("out", "null-report"), sdev, a.keep_work)
+        if res and res.get("untrustworthy"):
+            return EXIT_TESTS_FAILED  # the report is written, but a pair could not be aligned
     elif a.cmd == "init":
         from .run import EXAMPLE_SUITE
         Path(a.path).write_text(EXAMPLE_SUITE)
@@ -178,6 +211,21 @@ def _main(argv=None):
         from .adapters import write_signal_set
         m = write_signal_set(out, a.klass, a.profile, a.rate, rates=a.rates, only=a.only)
         print(f"wrote {len(m['files'])} test signals (class {a.klass}, profile {a.profile}) and signals.json to {out}")
+    elif a.cmd == "gate":
+        from . import gate
+        if a.scale <= 0:
+            raise UserError("--scale must be above 0")
+        return EXIT_OK if gate.run(a.old, a.new, a.scale, a.json_out) else EXIT_TESTS_FAILED
+    elif a.cmd == "cache":
+        from . import stimcache
+        if a.key:
+            print(stimcache.gate_key())
+            return EXIT_OK
+        if a.clear:
+            print(f"deleted {stimcache.clear() / 2**20:.1f} MiB of cached test signals")
+        u = stimcache.usage()
+        print(f"{u['directory']}: {u['entries']} test signals, {u['bytes'] / 2**20:.1f} MiB (limit {u['limit_bytes'] / 2**20:.0f} MiB)"
+              + ("" if stimcache.enabled() else "; the cache is switched off (DSD_MEASURE_NO_CACHE)"))
     elif a.cmd == "versions":
         from .run import versions
         print(json.dumps(versions(), indent=1))

@@ -21,6 +21,7 @@ You choose what is measured with the suite file (devices, `profile`, `in_rate`, 
 
 Add `--plan` to `run` or `quick`. Nothing is measured; the command prints and exits:
 
+<!-- docs-run: skip="needs suite.toml from dsd-measure init, which no earlier block creates" -->
 ```sh
 dsd-measure run suite.toml --plan
 dsd-measure quick reference --plan
@@ -56,12 +57,14 @@ Every report opens with a short "What was measured" block: the device and the ex
 
 If ffmpeg is installed, one command measures it:
 
+<!-- docs-run: group=quick-start -->
 ```sh
 dsd-measure quick ffmpeg
 ```
 
 The built-in presets are `ffmpeg`, `dsd2pcm`, `sox-dsd` and `sacd_extract`. Each has a standard command, shown by `--plan`. The `ffmpeg` preset asks for 32-bit float output (`-c:a pcm_f32le`), because ffmpeg writes 16-bit WAV by default and a 16-bit file cannot show a decoder better than about 92 dB (44.1 kHz output) to 101 dB (352.8 kHz) (see [output word length](#output-word-length)). Some builds of ffmpeg read DSD from DFF files but not from DSF files; the pre-flight tries DSF first and, if ffmpeg refuses it, gives ffmpeg DFF files and says so. A preset takes extra arguments after the program name, for example `dsd-measure quick dsd2pcm --args '--filter pysacd'` (in a suite file, `args = "--filter pysacd"`; for the null test, `dsd2pcm:--filter pysacd`). Any other name needs its command:
 
+<!-- docs-run: skip="mytool is a placeholder for a tool the reader has installed" -->
 ```sh
 dsd-measure quick mytool --command 'mytool {input} {output}'
 ```
@@ -82,6 +85,7 @@ Pick the class. A DSD to PCM converter (class A) is given DSD files made by the 
 
 Any command-line tool works through a template with `{input}` and `{output}`:
 
+<!-- docs-run: skip="needs dsd2pcm installed" -->
 ```sh
 dsd-measure quick --command 'dsd2pcm {input} {output}' --class A my-decoder
 ```
@@ -122,7 +126,7 @@ Only `{input}` and `{output}` are replaced; every other brace, as in `awk '{prin
 | Status | Meaning |
 |---|---|
 | 0 | Everything ran |
-| 1 | The report was written, but one or more tests raised an error (for example the tool made no output file); they are listed under "Not run, and why" and on the terminal. Tests skipped on purpose, such as class A only tests on a modulator, do not count |
+| 1 | The report was written, but one or more tests raised an error (for example the tool made no output file); they are listed under "Not run, and why" and on the terminal. Tests skipped on purpose, such as class A only tests on a modulator, do not count. For `null` and for a suite's `[null]` table, the report was written but the alignment of a pair could not be trusted (`run` names the pair on its last lines) |
 | 2 | A fatal error and no report: missing or invalid suite file, unknown adapter or converter name, a tool that is not installed or fails its pre-flight, a compiled-core cache that is not private (see below) |
 | 130 | Interrupted with Ctrl-C |
 
@@ -138,6 +142,7 @@ The null test answers "do the outputs of these two decoders differ on my music, 
 
 Run it on any DSF or DFF file (the file is only read), naming the decoder to compare:
 
+<!-- docs-run: skip="needs a DSD file of the reader's own (track.dsf)" -->
 ```sh
 dsd-measure null track.dsf ffmpeg
 xdg-open null-report/index.html
@@ -147,12 +152,14 @@ When you name one decoder, the built-in reference decoder at 352.8 kHz is the ba
 
 To choose the baseline, name two or more decoders, or use the long form:
 
+<!-- docs-run: skip="needs a DSD file of the reader's own (track.dsf)" -->
 ```sh
 dsd-measure null --source track.dsf --device reference@352800 --device reference@176400 --out null-report
 ```
 
 `reference@352800` is the built-in decoder at 352.8 kHz output. The first device is the baseline; every other device is compared with it. Add a tool with `NAME=COMMAND`, using `{input}` and `{output}` as in the `cli` adapter, and start the command with `dff:` for a tool that reads DFF (the file is converted without changing a bit):
 
+<!-- docs-run: skip="needs a DSD file of the reader's own (track.dsf) and dsd2pcm" -->
 ```sh
 dsd-measure null --source track.dsf --device reference@352800 --device 'dsd2pcm=dsd2pcm {input} {output} --rate 176400' --device 'ffmpeg=dff: ffmpeg -v error -y -i {input} -c:a pcm_f32le {output}' --diff-wav --out null-report
 ```
@@ -162,10 +169,12 @@ The report starts with one line, `Result:`, such as "Difference -161 dB relative
 What happens to the outputs before they are subtracted:
 
 - **Rates.** If the devices output different rates, both are brought to the lower one with a Kaiser polyphase resampler (160 dB stopband, flat to 0.45 times the rate). The analysis stops at 0.45 times the common rate. A common rate above either device's own rate is refused, because it would only invent samples, and so is a ratio that is not a small fraction (use `--rate` to pick a simpler common rate).
-- **Delay.** Found from the cross-correlation of several loud passages, then refined to a fraction of a sample, and applied with a 512-tap windowed-sinc filter. It is reported in samples and microseconds.
+- **Delay.** Found from the normalised cross-correlation of several loud passages, in the band below (so ultrasonic noise, a level difference or an inverted device does not move the peak), then refined to a fraction of a sample, and applied with a 512-tap windowed-sinc filter. It is reported in samples and microseconds.
 - **Level.** A least-squares gain is fitted and reported, so a decoder that is simply louder does not look different. Use `--gain none` to keep levels as they are.
 - **Polarity.** An inverted decoder is detected and flipped, and the report says so. Use `--polarity keep` to leave it.
-- **Band.** The gain, delay and verdict use 20 Hz to 20 kHz only, so a decoder that passes or removes ultrasonic noise does not spoil the match in the audio band. Ultrasonic bands are still shown.
+- **Band.** The delay, polarity, gain and the null depth use 20 Hz to 20 kHz only, so a decoder that passes or removes ultrasonic noise does not spoil the match in the audio band. The band is narrower when the devices' passbands are (see below). The bands above it are still shown, and the full-band depth is kept in `results.json` as `null_depth_fullband_db`; it is not the null depth.
+- **Passbands.** The tool compares the two devices' spectra at the same frequencies (both decoded the same music), in twelfth-octave bands from 200 Hz to 0.45 times the rate, and looks for a device that is 20 dB or more below the other, relative to the ratio in 200 Hz to 8 kHz, over at least two bands in a row from some frequency above 2 kHz. That frequency is the estimated cut. The departure lasts until the other device's own cut (above it both outputs are noise and the ratio is flat again) or until the top, and where it ends below the top that end is the other device's estimated bandwidth. If the bandwidths differ, the pair is flagged "not like-for-like in band": the report and `results.json` (`trust.not_like_for_like`) give both estimated bandwidths, and alignment and the null depth use the common band, no higher than 20 kHz. When the lower cut is at or above the top of the null band (20 kHz), `trust.null_band_affected` is false, the log and the report give the bandwidths as information, and say that the null band is not affected. Two devices that are cut at the same place are not flagged, and neither are two noise floors that differ where both are far below the music (a band counts only where the stronger device is within 70 dB of its own level in the mid band). The bandwidths are estimates from the music itself: see [methodology limits](methodology-limits.md#null-test-passbands).
+- **Trust.** If the in-band correlation of the two outputs after alignment is below 0.5, the log warns, `results.json` has `trust.untrustworthy` with the reason, and the `Result:` line says that the alignment could not be trusted instead of giving a depth band. The report is still written, and `dsd-measure null` exits with status 1 (see [exit status](#exit-status)).
 - **Edges.** The first and last 0.5 s are cut (`--trim-start`, `--trim-end`) because decoders start up with a transient. `--start` and `--duration` pick a part of a long track.
 
 Memory use does not depend on the length of the track: a full album track is read, decoded and compared in blocks of about two million samples.
@@ -225,12 +234,54 @@ Crosstalk and channel match use a stereo pair automatically. For a class B modul
 
 ## Profiles
 
-`quick` takes a few minutes and uses shorter signals and 6 dB level steps; `full` follows the footprint (3 dB steps, 15 s noise, 60 s stability holds) and takes much longer. The report always says which one was used.
+`quick` runs every test with shorter signals and 6 dB level steps; `full` follows the footprint (3 dB steps, 15 s noise, 60 s stability holds) and takes much longer; `gate` runs four tests of the quick profile (the reference floor, the level steps, the noise and the alias tones) for a release check. The report always says which one was used. A figure of the gate profile is the same number the quick profile prints, because both use the same signals.
+
+## Speed
+
+Three things make a run fast, and none of them changes a number in the report. Measured times are in [Performance](performance.md).
+
+- **The cache of encoded test signals.** Turning a test signal into DSD with the reference modulator is most of the work of a run, and the result is always the same for the same signal and the same software. Each encoded signal is kept in `~/.cache/dsd-measure/stimuli` and read back by later runs and by every further device of a suite. Signals are encoded in pieces, with the modulator's state carried from piece to piece, so the bits are the same as if the whole signal were encoded at once; a long hold is cached whole, as any other signal, packed at one bit per sample (85 MB for a 60 s hold at DSD256), and checked by its hash when read back. The first run fills the cache; a quick run of the reference chain adds about 90 MiB, a gate run about 30 MiB.
+- **Jobs.** The tests of all devices run in parallel worker processes: all cores up to four, then half of them, at most 16. `-j N` (or `jobs = N` in the suite, or `DSD_MEASURE_JOBS`) sets the number; `-j 1` runs one test after the other in a single process. The tests finish out of order on the terminal, and the report is the same as with one job. A quick run of the reference chain needs about 2 GiB of memory with one job, 4 GiB with four and 6 GiB with eight; the full profile needs 7.5 GiB with one job and 15 GiB with eight. The default is lowered when less memory is available, and under the memory or CPU limit of a container or a systemd scope it counts what that limit leaves (80 % of the room below `memory.max`, and the CPUs of `cpu.max`). The long records (the 60 s stability holds, the level steps, the noise records) are made, decoded and analysed in pieces: the memory they need grows by one to two bytes per DSD sample of the record (the bit stream itself, one byte, and a copy of it in some tests), so a 60 s hold at DSD256 peaks at 1.4 GB in one test (see [Performance](performance.md#memory-and-disk)); the job figures above were measured before that change. A device with a `workdir` keeps its tests in one worker, so its numbered files stay in order.
+- **The gate profile.** `--profile gate` measures only what a release check compares.
+
+<!-- docs-run: skip="needs suite.toml and runs full-profile measurements; the cache and jobs paths are tested in tests/test_perf.py" -->
+```sh
+dsd-measure run suite.toml --profile gate
+dsd-measure run suite.toml --jobs 2
+dsd-measure run suite.toml --no-cache
+dsd-measure cache
+dsd-measure cache --clear
+```
+
+The cache is safe to delete at any time. An entry is named by a hash of everything it depends on: the samples of the signal, the rates, the modulator design, the dsd-measure version, the encoder's source, the NumPy and SciPy versions and the machine type. A change to any of them gives a new name, so an old entry is never read by mistake. Each file carries a checksum that is checked on every read; a damaged file is deleted and the signal is encoded again. The folder is private to you (mode 700) and dsd-measure refuses to use it otherwise, as for the compiled core. When the cached signals pass 4096 MiB the ones read longest ago are deleted first; `DSD_MEASURE_CACHE_MAX_MB` changes the limit and `DSD_MEASURE_CACHE_DIR` moves the folder. `--no-cache` (or `DSD_MEASURE_NO_CACHE=1`) neither reads nor writes it.
+
+### A release gate in CI
+
+To fail a build when a new version of a converter measures worse than the previous one, put both versions in one suite as two devices, run the gate profile, and compare the two device folders:
+
+<!-- docs-run: skip="needs suite.toml and two finished report folders" -->
+```sh
+dsd-measure run suite.toml --profile gate
+dsd-measure gate report/previous report/candidate
+```
+
+`dsd-measure gate` prints one row per figure with the old value, the new value and a verdict, and exits with status 1 when a figure is worse than before by more than the measurement's repeatability (the table is in [Command line options](options.md#release-gate)). It compares measured figures, not output bytes, so a converter may change its output and pass. Both versions get the identical signals from the cache, so the encoder runs once.
+
+To keep the cache between CI runs, save and restore the folder `~/.cache/dsd-measure/stimuli` under the name that `dsd-measure cache --key` prints. The name changes exactly when the entries would no longer be read (a new dsd-measure, NumPy or SciPy version, or another machine type), so a restored folder is always usable, and a missing one only makes the run slower.
+
+<!-- docs-run: group=quick-start -->
+```sh
+dsd-measure cache --key
+install -d -m 700 ~/.cache/dsd-measure
+```
+
+Make the parent folder before the CI system restores `stimuli` into it, as above: a folder that a restore step creates is open to other users, and dsd-measure refuses a cache that is not private.
 
 ## Troubleshooting
 
 - **No C compiler.** Install `gcc` (Linux) or the Xcode command line tools (macOS). Without it the slow Python modulator is used and a run takes hours.
-- **"cache directory ... is accessible to others".** The compiled modulator core is built once into `$XDG_CACHE_HOME/dsd-measure` (or `~/.cache/dsd-measure`), which must belong to you and not be accessible to anyone else, and the library inside must not be writable by others. dsd-measure refuses to load code from anywhere else. Fix it with `chmod 700 ~/.cache/dsd-measure`, or delete the folder and run again.
+- **"cache directory ... is accessible to others".** The compiled modulator core is built once into `$XDG_CACHE_HOME/dsd-measure` (or `~/.cache/dsd-measure`), and the encoded test signals are kept in its `stimuli` folder. Both must belong to you and not be accessible to anyone else, and the files inside must not be writable by others. dsd-measure refuses to load code from anywhere else. Fix it with `chmod 700 ~/.cache/dsd-measure`, or delete the folder and run again.
+- **Out of memory, or the machine is slow during a run.** Use fewer jobs: `--jobs 2`, or `--jobs 1` for one process.
 - **A test says "not run".** The reason is in the report. A tool that cannot make a file, or an import folder with a missing file, is reported and the other tests still run.
 - **Levels differ by 6.02 dB.** Some tools map WAV full scale to 0 dB SACD. Set `gain_db` on the device to undo it; the gain is recorded in the report.
 - **"unknown converter".** `quick` takes a preset (`ffmpeg`, `dsd2pcm`, `sox-dsd`, `sacd_extract`) or any name with `--command`. A DSD file given to `quick` or on its own is answered with the `null` command for it.
@@ -241,10 +292,9 @@ Crosstalk and channel match use a stereo pair automatically. For a class B modul
 ## See also
 
 - [Command line options](options.md)
+- [Performance](performance.md)
 - [Conclusions](conclusions.md)
 - [Roadmap](roadmap.md)
 - [Measurement footprint](footprint.md)
-- [Design](design.md)
-- [Roadmap](roadmap.md)
 
 Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

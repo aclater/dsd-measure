@@ -1,11 +1,11 @@
 {
- "headline": "Result: this is the measurement floor of the built-in reference chain (SINAD 147.0 dB, the highest figure the tool can show), not a result for a product.",
+ "headline": "Result: this is the measurement floor of the built-in reference chain (SINAD 147.1 dB, the highest figure the tool can show), not a result for a product.",
  "conclusions": [
   {
    "id": "floor",
    "verdict": "floor",
    "label": "Measurement floor",
-   "text": "This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.0 dB and dynamic range 151.8 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.0 dB) cannot be ranked by this tool.",
+   "text": "This is the measurement floor, not a result for a product: the built-in reference chain reads SINAD 147.1 dB and dynamic range 151.7 dB (A-weighted) at DSD64. A DSD to PCM converter within 6 dB of these figures (SINAD above 141.1 dB) cannot be ranked by this tool.",
    "metrics": [
     "reference_floor.chain.dr_a_db",
     "reference_floor.chain.sinad_db",
@@ -16,12 +16,12 @@
     {
      "metric": "reference_floor.chain.sinad_db",
      "label": "SINAD of the reference chain at DSD64",
-     "value": "147.0 dB"
+     "value": "147.1 dB"
     },
     {
      "metric": "reference_floor.chain.dr_a_db",
      "label": "dynamic range of the reference chain, A-weighted",
-     "value": "151.8 dB"
+     "value": "151.7 dB"
     },
     {
      "metric": "reference_floor.margin_db",
@@ -31,12 +31,12 @@
     {
      "metric": "tone_0dbsacd.sinad_db",
      "label": "SINAD of this device",
-     "value": "146.7 dB"
+     "value": "146.9 dB"
     },
     {
      "metric": "reference_floor.chain.sinad_db",
      "label": "SINAD above which a converter cannot be ranked",
-     "value": "141.0 dB"
+     "value": "141.1 dB"
     }
    ],
    "thresholds": [
@@ -238,7 +238,7 @@
  "device_versions": {
   "adapter": "reference",
   "program": "dsd-measure built-in reference chain",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "reference_chain": "2"
  },
  "metrics": {
@@ -252,19 +252,19 @@
    "ntf": "order 8, max gain 1.45",
    "ntf_fallbacks": 0,
    "chain": {
-    "thdn_db": -146.99,
-    "thd_db": -163.28,
-    "thdn_a_db": -150.37,
-    "sinad_db": 146.99,
+    "thdn_db": -147.05,
+    "thd_db": -164.35,
+    "thdn_a_db": -150.52,
+    "sinad_db": 147.05,
     "noise_dbfs": -159.06,
     "noise_a_dbfs": -162.45,
-    "dr_db": 148.46,
-    "dr_a_db": 151.8,
+    "dr_db": 148.47,
+    "dr_a_db": 151.67,
     "metric_floors": {
      "lobe_noise_db": -183.5,
-     "imd_smpte_db": -144.78,
-     "imd_ccif_db": -134.89,
-     "multitone_dfr_db": 150.7
+     "imd_smpte_db": -145.23,
+     "imd_ccif_db": -134.1,
+     "multitone_dfr_db": 153.0
     }
    },
    "decoder_alone": {
@@ -292,86 +292,86 @@
    "meets_target": true
   },
   "tone_0dbsacd": {
-   "thd_db": -163.548479837981,
-   "thdn_db": -146.725927401796,
-   "thdn_a_db": -150.25522950601743,
-   "sinad_db": 146.725927401796,
-   "thd_percent": 6.646239819756485e-07,
-   "thdn_percent": 4.610028708351317e-06,
+   "thd_db": -164.0543496619968,
+   "thdn_db": -146.91344155841077,
+   "thdn_a_db": -150.37726754859673,
+   "sinad_db": 146.91344155841077,
+   "thd_percent": 6.270216216365506e-07,
+   "thdn_percent": 4.511572305747115e-06,
    "largest_harmonic": {
     "order": 3,
-    "db": -166.52596269726274
+    "db": -166.970465197605
    }
   },
   "tone_peak": {
-   "thd_db": -139.58480229011903,
-   "thdn_db": -129.24940666056816,
-   "sinad_db": 129.24940666056816
+   "thd_db": -139.7571840045122,
+   "thdn_db": -129.10762018184636,
+   "sinad_db": 129.10762018184636
   },
-  "gain_error_db": 1.9109644586734476e-06,
+  "gain_error_db": 1.9081284676758514e-06,
   "dynamic_range": {
-   "dr_db": 147.27565232702614,
-   "dr_a_db": 150.49837250596434,
-   "noise_dbfs": -153.29625228366595,
-   "noise_a_dbfs": -156.51897246260415
+   "dr_db": 147.03776543631196,
+   "dr_a_db": 150.27404259101058,
+   "noise_dbfs": -153.05836539295177,
+   "noise_a_dbfs": -156.2946425476504
   },
   "linearity": {
    "lowest_level_within_0p5_db": -126.02059991327965,
    "error_at": {
-    "-6": 1.9109644586734476e-06,
-    "-66": 8.399248415003058e-06,
-    "-90": -7.541922590803551e-05,
-    "-102": 8.155800840370375e-05,
-    "-114": 0.00030626665942179443,
-    "-126": -0.005517149603122107
+    "-6": 1.9081284676758514e-06,
+    "-66": 8.291886572919793e-06,
+    "-90": -3.0994987980648148e-06,
+    "-102": 0.00027681499403797716,
+    "-114": 0.0006492737904579826,
+    "-126": 0.00035028226886879565
    }
   },
   "thdn_vs_frequency": {
-   "20": -146.32308002089695,
-   "100": -146.51591347098554,
-   "1000": -146.86821318512716,
-   "5000": -146.50528918984259,
-   "10000": -147.0347969905486,
-   "15000": -146.9563851454595,
-   "20000": -146.90079574998848,
+   "20": -146.52917258611507,
+   "100": -146.33240411104833,
+   "1000": -146.84351297689713,
+   "5000": -146.57445164358518,
+   "10000": -146.99260544661615,
+   "15000": -146.95338563099045,
+   "20000": -146.79138873071824,
    "bandwidth": "20 Hz to 20 kHz"
   },
   "thd_wide_vs_frequency": {
-   "20": -155.09508265436605,
-   "100": -155.9863754610107,
-   "1000": -166.88119076635382,
-   "5000": -158.20510052258112,
-   "10000": -89.8432411340734,
-   "15000": -57.31373777011456,
-   "20000": -35.46437218858766,
+   "20": -155.37485864186147,
+   "100": -155.57814022355598,
+   "1000": -166.76653821699264,
+   "5000": -158.47157316441817,
+   "10000": -91.5553927870989,
+   "15000": -57.49141245160288,
+   "20000": -35.83090864734539,
    "note": "harmonics 2 to 9 below 80 kHz or 0.45 x the output rate, counted when 10 dB above the local noise (None: none found; the bound is then 'no worse than'); the 20 kHz band cannot see the harmonics of tones at 10 kHz and above"
   },
   "thd_wide_vs_frequency_bound": {
-   "20": -154.89733369034025,
-   "100": -155.35516684702634,
-   "1000": -163.9709780104741,
-   "5000": -76.05475778858175,
-   "10000": -43.95251962937098,
-   "15000": -41.541346886786556,
-   "20000": -35.40586273039615
+   "20": -155.1213074408042,
+   "100": -154.96220189941914,
+   "1000": -163.9369176538495,
+   "5000": -74.47640822382323,
+   "10000": -46.282614343932295,
+   "15000": -41.214780613912374,
+   "20000": -35.76504695218688
   },
   "frequency_response": {
-   "ripple_pp_db": 3.7621585580183137e-06,
+   "ripple_pp_db": 3.7550783300588364e-06,
    "minus_0p1_db_hz": null,
    "minus_1p0_db_hz": null,
    "minus_3p0_db_hz": null,
    "at_hz": {
-    "20": 1.7729616708095364e-07,
+    "20": 1.8281782487861165e-07,
     "1000": 0.0,
-    "10000": -2.2692796388668057e-06,
-    "15000": -1.5658759201033133e-06,
-    "20000": -1.975914276641788e-06
+    "10000": -2.2698183546054906e-06,
+    "15000": -1.5697482935093734e-06,
+    "20000": -1.9682639660345558e-06
    },
    "method": "stepped coherent tones",
    "tones": 42
   },
   "latency": {
-   "seconds": 0.0,
+   "seconds": -2.834467120182982e-06,
    "method": "peak of a single impulse in dithered silence, searched from 0.1 s on"
   },
   "noise_input": "32-bit-level TPDF-dithered silence (about -194.85 dBFS over 20 kHz, below every converter here)",
@@ -418,29 +418,29 @@
   },
   "noise_zero_input": -162.51340063969113,
   "imd_smpte": {
-   "imd_db": -144.7151166177219,
-   "imd_percent": 5.810910267906808e-06,
-   "imd_db_amplitude_sum": -137.1116154150071
+   "imd_db": -143.91200044723334,
+   "imd_percent": 6.373822686197616e-06,
+   "imd_db_amplitude_sum": -136.65030691335636
   },
   "imd_ccif": {
-   "imd_db": -134.80282683430582,
-   "imd_percent": 1.8191087309110448e-05,
-   "imd_db_iec": -137.81312679094563
+   "imd_db": -133.34227176675424,
+   "imd_percent": 2.152218755148207e-05,
+   "imd_db_iec": -136.35257172339405
   },
   "multitone": {
    "headline": {
-    "tone_min_dbfs": -34.34387963917131,
-    "tone_mean_dbfs": -34.34387567967553,
-    "residual_max_dbfs": -188.5915606370925,
-    "residual_mean_dbfs": -203.66017021732262,
-    "distortion_free_range_db": 154.24768099792118
+    "tone_min_dbfs": -34.34387962473614,
+    "tone_mean_dbfs": -34.34387567745962,
+    "residual_max_dbfs": -188.82271240827458,
+    "residual_mean_dbfs": -203.67072388267235,
+    "distortion_free_range_db": 154.47883278353845
    },
    "avg1": {
-    "tone_min_dbfs": -34.34387967675951,
-    "tone_mean_dbfs": -34.343875676512134,
-    "residual_max_dbfs": -184.47493126721454,
-    "residual_mean_dbfs": -203.60677658892234,
-    "distortion_free_range_db": 150.13105159045503
+    "tone_min_dbfs": -34.34387963193933,
+    "tone_mean_dbfs": -34.34387567814533,
+    "residual_max_dbfs": -183.56904910216434,
+    "residual_mean_dbfs": -203.64842704509837,
+    "distortion_free_range_db": 149.225169470225
    },
    "averages": 8,
    "output_rate": 44100,
@@ -449,18 +449,18 @@
   },
   "tone_15k": {
    "audio_band": {
-    "db": -155.5382236107756,
-    "hz": 19938.400268554688
+    "db": -157.03801273480255,
+    "hz": 19927.633666992188
    },
    "above_audio": {
-    "db": -36.838729434541186,
-    "hz": 71599.24621582031
+    "db": -35.07282137376163,
+    "hz": 68400.2197265625
    },
-   "count_above": 18673
+   "count_above": 18579
   },
   "jtest": {
-   "carrier_dbfs": -6.010295931840175,
-   "noise_floor_db": -159.7879522467538,
+   "carrier_dbfs": -6.010295927936733,
+   "noise_floor_db": -159.31866689170394,
    "bin_hz": 1.3458251953125,
    "sidebands_detected": 0,
    "sidebands_above_minus130": 0,
@@ -478,11 +478,11 @@
      "max_modulation_pct": 64.28571428571428,
      "min_modulation_pct": -64.28571428571428,
      "saturated": false,
-     "longest_run": 10,
+     "longest_run": 11,
      "mean_density": 0.50000016673336,
-     "thdn_start_db": -147.04929309977857,
-     "thdn_end_db": -146.87221963085142,
-     "thdn_drift_db": 0.17707346892714781
+     "thdn_start_db": -146.74984826443549,
+     "thdn_end_db": -146.89538725375957,
+     "thdn_drift_db": -0.1455389893240806
     },
     "+3.1 dB SACD (peak)": {
      "max_density": 0.8928571428571429,
@@ -492,9 +492,9 @@
      "saturated": false,
      "longest_run": 14,
      "mean_density": 0.5000002381905143,
-     "thdn_start_db": -129.14000349129722,
-     "thdn_end_db": -129.13447252905834,
-     "thdn_drift_db": 0.005530962238879056
+     "thdn_start_db": -129.1905050683238,
+     "thdn_end_db": -129.0931477485542,
+     "thdn_drift_db": 0.09735731976959983
     },
     "20 kHz at peak": {
      "max_density": 0.8928571428571429,
@@ -502,62 +502,62 @@
      "max_modulation_pct": 78.57142857142858,
      "min_modulation_pct": -78.57142857142857,
      "saturated": false,
-     "longest_run": 15,
-     "mean_density": 0.5000000655023914,
-     "thdn_start_db": -129.59902305975717,
-     "thdn_end_db": -129.63227522758666,
-     "thdn_drift_db": -0.033252167829488144
+     "longest_run": 14,
+     "mean_density": 0.5000000714571543,
+     "thdn_start_db": -129.64119304542794,
+     "thdn_end_db": -129.7819840334746,
+     "thdn_drift_db": -0.14079098804666046
     }
    }
   },
   "crosstalk": {
    "1000": {
-    "left_to_right_db": -179.20794546385667,
-    "right_to_left_db": -179.20794546385667,
+    "left_to_right_db": -179.207945466676,
+    "right_to_left_db": -179.207945466676,
     "gain_diff_db": 0.0,
     "phase_diff_deg": -0.0
    },
    "10000": {
-    "left_to_right_db": -190.215514792167,
-    "right_to_left_db": -190.215514792167,
+    "left_to_right_db": -190.2155147945884,
+    "right_to_left_db": -190.2155147945884,
     "gain_diff_db": 0.0,
-    "phase_diff_deg": -1.454243453886956e-15
+    "phase_diff_deg": -0.0
    }
   },
   "imd_sweep": {
-   "ccif_worst_db": -133.85832084302427,
+   "ccif_worst_db": -134.6227867613072,
    "ccif_worst_centre_hz": 19500,
    "ccif_by_centre": {
-    "10000": -158.2778783940653,
-    "12000": -157.99562667625725,
-    "14000": -157.8310845056363,
-    "16000": -154.36261068744525,
-    "18000": -148.05260896352542,
-    "19500": -133.85832084302427
+    "10000": -157.9341720710446,
+    "12000": -157.0766659898833,
+    "14000": -159.24999406424806,
+    "16000": -154.0983567329638,
+    "18000": -151.69719683578836,
+    "19500": -134.6227867613072
    },
-   "smpte_worst_db": -92.69105955356615,
+   "smpte_worst_db": -93.11930863112488,
    "smpte_by_level_db_sacd": {
-    "-60": -92.69105955356615,
-    "-40": -113.95661372285248,
-    "-20": -130.33534879351848,
-    "-10": -140.07133073433215,
-    "0": -144.86107295623054
+    "-60": -93.11930863112488,
+    "-40": -113.39065299125639,
+    "-20": -130.87859844059128,
+    "-10": -141.24500940063797,
+    "0": -144.71267970598933
    }
   },
   "overload_recovery": {
    "burst_level_dbfs": 0.0,
    "burst_ms": 50.0,
-   "recovery_ms": 10.000000000000009,
-   "residual_peak_over_baseline_db": 102.96438803026284,
+   "recovery_ms": 10.002834467120136,
+   "residual_peak_over_baseline_db": 103.0211161937122,
    "method": "1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms (5 ms windows, the recovery is read to the end of the last window that is out)"
   },
   "rates": {
    "DSD128": {
-    "thdn_db": -175.7869043198153,
-    "thd_db": -184.50000110935218,
-    "sinad_db": 175.7869043198153,
-    "thdn_a_db": -177.16868030314245,
-    "dr_a_db": 175.74819273440895,
+    "thdn_db": -175.8213224755304,
+    "thd_db": -184.10040445541324,
+    "sinad_db": 175.8213224755304,
+    "thdn_a_db": -177.22159387767076,
+    "dr_a_db": 175.532364200542,
     "stability_peak": {
      "saturated": false
     },
@@ -586,19 +586,19 @@
      "ntf": "order 7, max gain 1.4",
      "ntf_fallbacks": 0,
      "chain": {
-      "thdn_db": -175.81,
-      "thd_db": -184.55,
-      "thdn_a_db": -177.2,
-      "sinad_db": 175.81,
+      "thdn_db": -175.87,
+      "thd_db": -184.19,
+      "thdn_a_db": -177.28,
+      "sinad_db": 175.87,
       "noise_dbfs": -183.51,
       "noise_a_dbfs": -184.78,
       "dr_db": 176.05,
-      "dr_a_db": 176.94,
+      "dr_a_db": 177.06,
       "metric_floors": {
        "lobe_noise_db": -203.7,
-       "imd_smpte_db": -179.48,
-       "imd_ccif_db": -163.91,
-       "multitone_dfr_db": 183.5
+       "imd_smpte_db": -179.98,
+       "imd_ccif_db": -163.7,
+       "multitone_dfr_db": 184.4
       }
      },
      "decoder_alone": {
@@ -627,11 +627,11 @@
     }
    },
    "DSD256": {
-    "thdn_db": -177.7751260425747,
-    "thd_db": -197.882908279874,
-    "sinad_db": 177.7751260425747,
-    "thdn_a_db": -179.25633815818006,
-    "dr_a_db": 177.18387819821626,
+    "thdn_db": -177.80939992746448,
+    "thd_db": -195.86297465608322,
+    "sinad_db": 177.80939992746448,
+    "thdn_a_db": -179.2873872270406,
+    "dr_a_db": 177.34246726910726,
     "stability_peak": {
      "saturated": false
     },
@@ -660,19 +660,19 @@
      "ntf": "order 7, max gain 1.4",
      "ntf_fallbacks": 0,
      "chain": {
-      "thdn_db": -177.81,
-      "thd_db": -197.99,
-      "thdn_a_db": -179.29,
-      "sinad_db": 177.81,
+      "thdn_db": -177.85,
+      "thd_db": -195.76,
+      "thdn_a_db": -179.32,
+      "sinad_db": 177.85,
       "noise_dbfs": -180.99,
       "noise_a_dbfs": -184.13,
-      "dr_db": 177.19,
-      "dr_a_db": 178.28,
+      "dr_db": 177.09,
+      "dr_a_db": 178.21,
       "metric_floors": {
        "lobe_noise_db": -207.3,
-       "imd_smpte_db": -184.61,
-       "imd_ccif_db": -196.48,
-       "multitone_dfr_db": 192.6
+       "imd_smpte_db": -183.11,
+       "imd_ccif_db": -196.49,
+       "multitone_dfr_db": 192.7
       }
      },
      "decoder_alone": {
@@ -704,12 +704,12 @@
   "reference_decoder_only": {
    "impulse": {
     "peak_index": 4080,
-    "pre_ringing_samples": 134,
-    "post_ringing_samples": 124,
-    "pre_ringing_ms": 1.5192743764172336,
-    "post_ringing_ms": 1.4058956916099774,
-    "pre_energy_fraction": 0.036874047673333736,
-    "symmetry": 0.99911887955108,
+    "pre_ringing_samples": 124,
+    "post_ringing_samples": 137,
+    "pre_ringing_ms": 1.4058956916099774,
+    "post_ringing_ms": 1.5532879818594105,
+    "pre_energy_fraction": 0.03670425700838211,
+    "symmetry": 0.9990753170603375,
     "floor_used_db": -60.0,
     "filter_type": "linear phase",
     "output_rate": 88200,
@@ -717,22 +717,22 @@
     "method": "output samples"
    },
    "filter_summary": {
-    "minus_0p1_db_hz": 30212.429809570312,
-    "minus_3_db_hz": 40549.04022216797,
-    "minus_60_db_hz": 41523.41766357422,
+    "minus_0p1_db_hz": 29924.423217773438,
+    "minus_3_db_hz": 40334.381103515625,
+    "minus_60_db_hz": 41497.84698486328,
     "output_nyquist_hz": null,
     "stopband_edge_hz": null
    },
    "group_delay_us": {
-    "at_1k": -0.03568662207074224,
-    "at_10k": 0.6224468371789293,
-    "at_20k": -1.5114231538921128,
+    "at_1k": -0.15659226649349267,
+    "at_10k": -0.9092294696776028,
+    "at_20k": -0.8392150782349115,
     "measurable": true
    },
    "step": {
-    "overshoot_percent": 4.471513319647145,
+    "overshoot_percent": 4.430571797213146,
     "settle_1pct_ms": 0.1927437641723356,
-    "final": 1.0000047793760556,
+    "final": 0.9999999579751774,
     "note": "average of 8 rising edges"
    }
   }

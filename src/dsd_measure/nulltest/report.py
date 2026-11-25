@@ -11,8 +11,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from ..report import PALETTE, _card, _logx, _page, _svg  # noqa: E402
-from .verdict import BASIS, SOURCES, TIERS, inband_depth, verdict  # noqa: E402
+from ..report import PALETTE, _card, _logx, _measured_with_md, _page, _svg, use_version  # noqa: E402
+from .verdict import BASIS, SOURCES, TIERS, verdict  # noqa: E402
 
 _TIER_NOTE = re.compile(r"^depth band [^;:,]*[;:,]?\s*")
 
@@ -22,12 +22,17 @@ def _worst(res):
     return min(chs, key=lambda c: c["null_depth_db"])
 
 
+def _band(ch):
+    lo, hi = ch["null_band_hz"]
+    return f"{lo:g} Hz to {hi / 1000:g} kHz"
+
+
 def plot_spectrum(ch, fc):
     fig, ax = plt.subplots()
     f = [b["centre_hz"] for b in ch["bands"]]
     ax.plot(f, [b["music_dbfs"] for b in ch["bands"]], "-o", ms=3, color=PALETTE[0], label="music (device A)")
     ax.plot(f, [max(b["diff_dbfs"], -250) for b in ch["bands"]], "-o", ms=3, color=PALETTE[3], label="difference (A minus B)")
-    ax.axvline(20000, color="#999", lw=0.8, ls=":")
+    ax.axvline(ch["null_band_hz"][1], color="#999", lw=0.8, ls=":")
     _logx(ax, 20, None)
     ax.set_ylabel("Level in third-octave band (dBFS)")
     lo = min(-200, min(max(b["diff_dbfs"], -250) for b in ch["bands"]) - 5)
@@ -57,7 +62,7 @@ def plot_depth(ch):
     for y, lab in ((100, "100 dB"), (60, "60 dB"), (40, "40 dB")):
         ax.axhline(y, color="#999", lw=0.8, ls="--")
         ax.text(21, y + 1.5, lab, fontsize=7, color="#666")
-    ax.axvline(20000, color="#999", lw=0.8, ls=":")
+    ax.axvline(ch["null_band_hz"][1], color="#999", lw=0.8, ls=":")
     _logx(ax, 20, None)
     ax.set_ylabel("Null depth (dB below the music in the band)")
     ax.set_ylim(0, max(120, min(max(d) + 5, 320)))
@@ -70,19 +75,32 @@ def _fmt(x, nd=1):
 
 
 def _depth_txt(d):
+    if d is None:
+        return "not trusted"
     return "identical" if d >= 300 else f"{d:.1f} dB"
 
 
-def _summary_rows(ch, v):
+def _summary_rows(ch, v, trust):
     gain = -ch["gain_db"]
-    return [
-        ("Null depth, 20 Hz to 20 kHz (music RMS minus difference RMS)", _depth_txt(v["depth_db"])),
-        ("Null depth, full analysed band", _depth_txt(ch["null_depth_db"])),
-        ("Difference RMS, 20 Hz to 20 kHz", f"{_fmt(ch['diff_rms_audio_dbfs'])} dBFS"),
+    band = _band(ch)
+    rows = []
+    if trust["untrustworthy"]:
+        rows.append(("Alignment", f"not trustworthy: {trust['reason']}"))
+    if trust["not_like_for_like"]:
+        bw = trust["bandwidth_hz"]
+        seen = f"device A passes to about {bw['A'] / 1000:.1f} kHz, device B to about {bw['B'] / 1000:.1f} kHz"
+        if trust.get("null_band_affected", True):
+            rows.append(("Not like-for-like in band", seen))
+        else:
+            rows.append(("Passbands differ", f"{seen}; the null band is not affected"))
+    return rows + [
+        (f"Null depth, {band} (music RMS minus difference RMS)", _depth_txt(v["depth_db"])),
+        ("Null depth, full analysed band (includes content outside the band above)", _depth_txt(ch["null_depth_fullband_db"])),
+        (f"Difference RMS, {band}", f"{_fmt(ch['diff_rms_audio_dbfs'])} dBFS"),
         ("Difference RMS, full analysed band", f"{_fmt(ch['diff_rms_dbfs'])} dBFS"),
         ("Difference peak", f"{_fmt(ch['diff_peak_dbfs'])} dBFS"),
-        ("Music RMS (20 Hz to 20 kHz), peak", f"{_fmt(ch['music_rms_audio_dbfs'])} dBFS, {_fmt(ch['music_peak_dbfs'])} dBFS"),
-        ("Correlation, 20 Hz to 20 kHz (1 minus r)", f"{ch['correlation']:.10f} ({ch['one_minus_correlation']:.2e})"),
+        (f"Music RMS ({band}), peak", f"{_fmt(ch['music_rms_audio_dbfs'])} dBFS, {_fmt(ch['music_peak_dbfs'])} dBFS"),
+        (f"Correlation, {band} (1 minus r)", f"{ch['correlation']:.10f} ({ch['one_minus_correlation']:.2e})"),
         ("Delay of B behind A", f"{ch['delay_samples']:.4f} samples ({ch['delay_us']:.2f} µs); spread over segments {ch['delay_spread_samples']:.1e}"),
         ("Level of B relative to A", f"{gain:+.4f} dB"),
         ("Polarity of B", "inverted (flipped for the subtraction)" if ch["polarity_inverted"] else "same as A"),
@@ -117,6 +135,7 @@ def _compared(run):
 
 
 def write_report(outdir, run):
+    use_version((run.get("versions") or {}).get("dsd_measure"))
     out = Path(outdir)
     (out / "plots").mkdir(parents=True, exist_ok=True)
     fc = run["pairs"][0]["result"]["common_rate"]
@@ -131,21 +150,21 @@ def write_report(outdir, run):
         for name, svg in (("spectrum", plot_spectrum(ch, fc)), ("time", plot_time(ch)), ("depth", plot_depth(ch))):
             (out / "plots" / f"{name}-{tag}.svg").write_text(svg)
         cards = "".join([
-            _card(plot_spectrum(ch, fc), "Where the difference sits against the music. The dotted line marks 20 kHz; bands above it are ultrasonic and are not part of the verdict."),
+            _card(plot_spectrum(ch, fc), "Where the difference sits against the music. The dotted line marks the top of the null band (20 kHz unless the devices' passbands are narrower); bands above it are not part of the verdict."),
             _card(plot_time(ch), "Whether the difference follows the music or is steady. A difference that rises in loud passages scales with the music; a flat one is a noise floor."),
             _card(plot_depth(ch), "The same two lines as a ratio. Dashed lines mark the depth band edges."),
         ])
-        per_ch = "<table><tr><th>Channel</th><th class=v>Null depth, 20 Hz to 20 kHz</th><th class=v>Null depth, full analysed band</th><th class=v>Diff RMS (dBFS)</th><th class=v>Diff peak (dBFS)</th><th class=v>Delay (samples)</th><th class=v>Level B vs A (dB)</th></tr>" + "".join(
-            f"<tr><td>{c['channel']}</td><td class=v>{_depth_txt(inband_depth(c))}</td><td class=v>{_depth_txt(c['null_depth_db'])}</td><td class=v>{c['diff_rms_dbfs']:.1f}</td><td class=v>{c['diff_peak_dbfs']:.1f}</td>"
+        per_ch = f"<table><tr><th>Channel</th><th class=v>Null depth, {_band(res['channels'][0])}</th><th class=v>Null depth, full analysed band</th><th class=v>Diff RMS (dBFS)</th><th class=v>Diff peak (dBFS)</th><th class=v>Delay (samples)</th><th class=v>Level B vs A (dB)</th></tr>" + "".join(
+            f"<tr><td>{c['channel']}</td><td class=v>{_depth_txt(None if res['trust']['untrustworthy'] else c['null_depth_db'])}</td><td class=v>{_depth_txt(c['null_depth_fullband_db'])}</td><td class=v>{c['diff_rms_dbfs']:.1f}</td><td class=v>{c['diff_peak_dbfs']:.1f}</td>"
             f"<td class=v>{c['delay_samples']:.4f}</td><td class=v>{-c['gain_db']:+.4f}</td></tr>" for c in res["channels"]) + "</table>"
         det = "".join(f"<li>{html.escape(x)}</li>" for x in v["details"])
         wav = f"<p>Difference signal: <a href='{html.escape(p['diff_wav'])}'>{html.escape(p['diff_wav'])}</a> (32-bit float WAV at {fc} Hz; the level is {run['options']['diff_gain_db']:+g} dB from true, so turn the volume down before playing it).</p>" if p.get("diff_wav") else ""
         sections.append(f"<h2>{html.escape(p['b'])} against {html.escape(a_name)}</h2><p><b>{html.escape(v['headline'])}</b></p>"
-                        f"{f'<ul>{det}</ul>' if det else ''}<div class=card>{_table(_summary_rows(ch, v))}</div>"
+                        f"{f'<ul>{det}</ul>' if det else ''}<div class=card>{_table(_summary_rows(ch, v, res['trust']))}</div>"
                         f"<div class=card>{per_ch}</div><div class=grid>{cards}</div>{wav}")
         srows.append((p["b"], v, ch))
         md += [f"## {p['b']} against {a_name}", "", f"**{v['headline']}**", ""] + [f"- {x}" for x in v["details"]] + ["", "| Measure | Value |", "|---|---|"]
-        md += [f"| {a} | {b} |" for a, b in _summary_rows(ch, v)] + [""]
+        md += [f"| {a} | {b} |" for a, b in _summary_rows(ch, v, res['trust'])] + [""]
     hero = "".join(f"<div><span>{html.escape(b)} vs {html.escape(a_name)}</span><b>{_depth_txt(v['depth_db'])}</b><span>null depth</span></div>" for b, v, _ in srows)
     results = [(f"{p['b']} against {a_name}: " if len(srows) > 1 else "") + p["verdict"]["headline"] for p in run["pairs"]]
     head = "".join(f"<p class=result>Result: {html.escape(r)}</p>" for r in results)
@@ -160,7 +179,7 @@ def write_report(outdir, run):
             f"<p>Raw numbers: <a href=results.json>results.json</a>, <a href=bands.csv>bands.csv</a>, <a href=seconds.csv>seconds.csv</a>, <a href=provenance.json>provenance.json</a>.</p>")
     sub = f"Null test of {len(run['devices'])} decoders on {html.escape(run['source']['name'])}; common rate {fc} Hz."
     (out / "index.html").write_text(_page("Null test report", body, sub))
-    md += ["## What was compared", ""] + [f"- {k}: {v}" for k, v in _rows_plain(run)] + ["", "Depth bands and sources: see `index.html`.", ""]
+    md += ["## What was compared", ""] + [f"- {k}: {v}" for k, v in _rows_plain(run)] + ["", "Depth bands and sources: see `index.html`.", "", _measured_with_md(), ""]
     (out / "index.md").write_text("\n".join(md) + "\n")
     (out / "results.json").write_text(json.dumps(run, indent=1, default=float))
     (out / "provenance.json").write_text(json.dumps({k: run[k] for k in ("source", "devices", "options", "command", "versions")}, indent=1, default=float))

@@ -1,0 +1,78 @@
+# Docs stay true: links resolve, the README's Quick start works on the latest release, and the
+# facts (the install line and its version) equal the latest release.
+# The shared DSD Toolbox docs tools (tools/docs of dsd-toolbox/dsd-toolbox, docs/docs-tooling.md
+# there), as reusable workflows pinned to one commit; the same commit is passed as the tools' ref.
+# Settings in .docs.toml.
+#   - lint: page and README shape, spelling, terminology, placeholders, the release step.
+#   - links: every Markdown file's relative links, anchors and links into this repository,
+#     offline; on the weekly run and by hand also every external URL.
+#   - touched (pull requests): a change to code, options or behaviour also changes the docs, or
+#     the pull request says "Docs: none needed — <reason>".
+#   - facts: the marked facts regions (the install line) equal their sources. Read-only.
+#   - commands (weekly and by hand): the marked command blocks of README.md and docs/ run in a
+#     fresh container against the published release; the rest are skipped with a reason, and an
+#     unmarked block fails.
+#   - facts-update (weekly and by hand): regenerates the facts regions onto docs/facts-update.
+# Linux only; no secrets.
+name: docs
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 6 * * 3"  # Wednesdays, 06:23 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}  # a new push supersedes the old PR run; main runs finish
+
+permissions:
+  contents: read
+
+jobs:
+  # The shared docs tools, pinned to one commit of dsd-toolbox/dsd-toolbox (workflow and tools).
+  lint:
+    uses: dsd-toolbox/dsd-toolbox/.github/workflows/docs-lint.yml@33e1b0308e4bb9890701d5e3bb857c9ce9fe110f  # 2026-11-24, docs tools v2
+    with:
+      tools_ref: 33e1b0308e4bb9890701d5e3bb857c9ce9fe110f
+
+  links:
+    uses: dsd-toolbox/dsd-toolbox/.github/workflows/docs-links.yml@33e1b0308e4bb9890701d5e3bb857c9ce9fe110f  # 2026-11-24, docs tools v2
+    with:
+      tools_ref: 33e1b0308e4bb9890701d5e3bb857c9ce9fe110f
+      external: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+
+  touched:
+    if: github.event_name == 'pull_request'
+    uses: dsd-toolbox/dsd-toolbox/.github/workflows/docs-touched.yml@33e1b0308e4bb9890701d5e3bb857c9ce9fe110f  # 2026-11-24, docs tools v2
+    with:
+      tools_ref: 33e1b0308e4bb9890701d5e3bb857c9ce9fe110f
+
+  facts:
+    uses: dsd-toolbox/dsd-toolbox/.github/workflows/docs-facts.yml@33e1b0308e4bb9890701d5e3bb857c9ce9fe110f  # 2026-11-24, docs tools v2
+    with:
+      tools-ref: 33e1b0308e4bb9890701d5e3bb857c9ce9fe110f
+
+  # The README and install blocks use the published release, so not on pull requests: between a
+  # version bump and its tag the docs name the previous release, which exists.
+  # Every command block is marked to run or skipped with a reason (fail_unmarked).
+  commands:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    uses: dsd-toolbox/dsd-toolbox/.github/workflows/docs-run.yml@33e1b0308e4bb9890701d5e3bb857c9ce9fe110f  # 2026-11-24, docs tools v2
+    with:
+      tools-ref: 33e1b0308e4bb9890701d5e3bb857c9ce9fe110f
+      fail_unmarked: true
+      timeout-minutes: 60
+
+  # Regenerates the facts regions and pushes them to the branch docs/facts-update (weekly and by
+  # hand; docs-audit.yml runs it after a release). It opens no pull request: a person or an
+  # agent does. The one job with write access, to push that branch.
+  facts-update:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write  # pushes the branch docs/facts-update; nothing else
+    uses: dsd-toolbox/dsd-toolbox/.github/workflows/docs-facts-generate.yml@33e1b0308e4bb9890701d5e3bb857c9ce9fe110f  # 2026-11-24, docs tools v2
+    with:
+      tools-ref: 33e1b0308e4bb9890701d5e3bb857c9ce9fe110f

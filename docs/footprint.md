@@ -22,9 +22,9 @@ This page is the shared standard for what dsd-measure measures, how each result 
 
 ## What is measured and why
 
-Class A is a DSD to PCM converter, class B a PCM to DSD modulator. "Run" says what version 0.1.2 does; the method for each is in [The measurements](#the-measurements).
+Class A is a DSD to PCM converter, class B a PCM to DSD modulator. "Run" says what version 0.1.3 does; the method for each is in [The measurements](#the-measurements).
 
-| # | Measurement | What it tells you | What it shows | Run in 0.1.2 |
+| # | Measurement | What it tells you | What it shows | Run in 0.1.3 |
 |---|---|---|---|---|
 | 1 | Summary dashboard | SINAD, THD, noise, DR, IMD, ripple, gain, polarity | All headline figures on one screen | yes |
 | 2 | Frequency response, ripple | Gain across 20 Hz to 20 kHz | Response tilt at the band edges | yes (stepped tones, reduced) |
@@ -70,7 +70,7 @@ The set is a synthesis of public practice; it copies no private test and no text
 | [RMAA](http://audio.rightmark.org/) | Noise level dB(A), dynamic range, THD, IMD (SMPTE), crosstalk, frequency response |
 | AES17 | The 20 kHz measurement bandwidth and the dBFS reference (a full-scale sine). Not followed: the 997 Hz tone, the CCIR-RMS weighting, the notch width and the dither; see [methodology limits](methodology-limits.md#what-follows-aes17) |
 
-The [dsd2pcm quality tools](https://github.com/aclater/dsd2pcm-rs) (tools/quality, MIT OR Apache-2.0) are a sister project that measures DSD to PCM decoders in the same spirit. From them we took the SoX-DSD filter per DSD rate (CLANS-8, 7 and 6, from Archimago's 2022 tests), the Legendre-zero modulator design that our reference modulator extends to higher order, and the observation that a wide decoder filter folds 300 to 400 kHz DSD noise into the audio band. Not yet taken: their separate low-pass step for comparing a 30 kHz decoder filter with a wide decode.
+The [dsd2pcm quality tools](https://github.com/dsd-toolbox/dsd2pcm-rs) (tools/quality, MIT OR Apache-2.0) are a sister project that measures DSD to PCM decoders in the same spirit. From them we took the SoX-DSD filter per DSD rate (CLANS-8, 7 and 6, from Archimago's 2022 tests), the Legendre-zero modulator design that our reference modulator extends to higher order, and the observation that a wide decoder filter folds 300 to 400 kHz DSD noise into the audio band. Not yet taken: their separate low-pass step for comparing a 30 kHz decoder filter with a wide decode.
 
 The SACD level convention is taken from public reviewer practice and is restated below in our own words.
 
@@ -284,7 +284,7 @@ These tests apply to class B only.
 
 ## Reduced methods
 
-Some tests have a full method (the target) and a reduced method that version 0.1.2 uses because it costs less compute. This table lists every place where what the code does differs from the test text above. A report says which method was used.
+Some tests have a full method (the target) and a reduced method that version 0.1.3 uses because it costs less compute. This table lists every place where what the code does differs from the test text above. A report says which method was used.
 
 | Test | Full method (target) | Reduced method (first round) |
 |---|---|---|
@@ -326,8 +326,8 @@ This is a separate test from everything above, and it is not synthetic. It decod
 | Item | Method |
 |---|---|
 | Common rate | The lower of the two output rates; Kaiser polyphase resampler, 160 dB stopband, flat to 0.45 x the rate. Upsampling is refused |
-| Delay | Cross-correlation of first differences on four loud segments for the whole-sample lag, then the maximum of the band-limited cross-spectrum coherence for the fraction; applied with a 512-tap Kaiser sinc |
-| Gain and polarity | Least squares in 20 Hz to 20 kHz; negative correlation flips the polarity |
+| Delay | Normalised cross-correlation of band-limited first differences (20 Hz to 20 kHz, or the common passband) on four loud segments for the whole-sample lag, then the maximum of the band-limited cross-spectrum coherence for the fraction; applied with a 512-tap Kaiser sinc |
+| Gain and polarity | Least squares in the same band; negative correlation flips the polarity |
 | Difference | Subtracted in 64-bit float, in blocks, after trimming 0.5 s at each end |
 | Results | RMS and peak of the difference, null depth (music RMS minus difference RMS), correlation, per second and per third-octave band from 20 Hz to 0.45 x the common rate |
 | Verdict | Tiers of null depth over 20 Hz to 20 kHz, with sources, in the report |
@@ -338,7 +338,7 @@ One report per device under test, plus a comparison report across devices.
 
 ### Per-device report
 
-```
+```text
 report/<device>/
   index.html       the report: conclusions first, then the dashboard and the plots in the order above
   index.md         the same content in Markdown, for forges and diffs
@@ -359,7 +359,7 @@ Each plot has:
 
 ### Comparison report
 
-```
+```text
 report/comparison/
   index.html       conclusions, then a dashboard table with one column per device, no value marked as better (no repeatability interval has been measured yet)
   index.md

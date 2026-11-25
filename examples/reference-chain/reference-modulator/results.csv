@@ -7,18 +7,18 @@ reference_floor.target_db,-140.0
 reference_floor.margin_db,6.0
 reference_floor.ntf,"order 8, max gain 1.45"
 reference_floor.ntf_fallbacks,0
-reference_floor.chain.thdn_db,-146.99
-reference_floor.chain.thd_db,-163.28
-reference_floor.chain.thdn_a_db,-150.37
-reference_floor.chain.sinad_db,146.99
+reference_floor.chain.thdn_db,-147.05
+reference_floor.chain.thd_db,-164.35
+reference_floor.chain.thdn_a_db,-150.52
+reference_floor.chain.sinad_db,147.05
 reference_floor.chain.noise_dbfs,-159.06
 reference_floor.chain.noise_a_dbfs,-162.45
-reference_floor.chain.dr_db,148.46
-reference_floor.chain.dr_a_db,151.8
+reference_floor.chain.dr_db,148.47
+reference_floor.chain.dr_a_db,151.67
 reference_floor.chain.metric_floors.lobe_noise_db,-183.5
-reference_floor.chain.metric_floors.imd_smpte_db,-144.78
-reference_floor.chain.metric_floors.imd_ccif_db,-134.89
-reference_floor.chain.metric_floors.multitone_dfr_db,150.7
+reference_floor.chain.metric_floors.imd_smpte_db,-145.23
+reference_floor.chain.metric_floors.imd_ccif_db,-134.1
+reference_floor.chain.metric_floors.multitone_dfr_db,153.0
 reference_floor.decoder_alone.thdn_db,-280.92
 reference_floor.decoder_alone.thd_db,-309.97
 reference_floor.decoder_alone.thdn_a_db,-282.12
@@ -36,64 +36,64 @@ reference_floor.decoder_alone.metric_floors.lobe_noise_db,-369.4
 reference_floor.decoder_alone.metric_floors.imd_smpte_db,-294.92
 reference_floor.decoder_alone.metric_floors.imd_ccif_db,-279.67
 reference_floor.meets_target,True
-tone_0dbsacd.thd_db,-163.548479837981
-tone_0dbsacd.thdn_db,-146.725927401796
-tone_0dbsacd.thdn_a_db,-150.25522950601743
-tone_0dbsacd.sinad_db,146.725927401796
-tone_0dbsacd.thd_percent,6.646239819756485e-07
-tone_0dbsacd.thdn_percent,4.610028708351317e-06
+tone_0dbsacd.thd_db,-164.0543496619968
+tone_0dbsacd.thdn_db,-146.91344155841077
+tone_0dbsacd.thdn_a_db,-150.37726754859673
+tone_0dbsacd.sinad_db,146.91344155841077
+tone_0dbsacd.thd_percent,6.270216216365506e-07
+tone_0dbsacd.thdn_percent,4.511572305747115e-06
 tone_0dbsacd.largest_harmonic.order,3
-tone_0dbsacd.largest_harmonic.db,-166.52596269726274
-tone_peak.thd_db,-139.58480229011903
-tone_peak.thdn_db,-129.24940666056816
-tone_peak.sinad_db,129.24940666056816
-gain_error_db,1.9109644586734476e-06
-dynamic_range.dr_db,147.27565232702614
-dynamic_range.dr_a_db,150.49837250596434
-dynamic_range.noise_dbfs,-153.29625228366595
-dynamic_range.noise_a_dbfs,-156.51897246260415
+tone_0dbsacd.largest_harmonic.db,-166.970465197605
+tone_peak.thd_db,-139.7571840045122
+tone_peak.thdn_db,-129.10762018184636
+tone_peak.sinad_db,129.10762018184636
+gain_error_db,1.9081284676758514e-06
+dynamic_range.dr_db,147.03776543631196
+dynamic_range.dr_a_db,150.27404259101058
+dynamic_range.noise_dbfs,-153.05836539295177
+dynamic_range.noise_a_dbfs,-156.2946425476504
 linearity.lowest_level_within_0p5_db,-126.02059991327965
-linearity.error_at.-6,1.9109644586734476e-06
-linearity.error_at.-66,8.399248415003058e-06
-linearity.error_at.-90,-7.541922590803551e-05
-linearity.error_at.-102,8.155800840370375e-05
-linearity.error_at.-114,0.00030626665942179443
-linearity.error_at.-126,-0.005517149603122107
-thdn_vs_frequency.20,-146.32308002089695
-thdn_vs_frequency.100,-146.51591347098554
-thdn_vs_frequency.1000,-146.86821318512716
-thdn_vs_frequency.5000,-146.50528918984259
-thdn_vs_frequency.10000,-147.0347969905486
-thdn_vs_frequency.15000,-146.9563851454595
-thdn_vs_frequency.20000,-146.90079574998848
+linearity.error_at.-6,1.9081284676758514e-06
+linearity.error_at.-66,8.291886572919793e-06
+linearity.error_at.-90,-3.0994987980648148e-06
+linearity.error_at.-102,0.00027681499403797716
+linearity.error_at.-114,0.0006492737904579826
+linearity.error_at.-126,0.00035028226886879565
+thdn_vs_frequency.20,-146.52917258611507
+thdn_vs_frequency.100,-146.33240411104833
+thdn_vs_frequency.1000,-146.84351297689713
+thdn_vs_frequency.5000,-146.57445164358518
+thdn_vs_frequency.10000,-146.99260544661615
+thdn_vs_frequency.15000,-146.95338563099045
+thdn_vs_frequency.20000,-146.79138873071824
 thdn_vs_frequency.bandwidth,20 Hz to 20 kHz
-thd_wide_vs_frequency.20,-155.09508265436605
-thd_wide_vs_frequency.100,-155.9863754610107
-thd_wide_vs_frequency.1000,-166.88119076635382
-thd_wide_vs_frequency.5000,-158.20510052258112
-thd_wide_vs_frequency.10000,-89.8432411340734
-thd_wide_vs_frequency.15000,-57.31373777011456
-thd_wide_vs_frequency.20000,-35.46437218858766
+thd_wide_vs_frequency.20,-155.37485864186147
+thd_wide_vs_frequency.100,-155.57814022355598
+thd_wide_vs_frequency.1000,-166.76653821699264
+thd_wide_vs_frequency.5000,-158.47157316441817
+thd_wide_vs_frequency.10000,-91.5553927870989
+thd_wide_vs_frequency.15000,-57.49141245160288
+thd_wide_vs_frequency.20000,-35.83090864734539
 thd_wide_vs_frequency.note,"harmonics 2 to 9 below 80 kHz or 0.45 x the output rate, counted when 10 dB above the local noise (None: none found; the bound is then 'no worse than'); the 20 kHz band cannot see the harmonics of tones at 10 kHz and above"
-thd_wide_vs_frequency_bound.20,-154.89733369034025
-thd_wide_vs_frequency_bound.100,-155.35516684702634
-thd_wide_vs_frequency_bound.1000,-163.9709780104741
-thd_wide_vs_frequency_bound.5000,-76.05475778858175
-thd_wide_vs_frequency_bound.10000,-43.95251962937098
-thd_wide_vs_frequency_bound.15000,-41.541346886786556
-thd_wide_vs_frequency_bound.20000,-35.40586273039615
-frequency_response.ripple_pp_db,3.7621585580183137e-06
+thd_wide_vs_frequency_bound.20,-155.1213074408042
+thd_wide_vs_frequency_bound.100,-154.96220189941914
+thd_wide_vs_frequency_bound.1000,-163.9369176538495
+thd_wide_vs_frequency_bound.5000,-74.47640822382323
+thd_wide_vs_frequency_bound.10000,-46.282614343932295
+thd_wide_vs_frequency_bound.15000,-41.214780613912374
+thd_wide_vs_frequency_bound.20000,-35.76504695218688
+frequency_response.ripple_pp_db,3.7550783300588364e-06
 frequency_response.minus_0p1_db_hz,
 frequency_response.minus_1p0_db_hz,
 frequency_response.minus_3p0_db_hz,
-frequency_response.at_hz.20,1.7729616708095364e-07
+frequency_response.at_hz.20,1.8281782487861165e-07
 frequency_response.at_hz.1000,0.0
-frequency_response.at_hz.10000,-2.2692796388668057e-06
-frequency_response.at_hz.15000,-1.5658759201033133e-06
-frequency_response.at_hz.20000,-1.975914276641788e-06
+frequency_response.at_hz.10000,-2.2698183546054906e-06
+frequency_response.at_hz.15000,-1.5697482935093734e-06
+frequency_response.at_hz.20000,-1.9682639660345558e-06
 frequency_response.method,stepped coherent tones
 frequency_response.tones,42
-latency.seconds,0.0
+latency.seconds,-2.834467120182982e-06
 latency.method,"peak of a single impulse in dithered silence, searched from 0.1 s on"
 noise_input,"32-bit-level TPDF-dithered silence (about -194.85 dBFS over 20 kHz, below every converter here)"
 noise_reference,"dBFS re the rms of a full-scale sine (AES17, ASR); a full-scale square would read +3 dB"
@@ -124,33 +124,33 @@ noise_wide.20000-40000,-79.26633866204831
 noise_wide.40000-96000,-34.606741584693594
 noise_wide.96000-192000,-26.41459243633414
 noise_zero_input,-162.51340063969113
-imd_smpte.imd_db,-144.7151166177219
-imd_smpte.imd_percent,5.810910267906808e-06
-imd_smpte.imd_db_amplitude_sum,-137.1116154150071
-imd_ccif.imd_db,-134.80282683430582
-imd_ccif.imd_percent,1.8191087309110448e-05
-imd_ccif.imd_db_iec,-137.81312679094563
-multitone.headline.tone_min_dbfs,-34.34387963917131
-multitone.headline.tone_mean_dbfs,-34.34387567967553
-multitone.headline.residual_max_dbfs,-188.5915606370925
-multitone.headline.residual_mean_dbfs,-203.66017021732262
-multitone.headline.distortion_free_range_db,154.24768099792118
-multitone.avg1.tone_min_dbfs,-34.34387967675951
-multitone.avg1.tone_mean_dbfs,-34.343875676512134
-multitone.avg1.residual_max_dbfs,-184.47493126721454
-multitone.avg1.residual_mean_dbfs,-203.60677658892234
-multitone.avg1.distortion_free_range_db,150.13105159045503
+imd_smpte.imd_db,-143.91200044723334
+imd_smpte.imd_percent,6.373822686197616e-06
+imd_smpte.imd_db_amplitude_sum,-136.65030691335636
+imd_ccif.imd_db,-133.34227176675424
+imd_ccif.imd_percent,2.152218755148207e-05
+imd_ccif.imd_db_iec,-136.35257172339405
+multitone.headline.tone_min_dbfs,-34.34387962473614
+multitone.headline.tone_mean_dbfs,-34.34387567745962
+multitone.headline.residual_max_dbfs,-188.82271240827458
+multitone.headline.residual_mean_dbfs,-203.67072388267235
+multitone.headline.distortion_free_range_db,154.47883278353845
+multitone.avg1.tone_min_dbfs,-34.34387963193933
+multitone.avg1.tone_mean_dbfs,-34.34387567814533
+multitone.avg1.residual_max_dbfs,-183.56904910216434
+multitone.avg1.residual_mean_dbfs,-203.64842704509837
+multitone.avg1.distortion_free_range_db,149.225169470225
 multitone.averages,8
 multitone.output_rate,44100
 multitone.analysis_rate,44100
 multitone.range_note,tones and residual up to 20 kHz; rectangular window on whole periods; every record decimated to 44.1 kHz first
-tone_15k.audio_band.db,-155.5382236107756
-tone_15k.audio_band.hz,19938.400268554688
-tone_15k.above_audio.db,-36.838729434541186
-tone_15k.above_audio.hz,71599.24621582031
-tone_15k.count_above,18673
-jtest.carrier_dbfs,-6.010295931840175
-jtest.noise_floor_db,-159.7879522467538
+tone_15k.audio_band.db,-157.03801273480255
+tone_15k.audio_band.hz,19927.633666992188
+tone_15k.above_audio.db,-35.07282137376163
+tone_15k.above_audio.hz,68400.2197265625
+tone_15k.count_above,18579
+jtest.carrier_dbfs,-6.010295927936733
+jtest.noise_floor_db,-159.31866689170394
 jtest.bin_hz,1.3458251953125
 jtest.sidebands_detected,0
 jtest.sidebands_above_minus130,0
@@ -164,11 +164,11 @@ stability.levels.0 dB SACD.min_density,0.17857142857142858
 stability.levels.0 dB SACD.max_modulation_pct,64.28571428571428
 stability.levels.0 dB SACD.min_modulation_pct,-64.28571428571428
 stability.levels.0 dB SACD.saturated,False
-stability.levels.0 dB SACD.longest_run,10
+stability.levels.0 dB SACD.longest_run,11
 stability.levels.0 dB SACD.mean_density,0.50000016673336
-stability.levels.0 dB SACD.thdn_start_db,-147.04929309977857
-stability.levels.0 dB SACD.thdn_end_db,-146.87221963085142
-stability.levels.0 dB SACD.thdn_drift_db,0.17707346892714781
+stability.levels.0 dB SACD.thdn_start_db,-146.74984826443549
+stability.levels.0 dB SACD.thdn_end_db,-146.89538725375957
+stability.levels.0 dB SACD.thdn_drift_db,-0.1455389893240806
 stability.levels.+3.1 dB SACD (peak).max_density,0.8928571428571429
 stability.levels.+3.1 dB SACD (peak).min_density,0.10714285714285714
 stability.levels.+3.1 dB SACD (peak).max_modulation_pct,78.57142857142858
@@ -176,51 +176,51 @@ stability.levels.+3.1 dB SACD (peak).min_modulation_pct,-78.57142857142857
 stability.levels.+3.1 dB SACD (peak).saturated,False
 stability.levels.+3.1 dB SACD (peak).longest_run,14
 stability.levels.+3.1 dB SACD (peak).mean_density,0.5000002381905143
-stability.levels.+3.1 dB SACD (peak).thdn_start_db,-129.14000349129722
-stability.levels.+3.1 dB SACD (peak).thdn_end_db,-129.13447252905834
-stability.levels.+3.1 dB SACD (peak).thdn_drift_db,0.005530962238879056
+stability.levels.+3.1 dB SACD (peak).thdn_start_db,-129.1905050683238
+stability.levels.+3.1 dB SACD (peak).thdn_end_db,-129.0931477485542
+stability.levels.+3.1 dB SACD (peak).thdn_drift_db,0.09735731976959983
 stability.levels.20 kHz at peak.max_density,0.8928571428571429
 stability.levels.20 kHz at peak.min_density,0.10714285714285714
 stability.levels.20 kHz at peak.max_modulation_pct,78.57142857142858
 stability.levels.20 kHz at peak.min_modulation_pct,-78.57142857142857
 stability.levels.20 kHz at peak.saturated,False
-stability.levels.20 kHz at peak.longest_run,15
-stability.levels.20 kHz at peak.mean_density,0.5000000655023914
-stability.levels.20 kHz at peak.thdn_start_db,-129.59902305975717
-stability.levels.20 kHz at peak.thdn_end_db,-129.63227522758666
-stability.levels.20 kHz at peak.thdn_drift_db,-0.033252167829488144
-crosstalk.1000.left_to_right_db,-179.20794546385667
-crosstalk.1000.right_to_left_db,-179.20794546385667
+stability.levels.20 kHz at peak.longest_run,14
+stability.levels.20 kHz at peak.mean_density,0.5000000714571543
+stability.levels.20 kHz at peak.thdn_start_db,-129.64119304542794
+stability.levels.20 kHz at peak.thdn_end_db,-129.7819840334746
+stability.levels.20 kHz at peak.thdn_drift_db,-0.14079098804666046
+crosstalk.1000.left_to_right_db,-179.207945466676
+crosstalk.1000.right_to_left_db,-179.207945466676
 crosstalk.1000.gain_diff_db,0.0
 crosstalk.1000.phase_diff_deg,-0.0
-crosstalk.10000.left_to_right_db,-190.215514792167
-crosstalk.10000.right_to_left_db,-190.215514792167
+crosstalk.10000.left_to_right_db,-190.2155147945884
+crosstalk.10000.right_to_left_db,-190.2155147945884
 crosstalk.10000.gain_diff_db,0.0
-crosstalk.10000.phase_diff_deg,-1.454243453886956e-15
-imd_sweep.ccif_worst_db,-133.85832084302427
+crosstalk.10000.phase_diff_deg,-0.0
+imd_sweep.ccif_worst_db,-134.6227867613072
 imd_sweep.ccif_worst_centre_hz,19500
-imd_sweep.ccif_by_centre.10000,-158.2778783940653
-imd_sweep.ccif_by_centre.12000,-157.99562667625725
-imd_sweep.ccif_by_centre.14000,-157.8310845056363
-imd_sweep.ccif_by_centre.16000,-154.36261068744525
-imd_sweep.ccif_by_centre.18000,-148.05260896352542
-imd_sweep.ccif_by_centre.19500,-133.85832084302427
-imd_sweep.smpte_worst_db,-92.69105955356615
-imd_sweep.smpte_by_level_db_sacd.-60,-92.69105955356615
-imd_sweep.smpte_by_level_db_sacd.-40,-113.95661372285248
-imd_sweep.smpte_by_level_db_sacd.-20,-130.33534879351848
-imd_sweep.smpte_by_level_db_sacd.-10,-140.07133073433215
-imd_sweep.smpte_by_level_db_sacd.0,-144.86107295623054
+imd_sweep.ccif_by_centre.10000,-157.9341720710446
+imd_sweep.ccif_by_centre.12000,-157.0766659898833
+imd_sweep.ccif_by_centre.14000,-159.24999406424806
+imd_sweep.ccif_by_centre.16000,-154.0983567329638
+imd_sweep.ccif_by_centre.18000,-151.69719683578836
+imd_sweep.ccif_by_centre.19500,-134.6227867613072
+imd_sweep.smpte_worst_db,-93.11930863112488
+imd_sweep.smpte_by_level_db_sacd.-60,-93.11930863112488
+imd_sweep.smpte_by_level_db_sacd.-40,-113.39065299125639
+imd_sweep.smpte_by_level_db_sacd.-20,-130.87859844059128
+imd_sweep.smpte_by_level_db_sacd.-10,-141.24500940063797
+imd_sweep.smpte_by_level_db_sacd.0,-144.71267970598933
 overload_recovery.burst_level_dbfs,0.0
 overload_recovery.burst_ms,50.0
-overload_recovery.recovery_ms,10.000000000000009
-overload_recovery.residual_peak_over_baseline_db,102.96438803026284
+overload_recovery.recovery_ms,10.002834467120136
+overload_recovery.residual_peak_over_baseline_db,103.0211161937122
 overload_recovery.method,"1 kHz at -60 dB SACD, 50 ms burst; residual (300 Hz-20 kHz, 1 kHz fitted out) in 5 ms windows back within 3 dB of its pre-burst level; resolution about 10 ms (5 ms windows, the recovery is read to the end of the last window that is out)"
-rates.DSD128.thdn_db,-175.7869043198153
-rates.DSD128.thd_db,-184.50000110935218
-rates.DSD128.sinad_db,175.7869043198153
-rates.DSD128.thdn_a_db,-177.16868030314245
-rates.DSD128.dr_a_db,175.74819273440895
+rates.DSD128.thdn_db,-175.8213224755304
+rates.DSD128.thd_db,-184.10040445541324
+rates.DSD128.sinad_db,175.8213224755304
+rates.DSD128.thdn_a_db,-177.22159387767076
+rates.DSD128.dr_a_db,175.532364200542
 rates.DSD128.stability_peak.saturated,False
 rates.DSD128.ultrasonic.peak_hz,452548.3399593904
 rates.DSD128.ultrasonic.peak_density_dbfs_hz,-73.38355271078157
@@ -239,18 +239,18 @@ rates.DSD128.reference_floor.target_db,-140.0
 rates.DSD128.reference_floor.margin_db,6.0
 rates.DSD128.reference_floor.ntf,"order 7, max gain 1.4"
 rates.DSD128.reference_floor.ntf_fallbacks,0
-rates.DSD128.reference_floor.chain.thdn_db,-175.81
-rates.DSD128.reference_floor.chain.thd_db,-184.55
-rates.DSD128.reference_floor.chain.thdn_a_db,-177.2
-rates.DSD128.reference_floor.chain.sinad_db,175.81
+rates.DSD128.reference_floor.chain.thdn_db,-175.87
+rates.DSD128.reference_floor.chain.thd_db,-184.19
+rates.DSD128.reference_floor.chain.thdn_a_db,-177.28
+rates.DSD128.reference_floor.chain.sinad_db,175.87
 rates.DSD128.reference_floor.chain.noise_dbfs,-183.51
 rates.DSD128.reference_floor.chain.noise_a_dbfs,-184.78
 rates.DSD128.reference_floor.chain.dr_db,176.05
-rates.DSD128.reference_floor.chain.dr_a_db,176.94
+rates.DSD128.reference_floor.chain.dr_a_db,177.06
 rates.DSD128.reference_floor.chain.metric_floors.lobe_noise_db,-203.7
-rates.DSD128.reference_floor.chain.metric_floors.imd_smpte_db,-179.48
-rates.DSD128.reference_floor.chain.metric_floors.imd_ccif_db,-163.91
-rates.DSD128.reference_floor.chain.metric_floors.multitone_dfr_db,183.5
+rates.DSD128.reference_floor.chain.metric_floors.imd_smpte_db,-179.98
+rates.DSD128.reference_floor.chain.metric_floors.imd_ccif_db,-163.7
+rates.DSD128.reference_floor.chain.metric_floors.multitone_dfr_db,184.4
 rates.DSD128.reference_floor.decoder_alone.thdn_db,-286.09
 rates.DSD128.reference_floor.decoder_alone.thd_db,-320.13
 rates.DSD128.reference_floor.decoder_alone.thdn_a_db,-288.33
@@ -268,11 +268,11 @@ rates.DSD128.reference_floor.decoder_alone.metric_floors.lobe_noise_db,-374.6
 rates.DSD128.reference_floor.decoder_alone.metric_floors.imd_smpte_db,-299.6
 rates.DSD128.reference_floor.decoder_alone.metric_floors.imd_ccif_db,-280.06
 rates.DSD128.reference_floor.meets_target,True
-rates.DSD256.thdn_db,-177.7751260425747
-rates.DSD256.thd_db,-197.882908279874
-rates.DSD256.sinad_db,177.7751260425747
-rates.DSD256.thdn_a_db,-179.25633815818006
-rates.DSD256.dr_a_db,177.18387819821626
+rates.DSD256.thdn_db,-177.80939992746448
+rates.DSD256.thd_db,-195.86297465608322
+rates.DSD256.sinad_db,177.80939992746448
+rates.DSD256.thdn_a_db,-179.2873872270406
+rates.DSD256.dr_a_db,177.34246726910726
 rates.DSD256.stability_peak.saturated,False
 rates.DSD256.ultrasonic.peak_hz,452548.3399593904
 rates.DSD256.ultrasonic.peak_density_dbfs_hz,-87.6325064854438
@@ -291,18 +291,18 @@ rates.DSD256.reference_floor.target_db,-140.0
 rates.DSD256.reference_floor.margin_db,6.0
 rates.DSD256.reference_floor.ntf,"order 7, max gain 1.4"
 rates.DSD256.reference_floor.ntf_fallbacks,0
-rates.DSD256.reference_floor.chain.thdn_db,-177.81
-rates.DSD256.reference_floor.chain.thd_db,-197.99
-rates.DSD256.reference_floor.chain.thdn_a_db,-179.29
-rates.DSD256.reference_floor.chain.sinad_db,177.81
+rates.DSD256.reference_floor.chain.thdn_db,-177.85
+rates.DSD256.reference_floor.chain.thd_db,-195.76
+rates.DSD256.reference_floor.chain.thdn_a_db,-179.32
+rates.DSD256.reference_floor.chain.sinad_db,177.85
 rates.DSD256.reference_floor.chain.noise_dbfs,-180.99
 rates.DSD256.reference_floor.chain.noise_a_dbfs,-184.13
-rates.DSD256.reference_floor.chain.dr_db,177.19
-rates.DSD256.reference_floor.chain.dr_a_db,178.28
+rates.DSD256.reference_floor.chain.dr_db,177.09
+rates.DSD256.reference_floor.chain.dr_a_db,178.21
 rates.DSD256.reference_floor.chain.metric_floors.lobe_noise_db,-207.3
-rates.DSD256.reference_floor.chain.metric_floors.imd_smpte_db,-184.61
-rates.DSD256.reference_floor.chain.metric_floors.imd_ccif_db,-196.48
-rates.DSD256.reference_floor.chain.metric_floors.multitone_dfr_db,192.6
+rates.DSD256.reference_floor.chain.metric_floors.imd_smpte_db,-183.11
+rates.DSD256.reference_floor.chain.metric_floors.imd_ccif_db,-196.49
+rates.DSD256.reference_floor.chain.metric_floors.multitone_dfr_db,192.7
 rates.DSD256.reference_floor.decoder_alone.thdn_db,-291.84
 rates.DSD256.reference_floor.decoder_alone.thd_db,-323.27
 rates.DSD256.reference_floor.decoder_alone.thdn_a_db,-294.83
@@ -321,27 +321,27 @@ rates.DSD256.reference_floor.decoder_alone.metric_floors.imd_smpte_db,-304.35
 rates.DSD256.reference_floor.decoder_alone.metric_floors.imd_ccif_db,-295.2
 rates.DSD256.reference_floor.meets_target,True
 reference_decoder_only.impulse.peak_index,4080
-reference_decoder_only.impulse.pre_ringing_samples,134
-reference_decoder_only.impulse.post_ringing_samples,124
-reference_decoder_only.impulse.pre_ringing_ms,1.5192743764172336
-reference_decoder_only.impulse.post_ringing_ms,1.4058956916099774
-reference_decoder_only.impulse.pre_energy_fraction,0.036874047673333736
-reference_decoder_only.impulse.symmetry,0.99911887955108
+reference_decoder_only.impulse.pre_ringing_samples,124
+reference_decoder_only.impulse.post_ringing_samples,137
+reference_decoder_only.impulse.pre_ringing_ms,1.4058956916099774
+reference_decoder_only.impulse.post_ringing_ms,1.5532879818594105
+reference_decoder_only.impulse.pre_energy_fraction,0.03670425700838211
+reference_decoder_only.impulse.symmetry,0.9990753170603375
 reference_decoder_only.impulse.floor_used_db,-60.0
 reference_decoder_only.impulse.filter_type,linear phase
 reference_decoder_only.impulse.output_rate,88200
 reference_decoder_only.impulse.measurable,True
 reference_decoder_only.impulse.method,output samples
-reference_decoder_only.filter_summary.minus_0p1_db_hz,30212.429809570312
-reference_decoder_only.filter_summary.minus_3_db_hz,40549.04022216797
-reference_decoder_only.filter_summary.minus_60_db_hz,41523.41766357422
+reference_decoder_only.filter_summary.minus_0p1_db_hz,29924.423217773438
+reference_decoder_only.filter_summary.minus_3_db_hz,40334.381103515625
+reference_decoder_only.filter_summary.minus_60_db_hz,41497.84698486328
 reference_decoder_only.filter_summary.output_nyquist_hz,
 reference_decoder_only.filter_summary.stopband_edge_hz,
-reference_decoder_only.group_delay_us.at_1k,-0.03568662207074224
-reference_decoder_only.group_delay_us.at_10k,0.6224468371789293
-reference_decoder_only.group_delay_us.at_20k,-1.5114231538921128
+reference_decoder_only.group_delay_us.at_1k,-0.15659226649349267
+reference_decoder_only.group_delay_us.at_10k,-0.9092294696776028
+reference_decoder_only.group_delay_us.at_20k,-0.8392150782349115
 reference_decoder_only.group_delay_us.measurable,True
-reference_decoder_only.step.overshoot_percent,4.471513319647145
+reference_decoder_only.step.overshoot_percent,4.430571797213146
 reference_decoder_only.step.settle_1pct_ms,0.1927437641723356
-reference_decoder_only.step.final,1.0000047793760556
+reference_decoder_only.step.final,0.9999999579751774
 reference_decoder_only.step.note,average of 8 rising edges

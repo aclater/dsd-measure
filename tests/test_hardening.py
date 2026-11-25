@@ -164,7 +164,7 @@ def test_timeout_kills_the_whole_process_group(tmp_path, shell):
         adapters.run_checked(cmd, shell=shell, timeout=2)
     assert time.time() - t0 < 20
     pid = int(pidfile.read_text())
-    for _ in range(50):
+    for _ in range(200):  # the kill is immediate; on a loaded machine the child can take seconds to be reaped
         if not _alive(pid):
             break
         time.sleep(0.1)

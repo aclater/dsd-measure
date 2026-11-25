@@ -1,0 +1,15 @@
+[suite]
+name = "release gate"
+in_rate = 88200
+
+[[device]]
+name = "previous"
+adapter = "cli"
+class = "A"
+command = "previous/target/release/CONVERTER {input} {output}"
+
+[[device]]
+name = "candidate"
+adapter = "cli"
+class = "A"
+command = "target/release/CONVERTER {input} {output}"

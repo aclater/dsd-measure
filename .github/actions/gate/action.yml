@@ -1,0 +1,187 @@
+# Audio quality gate: measure the previous release and the candidate of a converter with dsd-measure
+# and fail the job when the candidate is worse beyond repeatability. See docs/ci-gate.md.
+#
+# The caller builds or installs both versions earlier in the same job and names them as two devices of
+# one suite file. This action installs dsd-measure from its own checkout (the whole repository is
+# present at the pinned ref, so the one pin names both the action and the tool), measures both devices
+# with the gate profile, compares them and keeps the report.
+#
+# Needs: Python 3.11 or later with venv (set it up before this step), a C compiler named cc, and
+# 2 GiB of memory per job. Works on ubuntu and macOS runners. Writes nothing outside the workspace
+# and the runner's temporary folder; uses no secrets and no network except pip's download of NumPy,
+# SciPy and Matplotlib and the cache service.
+name: dsd-measure release gate
+description: Measure two versions of a converter with dsd-measure and fail when the new one is worse beyond repeatability.
+inputs:
+  suite:
+    description: Suite file in the workspace, with a device for the previous release and one for the candidate. Its profile is overridden by the gate profile.
+    required: true
+  previous:
+    description: Name of the previous release's device in the suite (letters, digits, dash and underscore).
+    default: previous
+  candidate:
+    description: Name of the candidate's device in the suite (letters, digits, dash and underscore).
+    default: candidate
+  out:
+    description: Report folder, relative to the workspace.
+    default: quality-gate
+  artifact-name:
+    description: Name of the uploaded report artifact; give each gate job in one workflow run its own.
+    default: quality-gate
+outputs:
+  result:
+    description: pass, fail (a figure is worse beyond repeatability or no longer measured, exit status 1) or error (the run could not complete, exit status 2).
+    value: ${{ steps.compare.outputs.result || steps.measure.outputs.result || 'error' }}
+  report:
+    description: The report folder.
+    value: ${{ inputs.out }}
+runs:
+  using: composite
+  steps:
+    - name: Check the inputs
+      shell: sh
+      env:
+        SUITE: ${{ inputs.suite }}
+        OLD: ${{ inputs.previous }}
+        NEW: ${{ inputs.candidate }}
+        OUT: ${{ inputs.out }}
+        ARTIFACT: ${{ inputs.artifact-name }}
+      run: |
+        python3 - <<'PY'
+        import os, re, sys
+        from pathlib import Path
+        def stop(message):  # exit status 2 is "could not run"; 1 is reserved for a regression
+            print(message, file=sys.stderr)
+            sys.exit(2)
+        if sys.version_info < (3, 11):
+            stop("gate: dsd-measure needs Python 3.11 or later; set it up before this step (found %d.%d)" % sys.version_info[:2])
+        env = os.environ
+        errors = []
+        ws = Path(env["GITHUB_WORKSPACE"]).resolve()
+        for key, what in (("OLD", "previous"), ("NEW", "candidate")):
+            if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", env[key]):
+                errors.append(f"{what} must be a device name of letters, digits, dash and underscore")
+        if env["OLD"] == env["NEW"]:
+            errors.append("previous and candidate must be two different devices")
+        if not re.fullmatch(r"[A-Za-z0-9._-]{1,80}", env["ARTIFACT"]):
+            errors.append("artifact-name may hold only letters, digits, dot, dash and underscore")
+        for key, what in (("SUITE", "suite"), ("OUT", "out")):
+            v = env[key]
+            if not re.fullmatch(r"[A-Za-z0-9._/-]{1,200}", v) or v.startswith("/") or ".." in v.split("/"):
+                errors.append(f"{what} must be a relative path of letters, digits, dot, dash, underscore and slash, without ..")
+                continue
+            p = (ws / v).resolve()
+            if ws not in p.parents:
+                errors.append(f"{what} must be inside the workspace")
+            elif key == "SUITE" and not p.is_file():
+                errors.append(f"suite {v} is not a file")
+        if errors:
+            stop("\n".join("gate: " + e for e in errors))
+        PY
+        command -v cc >/dev/null || { echo "gate: no C compiler named cc (dsd-measure compiles a small core on first use)" >&2; exit 2; }
+    - name: Install dsd-measure from this action's own checkout
+      shell: sh
+      env:
+        VENV: ${{ runner.temp }}/dsd-measure-venv
+      run: |
+        python3 -m venv "$VENV"
+        "$VENV/bin/python" -m pip install --quiet --disable-pip-version-check "$GITHUB_ACTION_PATH/../../.."
+    - name: Name of the stimulus cache
+      id: key
+      shell: sh
+      env:
+        VENV: ${{ runner.temp }}/dsd-measure-venv
+      run: echo "key=$("$VENV/bin/dsd-measure" cache --key)" >> "$GITHUB_OUTPUT"
+    - name: Restore the encoded test signals
+      id: restore
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/dsd-measure-cache/stimuli
+        key: ${{ steps.key.outputs.key }}-${{ hashFiles(inputs.suite) }}
+        restore-keys: ${{ steps.key.outputs.key }}-
+    - name: Make the cache folder private
+      shell: sh
+      env:
+        CACHE: ${{ runner.temp }}/dsd-measure-cache
+      run: |
+        umask 077
+        mkdir -p "$CACHE/stimuli"
+        chmod 700 "$CACHE" "$CACHE/stimuli"
+    - name: Measure both versions (gate profile)
+      id: measure
+      shell: sh
+      env:
+        VENV: ${{ runner.temp }}/dsd-measure-venv
+        DSD_MEASURE_CACHE_DIR: ${{ runner.temp }}/dsd-measure-cache
+        SUITE: ${{ inputs.suite }}
+        OUT: ${{ inputs.out }}
+      run: |
+        # The venv first on PATH: a converter command that starts python3 gets the Python of dsd-measure.
+        PATH="$VENV/bin:$PATH"
+        status=0
+        # The tool's output is data (it includes the converter's own output on errors): print it with workflow commands switched off.
+        token=$(python3 -c 'import secrets; print(secrets.token_hex(16))')
+        echo "::stop-commands::$token"
+        dsd-measure run "$SUITE" --profile gate -o "$OUT" 2>&1 || status=$?
+        echo "::$token::"
+        if [ "$status" -ge 2 ]; then
+          echo "result=error" >> "$GITHUB_OUTPUT"
+          echo "::error title=Audio quality gate::the measurement run failed (exit status $status); see the log above"
+          exit 2
+        fi
+        # Status 1: the report exists but a test raised an error. The gate below fails a figure that
+        # was measured before and is not now; say so, so a failure in both versions is not overlooked.
+        if [ "$status" -eq 1 ]; then
+          echo "::warning title=Audio quality gate::some tests raised an error; see 'Not run, and why' in the report"
+        fi
+    - name: Compare the two versions (fails on a regression beyond repeatability)
+      id: compare
+      shell: sh
+      env:
+        VENV: ${{ runner.temp }}/dsd-measure-venv
+        OUT: ${{ inputs.out }}
+        OLD: ${{ inputs.previous }}
+        NEW: ${{ inputs.candidate }}
+      run: |
+        PATH="$VENV/bin:$PATH"
+        status=0
+        dsd-measure gate "$OUT/$OLD" "$OUT/$NEW" --json "$OUT/gate.json" > "$OUT/gate.txt" 2>&1 || status=$?
+        # The tool's output is data: print it with workflow commands switched off.
+        token=$(python3 -c 'import secrets; print(secrets.token_hex(16))')
+        echo "::stop-commands::$token"
+        cat "$OUT/gate.txt"
+        echo "::$token::"
+        case "$status" in
+          0) result=pass; title="Audio quality gate: pass" ;;
+          1) result=fail; title="Audio quality gate: FAIL" ;;
+          *) result=error; title="Audio quality gate: could not compare" ;;
+        esac
+        echo "result=$result" >> "$GITHUB_OUTPUT"
+        {
+          echo "### $title"
+          echo
+          echo '```text'
+          tr '\140' '\047' < "$OUT/gate.txt"   # backticks become quotes: nothing in the tool's output can close the fence
+          echo '```'
+          echo
+          echo "Previous: \`$OLD\`, candidate: \`$NEW\`. The report folder is in the artifact of this job."
+        } >> "$GITHUB_STEP_SUMMARY"
+        if [ "$status" -eq 1 ]; then
+          echo "::error title=$title::$(grep '^FAIL' "$OUT/gate.txt")"
+        elif [ "$status" -ne 0 ]; then
+          echo "::error title=$title::see the log (exit status $status)"
+        fi
+        exit "$status"
+    - name: Save the encoded test signals (default branch only)
+      if: ${{ !cancelled() && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && steps.restore.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/dsd-measure-cache/stimuli
+        key: ${{ steps.key.outputs.key }}-${{ hashFiles(inputs.suite) }}
+    - name: Keep the report
+      if: ${{ !cancelled() }}
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.out }}
+        if-no-files-found: ignore

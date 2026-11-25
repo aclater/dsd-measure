@@ -13,6 +13,7 @@ How the numbers of dsd-measure are checked, how well they agree with signals who
 - [Other tools](#other-tools)
 - [The published SoX-DSD tests](#the-published-sox-dsd-tests)
 - [Conventions that change a number](#conventions-that-change-a-number)
+- [Repeatability](#repeatability)
 - [Known limits](#known-limits)
 - [What the validation found](#what-the-validation-found)
 - [Re-run it](#re-run-it)
@@ -34,7 +35,7 @@ How the numbers of dsd-measure are checked, how well they agree with signals who
 | J-Test carrier and sideband detection | 0.01 dB; a -120 dB sideband found to 0.03 dB; none reported in white noise or in noise that tilts by 25 dB and ripples by 24 dB across the band (each position is compared with its two neighbours) | built signals |
 | Ultrasonic density and band levels | 0.1 dB | white noise and tones with known level |
 | Spur level and frequency | 0.05 dB, one bin | injected spurs |
-| Reference floor (DSD64, 0 dB SACD, -147.04 dB THD+N) | 0.05 dB | sine fit (-147.04), notch (-147.08), SoX (-146.96) on the real output |
+| Reference floor (DSD64, 0 dB SACD, -146.73 dB THD+N) | 0.05 dB | sine fit (-146.70) and notch (-146.73) on the same record of the real output; SoX reads -146.95 over a longer stretch of the same file |
 
 Not covered by this validation: the peak-level (+3.1 dB SACD) SINAD of a class A device is measured with the reference modulator's design for that level (order 8, gain 1.3), whose own floor (about 129 dB at DSD64) is shown beside the figure and limits it; the class B filter rows are not shown, because they describe the reference decoder; the alias-tone stopband figure (an upper bound that includes the device's noise, read from tones that start 20 kHz below the output rate; its accuracy is tested on the reference decoder at 44.1, 88.2 and 176.4 kHz only), the device-delay probe (peak of one impulse, whole samples), the filter, group-delay, polarity and stability rows (not used by any conclusion), and the DC offset (a statistic of the dither record). The [limits](#known-limits) below say where the other figures stop being exact.
 
@@ -113,21 +114,21 @@ The reference chain's floor (DSD64, 1 kHz at 0 dB SACD) is the number everything
 
 | Case | THD+N main | THD+N sine fit | THD+N notch | THD+N SoX | THD main | THD harmonic fit | A-weighted main | A-weighted fit |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| DSD64, 0 dB SACD | -147.04 | -147.04 | -147.08 | -146.96 | -162.99 | -164.90 | -150.41 | -150.42 |
-| DSD64, -20 dB SACD | -127.64 | -127.65 | -127.69 | -127.66 | -146.11 | -150.75 | -131.22 | -131.23 |
-| DSD64, -60 dB SACD | -88.49 | -88.50 | -88.54 | -88.33 | -105.17 | -106.28 | -91.73 | -91.73 |
-| DSD128, 0 dB SACD | -175.94 | -175.95 | -176.00 | -174.91 | -184.66 | -184.92 | -177.25 | -177.26 |
+| DSD64, 0 dB SACD | -146.73 | -146.70 | -146.73 | -146.95 | -164.34 | -165.78 | -150.31 | -150.29 |
+| DSD64, -20 dB SACD | -127.71 | -127.77 | -127.83 | -127.63 | -147.60 | -151.11 | -131.20 | -131.24 |
+| DSD64, -60 dB SACD | -88.19 | -88.20 | -88.24 | -88.30 | -104.00 | -105.11 | -91.55 | -91.56 |
+| DSD128, 0 dB SACD | -175.85 | -175.85 | -175.88 | -174.95 | -184.32 | -184.59 | -177.17 | -177.17 |
 
 ### Same bits decoded by ffmpeg
 
 | ffmpeg output rate (Hz) | SINAD main (dB) | SINAD sine fit (dB) |
 |---|---:|---:|
-| 352800 | 146.80 | 146.80 |
-| 176400 | 138.93 | 138.93 |
-| 88200 | 126.36 | 126.35 |
-| 44100 | 138.16 | 138.18 |
+| 352800 | 146.52 | 146.49 |
+| 176400 | 138.98 | 138.99 |
+| 88200 | 126.31 | 126.30 |
+| 44100 | 138.24 | 138.24 |
 
-The same bits decoded by ffmpeg's own DSD decoder at four output rates, read by both analysers: 146.80 dB at 352.8 kHz, 138.93 dB at 176.4 kHz, 126.36 dB at 88.2 kHz and 138.16 dB at 44.1 kHz. One decoder, one stream, 20 dB apart: the output rate decides the floor, which is why the [footprint](footprint.md#principles) requires every comparison to state it.
+The same bits decoded by ffmpeg's own DSD decoder at four output rates, read by both analysers: 146.52 dB at 352.8 kHz, 138.98 dB at 176.4 kHz, 126.31 dB at 88.2 kHz and 138.24 dB at 44.1 kHz. One decoder, one stream, 20 dB apart: the output rate decides the floor, which is why the [footprint](footprint.md#principles) requires every comparison to state it.
 
 The sine-fit and notch methods use the exact stimulus frequency and a Kaiser-weighted fit. A fit without a window reads -124 dB on the same record: the ultrasonic noise (about -50 dBFS) leaks through a rectangular window into every fitted line. This is a warning for anyone who re-analyses these files by hand, and it is the same mechanism that made the class B multitone read 104 dB before 0.1.1 (see [findings](#what-the-validation-found)).
 
@@ -227,6 +228,62 @@ Anyone comparing with other published figures needs these.
 - **A-weighting** is the IEC 61672-1 curve, 0 dB at 1 kHz; the figure is the noise power through it.
 - **Output rate and level mapping.** A decoder's in-band floor depends on the rate it writes, and tools map PCM full scale to different DSD depths; see the rule in the [footprint](footprint.md#principles).
 
+## Repeatability
+
+How far a figure moves when nothing changes but the noise. The reference modulator is a chaotic system: a change of one part in 10^14 at its input gives a different bitstream with the same statistics, so every figure read near the noise floor has a spread from one noise realisation to the next. That spread is the repeatability, and it is what a comparison between two versions of a converter has to allow for.
+
+It was measured on the quick suite of the reference chain (DSD64, class A at 44.1 kHz and class B). White noise of 1e-14 rms (-280 dBFS) was added to the modulator's input, with 12 different seeds, and the whole suite was run for each. The table gives the mean and the standard deviation of the class A column; the class B column agrees within 0.1 dB in every row but the CCIF IMD (1.2 dB).
+
+| Figure | Mean | Standard deviation (dB) | Allowed between two runs (dB) |
+|---|---:|---:|---:|
+| SINAD, 1 kHz at 0 dB SACD | 146.9 dB | 0.14 | 0.6 |
+| THD, 1 kHz at 0 dB SACD | -163.6 dB | 0.32 | 1.5 |
+| THD+N A-weighted | -150.3 dB | 0.12 | 0.6 |
+| SINAD at the peak level | 129.2 dB | 0.13 | 0.6 |
+| Dynamic range, A-weighted | 150.5 dB | 0.10 | 0.5 |
+| Noise 20 Hz to 20 kHz, A-weighted | -162.4 dBFS | 0.03 | 0.2 |
+| Noise 20 Hz to 20 kHz | -159.0 dBFS | 0.04 | 0.2 |
+| IMD SMPTE | -144.9 dB | 0.41 | 1.8 |
+| IMD CCIF | -135.4 dB | 0.64 | 2.8 |
+| Multitone distortion-free range | 152.4 dB | 0.72 | 3.1 |
+| Worst alias image | -156.5 dB | 1.38 | 6.0 |
+| J-Test noise floor | -159.7 dB | 0.40 | 1.7 |
+| Reference floor, THD+N of the chain | -146.9 dB | 0.11 | 0.5 |
+| Reference floor, decoder alone | -280.9 dB | 0 | 0 |
+
+"Allowed between two runs" is three standard deviations of a difference (3 x 1.414 x the larger standard deviation of the two interpolators below), rounded up; the [release gate](options.md#release-gate) uses these values. The figures of the reference chain are the worst case, because they are all noise: a converter that is clear of the floor repeats better. A decoder (class A) that is deterministic gets the identical bitstream in both runs, so its own figures repeat exactly; the spread then matters only between versions of dsd-measure. The multitone range and the alias image are read from single bins, which is why they spread most. The decoder alone has no modulator in front of it and reads the same in every run.
+
+The multitone range of the 0.1.1 reference chain was published as 150.7 dB. With 12 seeds the same 0.1.1 chain reads 151.0 to 153.7 dB (mean 152.4 dB): 150.7 dB was one draw from the low end, and a tolerance of 1 dB around it was narrower than the figure repeats.
+
+### The FFT interpolator of 0.1.3
+
+Since 0.1.3 the interpolator in front of the reference modulator runs each filter stage as FFT convolutions instead of the direct form. The filters are the same. Two things show that no figure moved:
+
+- **The signal.** The interpolated signal differs from the direct form's by rounding only: less than 1e-14 of full scale (-280 dB) in every case of `tests/test_perf.py` (4e-15 on a 31 s signal), more than 130 dB below the reference floor. For signals at the level of the dither the modulator writes the identical bitstream.
+- **The figures.** For larger signals the bitstream is a different one with the same statistics, so the proof is statistical. The ensemble above was run with both interpolators (12 seeds each, 24 runs). Of the 429 numbers in the two `results.json` files, 106 are the same in all 24 runs and 323 vary with the seed. Welch's t-test between the two ensembles gives p below 0.05 for 18 of the 323 (16 are expected by chance), below 0.01 for 4 (3 expected) and below 0.001 for none. No figure separates the two interpolators.
+
+| Figure (class A) | Direct form, mean | sd | FFT, mean | sd | p |
+|---|---:|---:|---:|---:|---:|
+| SINAD, 1 kHz at 0 dB SACD (dB) | 146.901 | 0.136 | 146.879 | 0.107 | 0.66 |
+| THD (dB) | -163.626 | 0.324 | -163.922 | 0.321 | 0.035 |
+| SINAD at the peak level (dB) | 129.191 | 0.097 | 129.183 | 0.127 | 0.86 |
+| Dynamic range, A-weighted (dB) | 150.509 | 0.047 | 150.476 | 0.100 | 0.32 |
+| Noise, A-weighted (dBFS) | -162.440 | 0.030 | -162.440 | 0.030 | 1 |
+| IMD SMPTE (dB) | -144.854 | 0.407 | -144.625 | 0.403 | 0.18 |
+| IMD CCIF (dB) | -135.382 | 0.643 | -135.780 | 0.381 | 0.08 |
+| Multitone distortion-free range (dB) | 152.448 | 0.718 | 152.408 | 0.495 | 0.88 |
+| Worst alias image (dB) | -156.465 | 1.380 | -156.616 | 0.984 | 0.76 |
+| Reference floor, THD+N of the chain (dB) | -146.948 | 0.114 | -146.907 | 0.076 | 0.32 |
+
+A single 0.1.3 report is one draw from this distribution, as a 0.1.1 report was: its SINAD reads 146.9 dB where the 0.1.1 report read 147.0 dB, and its multitone floor 152.7 dB where 0.1.1 read 150.7 dB. The stimulus cache and the parallel runner change nothing at all: a cached run, a run with any number of jobs and a serial run without the cache write the same `results.json`, number for number (`tests/test_perf.py`).
+
+To run the ensemble again (12 seeds, four runs at a time; about four minutes of one core per seed, and up to 2.5 GB of memory per run):
+
+<!-- docs-run: skip="ensemble of repeated runs for the release gate, many CPU-hours" -->
+```sh
+sh scripts/repeatability/run.sh ensemble 12 4
+```
+
 ## Known limits
 
 - **Non-coherent tones.** The window's far sidelobes spread a tone's energy over the whole spectrum at about -160 dB (-161.6 dB at half a bin off, -171.8 dB at 0.1 bin) of the tone. A figure within 3 dB of that is limited by the window; the measurements use coherent tones wherever the output rate allows (44.1 kHz family), and a device that writes 48 kHz family rates is off the coherent grid.
@@ -234,7 +291,7 @@ Anyone comparing with other published figures needs these.
 - **THD below the noise.** THD counts the noise inside each harmonic's 21-bin lobe; a THD figure more than about 15 dB below THD+N is the noise in those lobes, not a harmonic. With noise equal to the harmonic a single record's THD is uncertain by about 0.3 dB for any method.
 - **Statistics.** One 2^18-point record gives THD+N to +-0.07 dB (1 sigma) for noise-only floors; noise over 20 Hz to 20 kHz with 8 averages to +-0.02 dB (2^18) or +-0.013 dB (2^20); noise density at 1 kHz only to +-0.3 dB (a few hundred bins). Multitone residuals are single-bin statistics.
 - **Band edges.** The 20 Hz edge is smeared by the window by about +-5 Hz: a noise block closer than 5 Hz to the edge is partly counted.
-- **Output rate.** The impulse, filter and group-delay measurements need an output rate on the 44.1 kHz grid (44.1, 88.2, 176.4, 352.8 kHz): at 48 kHz-family rates they report "not run" with the reason, as the multitone does.
+- **Output rate.** The impulse, filter and group-delay measurements need an output rate on the 44.1 kHz grid (44.1, 88.2, 176.4, 352.8 kHz): at 48 kHz-family rates they report "not run" with the reason, as the multitone does. A class B device may take a 48 kHz-family input: the reference decoder's output rates divide the DSD rate, so its impulse and step records are decoded at the smallest 44.1 kHz-family rate at or above the input rate (88.2 kHz for 48 kHz, 176.4 kHz for 96 kHz, 352.8 kHz for 192 kHz). The impulses and step edges are placed on input samples that fall on decoder samples exactly (every 80 input samples), so nothing is resampled. Through the reference modulator behind a resampler the in-band response read this way agrees with the 88.2 kHz input within 0.01 dB from 20 Hz to 20 kHz (checked in the test suite). At 96 and 192 kHz inputs the decoded record carries the DSD stream's ultrasonic noise, so the filter rows are marked not measurable by the rule in the next item, as they are at 176.4 and 352.8 kHz.
 - **Wide-band outputs.** A record at 88.2 kHz or more carries the DSD stream's own ultrasonic noise. When that noise is above the -60 dB ringing threshold of the impulse record (the reference decoder at 88.2 kHz and more), the filter type, ringing, cut-off and group delay print "not measurable" instead of a number read from noise. The stopband figure does not depend on the impulse record.
 - **Stopband.** The tones start 20 kHz below the output rate and rise in 2 kHz steps while they fit under the 352.8 kHz test signal (up to about 158 kHz), so every image lands at or below 20 kHz: six tones up to 88.2 kHz, two at 176.4 kHz, none at 192 kHz or more ("not run"). The figure is the worst image, "or deeper": it contains the device's noise.
 - **Device delay.** Every time-domain test (impulse, step, overload, polarity) first finds the device's delay from one impulse and shifts its windows by it, so a late device reads like an aligned one (tested with 300, 1000 and 3000 samples, inverted and not). The delay is the peak of the probe, in whole output samples; a device whose first output is not the impulse peak (a start-up click larger than the impulse after 0.1 s) is not handled. An imported signal set made before the probe existed runs with a delay of zero and says so.
@@ -253,7 +310,7 @@ Measurement faults from the separate internal review of 0.1.0, fixed in 0.1.1 (e
 
 | Finding | Before | After |
 |---|---|---|
-| Class B multitone used a rectangular window on a record full of ultrasonic noise (B1) | every modulator read 104 dB; the decoder column of the same chain 136 dB | class B decoded to 44.1 kHz first, and every class A record decimated to 44.1 kHz before the window: the reference decoder reads 150.7 dB at 44.1, 88.2, 176.4 and 352.8 kHz (it read 138, 109 and 106 dB at the last three, N1) |
+| Class B multitone used a rectangular window on a record full of ultrasonic noise (B1) | every modulator read 104 dB; the decoder column of the same chain 136 dB | class B decoded to 44.1 kHz first, and every class A record decimated to 44.1 kHz before the window: the reference decoder reads the same range (150.7 dB in 0.1.1, see [Repeatability](#repeatability)) at 44.1, 88.2, 176.4 and 352.8 kHz (it read 138, 109 and 106 dB at the last three, N1) |
 | Stopband taken from the noise of the impulse measurement (B2) | -81 dB for a filter that is -156 dB deep | from the alias tones, at most the stated level, with the tones named: tones start at the output rate minus 20 kHz (they started 2 kHz above Nyquist, so at 88.2 kHz the row read -9 dB from the filter's transition band and at 44.1 kHz -133 dB for a stopband of -155 dB or deeper, N2); the row says "upper bound", "or deeper" and the range |
 | Overload recovery's analysis filter had a fixed tap count (B4) | +-46 ms at 44.1 kHz: 47.5 ms against 10 ms for the same chain | sized in seconds: 7.6 ms and 10.0 ms |
 | The noise headline was the stimulus dither, 3.01 dB off the dBFS-re-sine convention of AES17 (B5) | -151.6 dBFS(A) for a chain below -160 | 32-bit dither and the sine-rms reference |
@@ -281,6 +338,7 @@ No fault was found in the level, THD+N, SINAD, noise, dynamic range, A-weighting
 
 ## Re-run it
 
+<!-- docs-run: skip="full validation, about 20 minutes and rootless Podman with the pinned reference containers" -->
 ```sh
 pip install -e '.[dev]'
 scripts/ci.sh                  # the fast subset: known answers and regressions, about 2 minutes

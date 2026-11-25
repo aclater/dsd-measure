@@ -58,15 +58,17 @@ def run_null(source, device_args, opts, out, suite_devices=None, keep_work=False
             safe = re.sub(r"[^A-Za-z0-9_-]+", "-", dev.name).strip("-")
             wav = f"difference-{safe}.wav" if opts.diff_wav else None
             res = compare(tracks[0][1], track, opts, out / wav if wav else None, log=log)
-            v = verdict(res["channels"])
+            v = verdict(res["channels"], res["trust"])
             ch = next(c for c in res["channels"] if c["channel"] == v["channel"])
             fmts = [(tracks[j][0].name, run["devices"][j].get("info", {}).get("output_format"),
                      float(run["devices"][j]["describe"].get("gain_db", 0.0)) + (ch["gain_db"] if j == k else 0.0)) for j in (0, k)]
-            v = apply_format_limit(v, ch, fmts)
+            if not res["trust"]["untrustworthy"]:
+                v = apply_format_limit(v, ch, fmts)
             run["pairs"].append({"a": tracks[0][0].name, "b": dev.name, "result": res, "verdict": v, "diff_wav": wav})
     finally:
         if not keep_work:
             shutil.rmtree(work, ignore_errors=True)
+    run["untrustworthy"] = any(p["result"]["trust"]["untrustworthy"] for p in run["pairs"])
     write_report(out, run)
     log(f"report written to {out}/")
     for p in run["pairs"]:

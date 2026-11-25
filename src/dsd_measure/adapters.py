@@ -403,16 +403,18 @@ class ReftoolSox(Adapter):
     ``gain_db`` is applied to the output so that the whole chain has unity gain. Unless given,
     it is ``6.0206 - input_gain_db`` (6.0206 with no input gain, 0 with 6.0206 of input gain).
 
-    ``trellis`` is ``"32x32"`` (the default, ``-t 32 -n 32``: trellis depth and number of paths
-    both 32, which scores about 2.6 dB lower noise than SoX's own settings) or ``"default"``
-    (SoX's own trellis settings, no ``-t``/``-n``). Say which one was used when comparing.
+    ``trellis`` is ``"default"`` (the default: SoX's own trellis settings, no ``-t``/``-n``) or ``"32x32"``
+    (``-t 32 -n 32``: trellis depth and number of paths both 32). Before 0.1.3 the default was ``"32x32"``; with
+    ``sdm-8`` at +6.0206 dB input SoX's own settings read SINAD 140.8 dB and A-weighted noise -156.5 dBFS against
+    138.6 dB and -147.5 dBFS (DSD64, built-in stimulus, 2026-11-24). Which is better depends on the modulator and
+    the figure (with ``clans-8`` they trade places), so say which one was used when comparing.
     """
 
     kind = "sox-dsd"
     TRELLIS = {"32x32": ["-t", "32", "-n", "32"], "default": []}
 
     def __init__(self, name, reftool, klass="A", out_rate=352800, modulator="sdm-8", workdir=None,
-                 gain_db=None, input_gain_db=0.0, trellis="32x32", timeout=3600, **opts):
+                 gain_db=None, input_gain_db=0.0, trellis="default", timeout=3600, **opts):
         input_gain_db = float(input_gain_db) if klass == "B" else 0.0  # input gain is a class B option
         if gain_db is None:
             gain_db = 6.0206 - input_gain_db

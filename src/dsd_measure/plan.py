@@ -15,23 +15,24 @@ from pathlib import Path
 from . import REFERENCE_CHAIN_VERSION, __version__
 from .adapters import PRESETS, Cli, Import, Reference, ReftoolSox, make_adapter
 from .levels import PEAK_DBFS, REF_DBFS
-from .measure import PROFILES, rate_name
+from .measure import PROFILE_TESTS, PROFILES, rate_name
 
 #: Reference-chain run time in seconds per test, measured for each profile on one CPU core
-#: (i9-13900H P-core), for class A and class B devices.
+#: (i9-13900H P-core) with one job and an empty cache of encoded test signals, for class A and
+#: class B devices. A run with several jobs or a filled cache is faster (docs/performance.md).
 #: The device's own run time is on top of this; each extra DSD rate adds ``RATE_S``.
 SECONDS = {
     "quick": {
-        "A": {'reference_floor': 5, 'levels': 14, 'thdn_freq': 4, 'frequency_response': 13, 'impulse': 2, 'noise': 3, 'imd': 2, 'multitone': 7, 'tone_15k': 1, 'jtest': 7, 'polarity': 0, 'stability': 0, 'crosstalk': 12, 'imd_sweep': 14, 'alias_tones': 6, 'overload': 1, 'rate_table': 0},
-        "B": {'reference_floor': 5, 'levels': 20, 'thdn_freq': 9, 'frequency_response': 25, 'impulse': 4, 'noise': 10, 'imd': 2, 'multitone': 8, 'tone_15k': 1, 'jtest': 7, 'polarity': 0, 'stability': 9, 'crosstalk': 14, 'imd_sweep': 15, 'alias_tones': 0, 'overload': 1, 'rate_table': 0},
+        "A": {'reference_floor': 8, 'levels': 7, 'thdn_freq': 2, 'frequency_response': 5, 'impulse': 1, 'noise': 1, 'imd': 1, 'multitone': 3, 'tone_15k': 0, 'jtest': 4, 'polarity': 0, 'stability': 0, 'crosstalk': 5, 'imd_sweep': 5, 'alias_tones': 3, 'overload': 1, 'rate_table': 0},
+        "B": {'reference_floor': 8, 'levels': 8, 'thdn_freq': 2, 'frequency_response': 9, 'impulse': 2, 'noise': 4, 'imd': 1, 'multitone': 4, 'tone_15k': 0, 'jtest': 4, 'polarity': 0, 'stability': 5, 'crosstalk': 6, 'imd_sweep': 7, 'alias_tones': 0, 'overload': 1, 'rate_table': 0},
     },
     "full": {
-        "A": {'reference_floor': 8, 'levels': 72, 'thdn_freq': 12, 'frequency_response': 35, 'impulse': 3, 'noise': 11, 'imd': 6, 'multitone': 22, 'tone_15k': 3, 'jtest': 19, 'polarity': 0, 'stability': 0, 'crosstalk': 28, 'imd_sweep': 38, 'alias_tones': 10, 'overload': 2, 'rate_table': 0},
-        "B": {'reference_floor': 8, 'levels': 78, 'thdn_freq': 13, 'frequency_response': 47, 'impulse': 6, 'noise': 35, 'imd': 6, 'multitone': 23, 'tone_15k': 3, 'jtest': 21, 'polarity': 0, 'stability': 143, 'crosstalk': 31, 'imd_sweep': 40, 'alias_tones': 0, 'overload': 2, 'rate_table': 0},
+        "A": {'reference_floor': 8, 'levels': 20, 'thdn_freq': 3, 'frequency_response': 9, 'impulse': 1, 'noise': 3, 'imd': 1, 'multitone': 5, 'tone_15k': 1, 'jtest': 8, 'polarity': 0, 'stability': 0, 'crosstalk': 7, 'imd_sweep': 9, 'alias_tones': 3, 'overload': 1, 'rate_table': 0},
+        "B": {'reference_floor': 8, 'levels': 23, 'thdn_freq': 4, 'frequency_response': 13, 'impulse': 2, 'noise': 10, 'imd': 2, 'multitone': 7, 'tone_15k': 1, 'jtest': 9, 'polarity': 0, 'stability': 52, 'crosstalk': 8, 'imd_sweep': 11, 'alias_tones': 0, 'overload': 1, 'rate_table': 0},
     },
 }
 
-RATE_S = {"quick": 40, "full": 45}
+RATE_S = {"quick": 25, "full": 25}
 
 
 def _t(**k):
@@ -233,8 +234,8 @@ def io_text(facts, in_rate):
 
 
 def estimate_s(profile, klass, tests, extra_rates=0):
-    tbl = SECONDS.get(profile, {}).get(klass, {})
-    return sum(tbl.get(t, 0.0) for t in tests) + (extra_rates * RATE_S[profile] if "rate_table" in tests else 0)
+    tbl = SECONDS.get(profile, SECONDS["quick"] if profile in PROFILES else {}).get(klass, {})
+    return sum(tbl.get(t, 0.0) for t in tests) + (extra_rates * RATE_S.get(profile, RATE_S["quick"]) if "rate_table" in tests else 0)
 
 
 def _mins(s):
@@ -261,6 +262,8 @@ def plan_text(suite_path, out=None, profile=None, only=None, source=None):
     cfg = tomllib.loads(Path(suite_path).read_text())
     suite = cfg.get("suite", {})
     profile = profile or suite.get("profile", "quick")
+    if only is None and profile in PROFILE_TESTS:
+        only = list(PROFILE_TESTS[profile])
     in_rate = int(suite.get("in_rate", 88200))
     outdir = Path(out or suite.get("out", "report"))
     devs = build_adapters(cfg)

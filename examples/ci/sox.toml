@@ -1,0 +1,15 @@
+[suite]
+name = "SoX gate"
+in_rate = 88200
+
+[[device]]
+name = "previous"
+adapter = "sox-dsd"
+class = "A"
+command = "previous/sox {input} -b 32 -e floating-point {output} rate -v 352800"
+
+[[device]]
+name = "candidate"
+adapter = "sox-dsd"
+class = "A"
+command = "candidate/sox {input} -b 32 -e floating-point {output} rate -v 352800"

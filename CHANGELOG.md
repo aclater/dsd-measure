@@ -2,6 +2,43 @@
 
 All notable changes are listed here, newest first. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Unreleased
+
+## 0.1.3 - 2026-11-25
+
+A faster run, the release gate as a step for GitHub Actions, and fixes to the null test, the long records of the full profile and class B devices fed at 48 kHz-family rates. The faster interpolator changes the reference modulator's bitstream, so every figure read at the noise floor is a new draw from the same distribution (see Changed).
+
+### Added
+
+- A cache of encoded test signals. The reference modulator's output for a signal is kept per user (`~/.cache/dsd-measure/stimuli`, private, 4096 MiB limit, oldest read deleted first) and read back by later runs and by every further device of a suite. An entry is named by a hash of the signal, the rates, the design, the dsd-measure version, the encoder's source, the NumPy and SciPy versions and the machine type, and is checked by hash on every read. `--no-cache` and `DSD_MEASURE_NO_CACHE=1` switch it off; `dsd-measure cache` shows it, `--clear` empties it and `--key` prints the name to save it under in CI. `DSD_MEASURE_CACHE_DIR` moves the folder and must be an absolute path: a relative one is an error (exit status 2), not ignored. No number changes.
+- Parallel runs: the tests of all devices run in worker processes (`-j N`, `jobs = N` in the suite, `DSD_MEASURE_JOBS`; default all cores up to four, then half, at most 16). The report is the one a single job writes, number for number.
+- A `gate` profile: the reference floor, the level steps, the noise and the alias tones of the quick profile, with the quick profile's signals and therefore its numbers.
+- `dsd-measure gate OLD NEW`: compares two device results figure by figure and exits 1 when one is worse beyond the measurement's repeatability. It judges figures, not output bytes. A NaN or infinite figure counts as not measured, so it fails when it appears in the new result. It exits 2 and prints no PASS when it cannot compare: nothing was measured in both results, a result does not record its analysis version, device class or DSD rate, or two report folders with a `provenance.json` differ in input rate, output rate or profile (the `gate` and `quick` profiles are comparable).
+- The repeatability of every figure, measured over 24 runs of the reference chain with different noise realisations (docs/accuracy.md, "Repeatability"; `scripts/repeatability/run.sh` repeats it).
+- docs/performance.md: run times by release.
+- A reusable GitHub Actions step for the release gate (`.github/actions/gate`): it installs dsd-measure from its own pinned checkout, measures the previous release and the candidate with the gate profile, and fails the job when a figure is worse beyond repeatability. It writes the table into the job summary and keeps the report as an artifact. A workflow in this repository (`gate-selftest`) runs it on every pull request and push, on Ubuntu and macOS.
+- Documentation page [Use dsd-measure in your project's CI](docs/ci-gate.md), with a copy-paste workflow, how to choose the previous release, how to read a failure and example suites for ffmpeg and SoX (the SoX suite has not been run).
+- `null` estimates each device's passband and flags a pair that is not like-for-like in band (`trust.not_like_for_like`, with both bandwidths). It sees two devices that are both cut, at different frequencies, and ignores two noise floors that differ far below the music; a cut at or above 20 kHz is recorded and worded as information, with `trust.null_band_affected` false, because the null band is not affected. The estimate and its limits are in [methodology limits](docs/methodology-limits.md#null-test-passbands). An alignment whose in-band correlation is below 0.5 is marked untrustworthy (`trust.untrustworthy`): the report gives no depth band for it and `dsd-measure null` exits with status 1, as does `dsd-measure run` for a suite's `[null]` table (its last lines name the pair).
+- Every report (device, comparison and null test, HTML and Markdown) ends with "Measured with dsd-measure X.Y.Z" and the project address, and every plot carries the same line in small grey text under the figure. The version is the one recorded in the results when there is one.
+- `NOTICE` and `LICENSES/CC-BY-4.0.txt`. The documentation and the example measurement data are CC BY 4.0, the code stays MIT OR Apache-2.0, and reports you generate are your own (README, "Licence and credits"). The licence files ship in the sdist and the wheel.
+
+### Changed
+
+- The SoX-DSD adapter's default `trellis` is SoX's own settings (`"default"`), no longer `"32x32"` (`-t 32 -n 32`), which understated the tool: `sdm-8` at +6.0206 dB input on the built-in stimulus (DSD64, 0 dB SACD) reads SINAD 140.8 dB and A-weighted noise -156.5 dBFS with SoX's own settings, against 138.6 dB and -147.5 dBFS with 32x32. `trellis = "32x32"` still selects the old setting. No figure in these docs was made with the old default: the rows of the SoX-DSD tables in `docs/accuracy.md` name their trellis.
+- The interpolator in front of the reference modulator runs each filter stage as FFT convolutions (`scipy.signal.oaconvolve`, one per polyphase branch) instead of the direct form. Same filters; the interpolated signal differs by rounding only (below 1e-14 of full scale, -280 dB). The modulator is chaotic, so its bitstream for signals above the dither level is a different one with the same statistics. Proof that no figure moved: 12 perturbed runs of the quick suite with each interpolator; of 323 figures that vary with the noise, 18 differ between the two at p < 0.05 (16 expected by chance), 4 at p < 0.01 (3 expected), none at p < 0.001. The reference floor reads -146.91 dB THD+N (standard deviation 0.08 dB) against -146.95 dB (0.11 dB) before; SINAD 146.88 dB (0.11) against 146.90 dB (0.14). One report is one draw: SINAD of the reference chain prints 146.9 dB where 0.1.1 printed 147.0 dB, and its multitone floor 152.7 dB where 0.1.1 printed 150.7 dB (that figure's standard deviation is 0.7 dB; the 0.1.1 chain reads 151.0 to 153.7 dB over 12 noise realisations).
+- The slow test of the multitone range at every output rate expects 152.4 dB within 2.2 dB (the mean and three standard deviations over noise realisations) instead of 150.7 dB within 1 dB, which was one realisation and narrower than the figure repeats.
+- The example report in `examples/reference-chain` is regenerated.
+- The headline `null_depth_db` of the null test is the depth in the null band (20 Hz to 20 kHz, or the band both devices pass when that is narrower). The full-band figure, which this key held before, is `null_depth_fullband_db`.
+- The default number of jobs also counts the memory and CPU limit of a container or a systemd scope (`memory.max`, `cpu.max` of the control group), not only the machine's free memory and cores. Under a 4 GiB limit the default was up to 16 jobs and the kernel stopped the workers; it is now 2.
+- `dsd-measure gate` separates the figures in its FAIL line with semicolons (the figure names hold commas).
+- The build needs setuptools 77 or newer (licence files in the package metadata, PEP 639).
+
+### Fixed
+
+- `null` aligned over the full band, so uncorrelated ultrasonic noise (two DSD outputs, or PCM that still holds DSD noise) or a level difference could give a wrong delay, inverted polarity and a depth near 0 dB ([#4](https://github.com/dsd-toolbox/dsd-measure/issues/4)). Delay, polarity and gain are now found in the null band with a normalised, band-limited correlation.
+- The full profile no longer keeps its long records in memory: the reference modulator and decoder, the stability figures and the DSF reader and writer work in pieces, with the same bits and the same figures. A 60 s stability hold at DSD256 peaks at 1.4 GB where it needed tens of GB ([#3](https://github.com/dsd-toolbox/dsd-measure/issues/3)).
+- The class B impulse and step tests work with a 48 kHz-family input: they are read at the smallest 44.1 kHz-family rate at or above the input rate, with the stimulus placed on decoder samples ([#7](https://github.com/dsd-toolbox/dsd-measure/issues/7)).
+
 ## 0.1.2 - 2026-11-24
 
 Usability fixes from a first-run study of 0.1.1, and the fixes a hostile methodology review of this release asked for before it was tagged: measurement language in place of audibility language, no AES17 claim, fairness inputs recorded, every output word length handled, and a page of limits. No analysis number of the reference chain changes; the regenerated example reports differ in text only.
@@ -64,7 +101,7 @@ Usability fixes from a first-run study of 0.1.1, and the fixes a hostile methodo
 - THD of a tone below about 27 Hz counted the fundamental's skirt as second harmonic (a 20 Hz tone with a -80 dB harmonic read -61 dB).
 - The alias image is read at its folded frequency (output rate minus tone), not at the largest bin, which was noise.
 - DSF and DFF files are padded with the DSD idle pattern, not zeros (a burst at -100 % modulation at the end of a file read as distortion).
-- WAV float files carry the extended fmt and fact chunks, which strict readers (SoX) expect; `write_wav` failed for multi-channel 24-bit files.
+- WAV float files carry the extended fmt and fact chunks, which strict readers (SoX) expect; `write_wav` failed for multichannel 24-bit files.
 - Temporary work folders are removed when a run ends, including after an error or Ctrl-C.
 - A brace in a command template (`awk '{print}'`) no longer crashes the run; only `{input}` and `{output}` are replaced.
 - A timed-out device command is killed together with its child processes; the FLAC conversion and the container wrapper have timeouts too.
@@ -96,7 +133,7 @@ Usability fixes from a first-run study of 0.1.1, and the fixes a hostile methodo
 - SoX-DSD adapter options `input_gain_db` and `trellis`.
 - A release test plan ([docs/release-test-plan.md](docs/release-test-plan.md)), a CI workflow (ruff and the tests on Python 3.11 and 3.13), and tests for the class B measurement path, the private cache, command templates, timeouts, cleanup, exit status and every fixed finding.
 
-## 0.1.0
+## 0.1.0 - 2026-11-23
 
 ### Added
 
@@ -107,8 +144,6 @@ Usability fixes from a first-run study of 0.1.1, and the fixes a hostile methodo
 - Adapters: `reference`, `cli` (DSF or DFF in), `import`, `sox-dsd`, and presets for dsd2pcm and sacd_extract; pinned black-box reference tool containers (SoX-DSD, ffmpeg-free, sacd_extract) through `tools/reftool.sh`.
 - Example reports in `examples/`.
 
-### Known issues in 0.1.0 (history)
-
-A separate internal review found that some report figures in 0.1.0 reflect the analysis rather than the device: the stopband, the class B multitone range, the ultrasonic noise peak, the noise headline, overload recovery, the J-Test sideband, multitone at 48 kHz-family rates, and the peak-level SINAD of class A devices. They are corrected in 0.1.1 (see Fixed above). For 0.1.0 results, the figures the review confirmed are THD, THD+N and SINAD, dynamic range, gain, linearity, frequency response, single-point IMD, crosstalk and the reference floor.
+**Known issues in 0.1.0 (history).** A separate internal review found that some report figures in 0.1.0 reflect the analysis rather than the device: the stopband, the class B multitone range, the ultrasonic noise peak, the noise headline, overload recovery, the J-Test sideband, multitone at 48 kHz-family rates, and the peak-level SINAD of class A devices. They are corrected in 0.1.1 (see Fixed above). For 0.1.0 results, the figures the review confirmed are THD, THD+N and SINAD, dynamic range, gain, linearity, frequency response, single-point IMD, crosstalk and the reference floor.
 
 Part of the [DSD Toolbox](https://github.com/dsd-toolbox/dsd-toolbox).

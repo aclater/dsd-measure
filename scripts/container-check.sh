@@ -7,6 +7,7 @@
 #
 # The container starts from an empty Fedora image, so a package missing from the README's install
 # line shows up as a failure. Needs Podman. Nothing from the host is writable inside the container.
+# CONTAINER_CHECK_ARGS: extra arguments for "podman run", for example "--memory 4g --cpus 2" to cap the run.
 set -eu
 cd "$(dirname "$0")/.."
 mode=${1:-quickstart}
@@ -47,7 +48,8 @@ inner="dnf install -y -q $pkgs
 git config --global --add safe.directory /src
 git clone -q /src /work
 pipx install /work
-PATH=/root/.local/bin:\$PATH
+PATH=\$HOME/.local/bin:\$PATH
 cd /tmp
 $steps"
-exec podman run --rm -v "$PWD":/src:ro,Z registry.fedoraproject.org/fedora:43 sh -eu -c "$inner"
+# shellcheck disable=SC2086  # the extra arguments are split on purpose
+exec podman run --rm ${CONTAINER_CHECK_ARGS:-} -v "$PWD":/src:ro,Z registry.fedoraproject.org/fedora:43 sh -eu -c "$inner"

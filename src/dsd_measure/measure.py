@@ -8,6 +8,7 @@ arrays that ``report`` draws; ``metrics`` is what goes into JSON and CSV.
 """
 
 import time
+from fractions import Fraction
 
 import numpy as np
 from scipy import signal
@@ -51,9 +52,44 @@ PROFILES = {
                  hold_s=60.0, jtest_s=24.0, tone_s=4.0),
 }
 
+#: The gate profile: the quick profile's signals and settings, so each figure is the same number a
+#: quick run prints, but only the tests a release comparison needs (SINAD, THD, dynamic range and
+#: linearity from ``levels``; the noise floor; the alias images; and the reference floor they are
+#: judged against). The null test on real music is separate (``dsd-measure null``).
+PROFILES["gate"] = dict(PROFILES["quick"])
+#: Profiles that run a fixed list of tests unless ``--only`` names others.
+PROFILE_TESTS = {"gate": ("reference_floor", "levels", "noise", "alias_tones")}
+
 THIRD_OCTAVE = [20, 25, 31.5, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630, 800, 1000,
                 1250, 1600, 2000, 2500, 3150, 4000, 5000, 6300, 8000, 10000, 12500, 16000, 20000]
 EXTRA_HF = [20500, 21000, 21500, 22000, 23000, 24000, 26000, 28000, 30000, 35000, 40000]
+
+
+def grid_rate(in_rate):
+    """The smallest 44.1 kHz-family rate (44.1 kHz times a power of two) at or above ``in_rate``.
+
+    A class B device's DSD rate is a multiple of 44.1 kHz, so the reference decoder can only
+    output rates on that grid; the impulse and step records of a 48 kHz-family input are read there.
+    """
+    r = 44100
+    while r < in_rate:
+        r *= 2
+    return r
+
+
+def grid_layout(in_rate):
+    """``(num, den, sp, half)`` for the class B impulse and step records of an input at ``in_rate``.
+
+    A 48 kHz-family input meets the 44.1 kHz grid every ``den`` input samples (``num/den`` is the
+    grid rate over the input rate; 147/80 for 48, 96 and 192 kHz). The impulses are ``sp`` samples
+    apart (a multiple of ``den``, at least 8192) and the first is ``half`` samples in (also a
+    multiple of ``den``), so every impulse position ``pos`` has ``pos * num % den == 0``: it lands
+    on a grid sample exactly and nothing is resampled. For a 44.1 kHz-family input den is 1,
+    ``sp`` is 8192 and ``half`` 4096.
+    """
+    num, den = Fraction(grid_rate(in_rate), in_rate).as_integer_ratio()
+    sp = -(-8192 // den) * den
+    return num, den, sp, sp // 2 // den * den
 
 
 def nfft_for(fs, base=REF_NFFT):
@@ -149,10 +185,16 @@ def _thin(f, p_db, per_octave=48, f_min=10.0):
     return out_f, out_p
 
 
-def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None):
+def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None, chain=None, finish=True):
+    """Run the tests of ``profile`` (or just those in ``only``) on one device.
+
+    ``chain`` and ``finish`` are for the parallel runner (``parallel``): it runs each test in its
+    own process with a ``Chain`` that already knows the device delay, with ``finish=False``, and
+    calls ``finish_result`` once on the merged result.
+    """
     log = log or (lambda msg, end="\n": print(msg, end=end, flush=True))
     prof = PROFILES[profile]
-    ch = Chain(adapter, in_rate)
+    ch = chain if chain is not None else Chain(adapter, in_rate)
     res = {"metrics": {}, "plots": {}, "not_run": {}, "errors": [], "notes": [], "timing_s": {}}
     M, P = res["metrics"], res["plots"]
     M["analysis_version"] = ANALYSIS_VERSION
@@ -343,38 +385,42 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
         # not used (the start of a record can carry a start-up click).
         lat = latency_s()
         rin = REF_FS if A else in_rate
-        unit_rate = REF_FS if A else in_rate
-        u = unit_rate // rin  # input sample length in response-grid units
-        sp, nj = 8192, 64
+        unit_rate = REF_FS if A else grid_rate(in_rate)
+        # A 48 kHz-family input meets the 44.1 kHz grid every ``den`` input samples (80 samples
+        # are 147 grid samples); see ``grid_layout``: every impulse sits on such a sample, so it
+        # lands on a grid sample exactly and nothing is resampled. For a 44.1 kHz-family input den is 1.
+        num, den, sp, half = grid_layout(in_rate) if not A else (1, 1, 8192, 4096)
+        nj = 64
         x = np.zeros(sp * (nj + 1))
         ts = []
         for j in range(nj):
             o = j % 8 if A else 0
-            pos = sp // 2 + j * sp + (o if A else 0)
+            pos = half + j * sp + (o if A else 0)
             x[pos] = 10 ** (REF_DBFS / 20)
             if j:
-                ts.append((pos * u, o))
+                assert pos * num % den == 0
+                ts.append((pos * num // den, o))
         y, fs, _ = ch.run(x, "impulse", in_rate=rin, decode_rate=unit_rate)
         if unit_rate % fs:
             res["not_run"]["impulse"] = (f"output rate {fs:g} Hz is not on the 44.1 kHz grid: the impulse, filter and group-delay "
                                          "measurements interleave the output samples on a 352.8 kHz grid "
                                          "(resample the device output to 44.1, 88.2, 176.4 or 352.8 kHz)")
         else:
-            _impulse_response(y, fs, ts, u, unit_rate, lat)
+            _impulse_response(y, fs, ts, unit_rate, lat)
         _step_response(lat)
 
-    def _impulse_response(y, fs, ts, u, unit_rate, lat):
+    def _impulse_response(y, fs, ts, unit_rate, lat):
         r = unit_rate // fs
         dly = int(round(lat * fs))
         span = max(256, 4096 // r)
         size = 2 * span * r
         acc, cnt = np.zeros(size), np.zeros(size)
         for T, o in ts:
-            m0 = (T - o * u) // r + dly
+            m0 = (T - o) // r + dly
             if m0 - span < 0 or m0 + span > len(y):
                 continue
             for m in range(m0 - span, m0 + span):
-                t = (m - m0) * r - o * u
+                t = (m - m0) * r - o
                 k = t + span * r
                 if 0 <= k < size:
                     acc[k] += y[m]
@@ -424,13 +470,16 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
 
     def _step_response(lat):
         # step: 9 periods of a square wave, the 8 rising edges averaged (those that fit after the device delay)
-        per = 16384
+        # a 48 kHz-family input meets the 44.1 kHz grid every ``den`` samples (see ``impulse``): the
+        # edges are placed on such samples, so each sits on a grid sample exactly
+        num, den = Fraction(grid_rate(in_rate), in_rate).as_integer_ratio() if not A else (1, 1)
+        per = -(-16384 // (2 * den)) * 2 * den
         sx = np.tile(np.concatenate([np.zeros(per // 2), np.full(per // 2, 10 ** (REF_DBFS / 20))]), 9)
-        ys, fs2, _ = ch.run(sx, "step", decode_rate=REF_FS if A else in_rate)
+        ys, fs2, _ = ch.run(sx, "step", decode_rate=REF_FS if A else grid_rate(in_rate))
         sc2 = fs2 / in_rate
         pre, post = 400, int(0.01 * fs2)
         dly = int(round(lat * fs2))
-        edges = [int((per // 2 + i * per) * sc2) + dly for i in range(1, 9)]
+        edges = [((per // 2 + i * per) * num // den if not A else int((per // 2 + i * per) * sc2)) + dly for i in range(1, 9)]
         edges = [c for c in edges if c - pre >= 0 and c + post <= len(ys)]
         if not edges:
             raise NotRun("the device delay is longer than the step record")
@@ -588,7 +637,10 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
             fc = sg.coherent_freq(f0, REF_FS, REF_NFFT)
             x = sg.sine(fc, lv, in_rate, hold)
             bits, rate = adapter.pcm_to_dsd(x, in_rate)
-            s = an.stability_report(bits[int(0.5 * rate):], rate)
+            # the density and run figures are taken piece by piece: no copy of the hold is made
+            scan = an.StabilityScan(row=rate)
+            scan.feed(bits[int(0.5 * rate):])
+            s = scan.report()
             d = int(2**18 / REF_FS * rate)
             y0 = dec.decode(bits[int(0.5 * rate) : int(0.5 * rate) + d + 2**22], rate, REF_FS)
             y1 = dec.decode(bits[-(d + 2**22) :], rate, REF_FS)
@@ -599,13 +651,11 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
             s["thdn_drift_db"] = m1["thdn_db"] - m0["thdn_db"]
             out[label] = s
             if f0 == 1000 and lv == PEAK_DBFS:
-                dens = an.bit_density(bits[int(0.5 * rate):], 28)
-                sec = rate
-                k = len(dens) // sec
-                if k:
-                    mod = (2 * dens[: k * sec].reshape(k, sec) - 1) * 100
-                    P["density"] = {"t": list(range(k)), "max": mod.max(1).tolist(), "min": mod.min(1).tolist(),
-                                    "mean": mod.mean(1).tolist()}
+                top, bottom, mean = scan.rows()  # per second, in percent modulation
+                if len(top):
+                    P["density"] = {"t": list(range(len(top))), "max": top.tolist(), "min": bottom.tolist(),
+                                    "mean": mean.tolist()}
+            del x, bits, y0, y1  # the next hold is made after this one is gone
         M["stability"] = {"hold_s": prof["hold_s"], "levels": out}
 
 
@@ -812,14 +862,22 @@ def measure_device(adapter, profile="quick", in_rate=88200, log=None, only=None)
     from .plan import SECONDS
     prog["order"] = [n for n, _ in steps if not only or n in only]
     prog["total"] = len(prog["order"])
-    prog["est"] = SECONDS.get(profile, {}).get(adapter.klass, {})
+    prog["est"] = SECONDS.get(profile, SECONDS["quick"]).get(adapter.klass, {})
     for name, fn in steps:
         step(name, fn)
+    res["reference_chain_ntf"] = ch.ntf
+    return finish_result(res, adapter) if finish else res
+
+
+def finish_result(res, adapter):
+    """What follows the last test: the output format read from the adapter's log, and for a
+    modulator the move of the reference decoder's own figures out of the tables."""
+    M, P = res["metrics"], res["plots"]
+    A = adapter.klass == "A"
     fmt = getattr(adapter, "output_format", lambda: None)() if A else None
     if fmt:
         # the tone as the tool wrote it: measured gain error, undone by the gain the adapter applied afterwards
         M["output_format"] = of.summary(fmt, float(M.get("gain_error_db", 0.0)) - float(getattr(adapter, "gain_db", 0.0)))
-    res["reference_chain_ntf"] = ch.ntf
     if not A:
         # S5: for a modulator these figures are the reference decoder's, not the device's. Keep them
         # (the reference chain's floor needs them) under a name that says so, and out of every table.
